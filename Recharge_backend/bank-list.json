@@ -1,0 +1,760 @@
+{
+  "status": true,
+  "response_code": 1,
+  "banklist": {
+    "status": true,
+    "message": "Request Completed",
+    "data": [
+      {
+        "id": "1",
+        "bankName": "Airtel Payment Bank",
+        "iinno": "990320",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "2",
+        "bankName": "Allahabad Bank",
+        "iinno": "608112",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "3",
+        "bankName": "Allahabad UP Gramin Bank",
+        "iinno": "607024",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "4",
+        "bankName": "Andhra Bank",
+        "iinno": "607076",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "5",
+        "bankName": "Andhra Pradesh Grameena Vikash Bank",
+        "iinno": "607198",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "6",
+        "bankName": "Andhra Pragathi Grameena Bank",
+        "iinno": "607121",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "7",
+        "bankName": "AP Mahesh Coop Urban Bank Ltd",
+        "iinno": "607051",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "8",
+        "bankName": "Aryavart Bank",
+        "iinno": "607024",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "9",
+        "bankName": "Assam Gramin Vikash Bank",
+        "iinno": "607064",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "10",
+        "bankName": "AU Small Finance Bank",
+        "iinno": "608087",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "11",
+        "bankName": "Axis Bank",
+        "iinno": "607153",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "12",
+        "bankName": "Bangiya Gramin Vikash Bank",
+        "iinno": "607063",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "13",
+        "bankName": "Bank Of Baroda",
+        "iinno": "606985",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "14",
+        "bankName": "Bank of India",
+        "iinno": "508505",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "15",
+        "bankName": "Bank of Maharashtra",
+        "iinno": "607387",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "16",
+        "bankName": "Baroda Gujarat Gramin Bank",
+        "iinno": "606995",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "17",
+        "bankName": "Baroda Rajasthan Kshetriya Gramin Bank",
+        "iinno": "607280",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "18",
+        "bankName": "Baroda Uttar Pradesh Gramin Bank ",
+        "iinno": "606993",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "19",
+        "bankName": "Canara Bank",
+        "iinno": "607396",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "20",
+        "bankName": "Catholic Syrian Bank",
+        "iinno": "607082",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "21",
+        "bankName": "Central Bank of India",
+        "iinno": "607264",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "22",
+        "bankName": "Chaitanya Godavari Gramin Bank",
+        "iinno": "607080",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "23",
+        "bankName": "Chhattisgarh Rajya Gramin Bank",
+        "iinno": "607214",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "24",
+        "bankName": "City Union Bank ",
+        "iinno": "607324",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "25",
+        "bankName": "Corporation Bank",
+        "iinno": "607184",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "26",
+        "bankName": "Dakshin Bihar Gramin Bank",
+        "iinno": "607136",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "27",
+        "bankName": "Dena Bank",
+        "iinno": "508547",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "28",
+        "bankName": "Dena Gujarat Gramin Bank",
+        "iinno": "607099",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "29",
+        "bankName": "Ellaquai Dehati Bank",
+        "iinno": "607218",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "30",
+        "bankName": "Equitas Small Finance Bank",
+        "iinno": "508998",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "31",
+        "bankName": "Federal Bank",
+        "iinno": "607363",
+        "activeFlag": "1",
+        "aadharpayiinno": "607322"
+      },
+      {
+        "id": "32",
+        "bankName": "Fincare Small Finance Bank",
+        "iinno": "817304",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "33",
+        "bankName": "Fino Payments Bank",
+        "iinno": "608001",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "34",
+        "bankName": "Gramin bank of Aryavart",
+        "iinno": "607024",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "35",
+        "bankName": "HDFC Bank",
+        "iinno": "607152",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "36",
+        "bankName": "Himachal Pradesh Gramin Bank",
+        "iinno": "607140",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "37",
+        "bankName": "ICICI Bank",
+        "iinno": "508534",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "38",
+        "bankName": "IDBI Bank",
+        "iinno": "607095",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "39",
+        "bankName": "IDFC First Bank",
+        "iinno": "608117",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "40",
+        "bankName": "India Post Payment Bank",
+        "iinno": "608314",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "41",
+        "bankName": "Indian bank",
+        "iinno": "607105",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "42",
+        "bankName": "Indian Overseas Bank",
+        "iinno": "607126",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "43",
+        "bankName": "IndusInd Bank",
+        "iinno": "607189",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "44",
+        "bankName": "Jammu & Kashmir Bank ",
+        "iinno": "607440",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "45",
+        "bankName": "Jharkhand Gramin Bank",
+        "iinno": "607210",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "46",
+        "bankName": "Jharkhand Rajya Gramin Bank",
+        "iinno": "607210",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "47",
+        "bankName": "Karnataka Bank",
+        "iinno": "607270",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "48",
+        "bankName": "Karnataka Gramin Bank",
+        "iinno": "607512",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "49",
+        "bankName": "Karnataka Vikas Grameena Bank ",
+        "iinno": "607122",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "50",
+        "bankName": "Karur Vysya Bank",
+        "iinno": "508662",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "51",
+        "bankName": "Kashi Gomati Samyut Gramin Bank",
+        "iinno": "607365",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "52",
+        "bankName": "Kerala Gramin Bank",
+        "iinno": "607399",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "53",
+        "bankName": "Kotak Mahindra Bank",
+        "iinno": "990309",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "54",
+        "bankName": "Lakshmi Vilas Bank",
+        "iinno": "607058",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "55",
+        "bankName": "Langpi Dehangi Rural Bank",
+        "iinno": "607203",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "56",
+        "bankName": "Madhya Bihar Gramin Bank erstwhile Dakshin Bihar Gramin Bank",
+        "iinno": "607136",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "57",
+        "bankName": "Madhya Pradesh Gramin Bank",
+        "iinno": "607022",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "58",
+        "bankName": "Madhyanchal Gramin Bank",
+        "iinno": "607232",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "59",
+        "bankName": "Maharashtra Gramin Bank ",
+        "iinno": "607000",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "60",
+        "bankName": "Manipur Rural Bank ",
+        "iinno": "607062",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "61",
+        "bankName": "Meghalaya Rural Bank",
+        "iinno": "607206",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "62",
+        "bankName": "Mizoram Rural Bank",
+        "iinno": "607230",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "63",
+        "bankName": "Narmada Jhabua Gramin Bank",
+        "iinno": "607022",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "64",
+        "bankName": "Odisha Gramya Bank ",
+        "iinno": "607060",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "65",
+        "bankName": "Oriental Bank of Commerce",
+        "iinno": "607027",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "66",
+        "bankName": "Pallavan Grama Bank",
+        "iinno": "607052",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "67",
+        "bankName": "Pandyan Grama Bank",
+        "iinno": "607059",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "68",
+        "bankName": "Paschim Banga Gramin Bank",
+        "iinno": "607079",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "69",
+        "bankName": "Pragathi Krishna Gramin Bank",
+        "iinno": "607400",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "70",
+        "bankName": "Prathama Bank",
+        "iinno": "607135",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "71",
+        "bankName": "Prathma UP Gramin Bank",
+        "iinno": "607135",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "72",
+        "bankName": "Puduvai Bharathiar Grama Bank",
+        "iinno": "607054",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "73",
+        "bankName": "Punjab & Sind Bank",
+        "iinno": "607087",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "74",
+        "bankName": "Punjab Gramin Bank",
+        "iinno": "607138",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "75",
+        "bankName": "Punjab National Bank",
+        "iinno": "607027",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "76",
+        "bankName": "Purvanchal Gramin Bank",
+        "iinno": "607212",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "77",
+        "bankName": "Rajasthan Marudhara Gramin Bank",
+        "iinno": "607509",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "78",
+        "bankName": "Ratnakar Bank",
+        "iinno": "607393",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "79",
+        "bankName": "Saptagiri Grameena Bank",
+        "iinno": "607053",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "80",
+        "bankName": "Sarva Haryana Gramin Bank",
+        "iinno": "607139",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "81",
+        "bankName": "Sarva UP Gramin Bank ",
+        "iinno": "607135",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "82",
+        "bankName": "Saurashtra Gramin Bank",
+        "iinno": "607200",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "83",
+        "bankName": "Shivalik Mercantile Cooperative Bank ",
+        "iinno": "607119",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "84",
+        "bankName": "South Indian Bank",
+        "iinno": "607475",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "85",
+        "bankName": "State Bank of India",
+        "iinno": "607094",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "86",
+        "bankName": "Syndicate Bank",
+        "iinno": "607580",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "87",
+        "bankName": "Tamilnad Mercantile Bank",
+        "iinno": "607187",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "88",
+        "bankName": "TamilNadu Grama Bank",
+        "iinno": "607052",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "89",
+        "bankName": "Telangana Grameena Bank",
+        "iinno": "607195",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "90",
+        "bankName": "The Saraswat Co-operative Bank Ltd",
+        "iinno": "652150",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "91",
+        "bankName": "Tripura Gramin Bank",
+        "iinno": "607065",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "92",
+        "bankName": "UCO Bank",
+        "iinno": "607066",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "93",
+        "bankName": "Ujjivan Small Finance Bank Limited",
+        "iinno": "508991",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "94",
+        "bankName": "Union Bank of India",
+        "iinno": "607161",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "95",
+        "bankName": "United Bank Of India",
+        "iinno": "607646",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "96",
+        "bankName": "Utkal Gramin Bank",
+        "iinno": "607234",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "97",
+        "bankName": "Uttar Banga Kshetriya Gramin Bank ",
+        "iinno": "607073",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "98",
+        "bankName": "Uttar Bihar Grameen Bank ",
+        "iinno": "607069",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "99",
+        "bankName": "Uttarakhand Gramin Bank",
+        "iinno": "607197",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "100",
+        "bankName": "Vananchal Gramin Bank",
+        "iinno": "607210",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "101",
+        "bankName": "Vidarbha Konkan Gramin Bank",
+        "iinno": "607020",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "102",
+        "bankName": "Vijaya Bank",
+        "iinno": "607075",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "103",
+        "bankName": "YES Bank",
+        "iinno": "607618",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "104",
+        "bankName": "Paytm Payments Bank",
+        "iinno": "608032",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "105",
+        "bankName": "PAYTM UAT BALANCE ENQUIRY",
+        "iinno": "100013",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "106",
+        "bankName": "PAYTM UAT CAHSWITHDRAW",
+        "iinno": "100051",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      },
+      {
+        "id": "107",
+        "bankName": "PAYTM UAT MINISTAEMENT",
+        "iinno": "100012",
+        "activeFlag": "1",
+        "aadharpayiinno": null
+      }
+    ]
+  },
+  "message": "Bank list successfully fetched"
+}

@@ -1,0 +1,34 @@
+
+[2026-02-12T11:45:44.340Z]
+METHOD: GET
+URL: /api/banking/accounts
+MESSAGE: bankingModel is not defined
+STACK: ReferenceError: bankingModel is not defined
+    at exports.getMyAccounts (C:\Users\h\Desktop\Recharge_backend\src\controllers\banking.controller.js:38:22)
+    at Layer.handleRequest (C:\Users\h\Desktop\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\h\Desktop\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at module.exports (C:\Users\h\Desktop\Recharge_backend\src\middlewares\auth.middleware.js:22:5)
+    at Layer.handleRequest (C:\Users\h\Desktop\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\h\Desktop\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\h\Desktop\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\h\Desktop\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\h\Desktop\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\h\Desktop\Recharge_backend\node_modules\router\index.js:295:15
+----------------------------------
+
+[2026-02-16T05:55:12.853Z]
+METHOD: POST
+URL: /api/banking/seed-banks
+MESSAGE: Unexpected end of JSON input
+STACK: SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at createStrictSyntaxError (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\body-parser\lib\types\json.js:109:10)
+    at parse (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\body-parser\lib\types\json.js:66:15)
+    at E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\body-parser\lib\read.js:162:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)
+    at invokeCallback (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\raw-body\index.js:238:16)
+    at done (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\raw-body\index.js:227:7)
+    at IncomingMessage.onEnd (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\raw-body\index.js:287:7)
+    at IncomingMessage.emit (node:events:518:28)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+----------------------------------
