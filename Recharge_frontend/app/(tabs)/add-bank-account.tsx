@@ -30,6 +30,10 @@ export default function AddBankAccountScreen() {
   const [ifscCode, setIfscCode] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+  const [showOtpInput, setShowOtpInput] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [newAccountId, setNewAccountId] = useState<number | null>(null);
 
   // Pre-fill bank details from params
   React.useEffect(() => {
@@ -149,58 +153,97 @@ export default function AddBankAccountScreen() {
       return;
     }
 
-    Alert.alert(
-      "Verify Bank Account",
-      "Do you want to verify and add this bank account?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Verify",
-          onPress: async () => {
-            setIsVerifying(true);
-            try {
-              const token = await AsyncStorage.getItem("userToken");
-              const response = await fetch("http://192.168.1.26:5000/api/banking/add-account", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                  bank_id: bankId,
-                  account_number: accountNumber,
-                  account_holder_name: accountHolderName,
-                  ifsc_code: ifscCode,
-                  linked_mobile: phoneNumber,
-                }),
-              });
+    setIsVerifying(true);
+    try {
+      const token = await AsyncStorage.getItem("userToken");
 
-              const data = await response.json();
-
-              if (response.ok) {
-                Alert.alert(
-                  "Success",
-                  "Bank account added successfully!",
-                  [
-                    {
-                      text: "OK",
-                      onPress: () => router.replace("/bank-accounts"),
-                    },
-                  ],
-                );
-              } else {
-                Alert.alert("Error", data.message || "Failed to add bank account");
-              }
-            } catch (err) {
-              console.error("Add bank account error:", err);
-              Alert.alert("Error", "Server error. Please try again later.");
-            } finally {
-              setIsVerifying(false);
-            }
-          },
+      // 1. Add Bank Account
+      const addResponse = await fetch("http://192.168.1.26:5000/api/banking/add-account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
-      ],
-    );
+        body: JSON.stringify({
+          bank_id: bankId,
+          account_number: accountNumber,
+          account_holder_name: accountHolderName,
+          ifsc_code: ifscCode,
+          linked_mobile: phoneNumber,
+        }),
+      });
+
+      const addData = await addResponse.json();
+
+      if (addResponse.ok) {
+        const accId = addData.account_id;
+        setNewAccountId(accId);
+
+        // 2. Trigger Verification (Send OTP)
+        const verifyResponse = await fetch("http://192.168.1.26:5000/api/banking/verify-account", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ account_id: accId }),
+        });
+
+        if (verifyResponse.ok) {
+          setShowOtpInput(true);
+          Alert.alert("OTP Sent", "A verification code has been sent to your registered mobile number.");
+        } else {
+          const verifyData = await verifyResponse.json();
+          Alert.alert("Success", `Account added, but failed to send OTP: ${verifyData.message || 'Unknown error'}`);
+          router.replace("/bank-accounts");
+        }
+      } else {
+        Alert.alert("Error", addData.message || "Failed to add bank account");
+      }
+    } catch (err) {
+      console.error("Add/Verify bank account error:", err);
+      Alert.alert("Error", "Server error. Please try again later.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (otp.length !== 6) {
+      Alert.alert("Validation Error", "Please enter 6-digit OTP");
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const response = await fetch("http://192.168.1.26:5000/api/banking/verify-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          account_id: newAccountId,
+          otp: otp,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        Alert.alert("Success", "Bank account verified and added successfully!", [
+          { text: "OK", onPress: () => router.replace("/bank-accounts") }
+        ]);
+      } else {
+        Alert.alert("Verification Failed", data.message || "Invalid OTP");
+      }
+    } catch (err) {
+      console.error("OTP verification error:", err);
+      Alert.alert("Error", "Server error during verification.");
+    } finally {
+      setIsVerifyingOtp(false);
+    }
   };
 
   const handleBackPress = () => {
@@ -412,6 +455,41 @@ export default function AddBankAccountScreen() {
             </View>
           </View>
 
+          {/* OTP Section - Show after adding account */}
+          {showOtpInput && (
+            <View style={[styles.section, { marginTop: 10 }]}>
+              <Text style={styles.sectionTitle}>Verify OTP</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>
+                  Enter 6-digit OTP <Text style={styles.required}>*</Text>
+                </Text>
+                <View style={[styles.inputContainer, { borderColor: '#2196F3' }]}>
+                  <Ionicons name="keypad-outline" size={20} color="#2196F3" />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter OTP"
+                    placeholderTextColor="#999"
+                    keyboardType="number-pad"
+                    maxLength={6}
+                    value={otp}
+                    onChangeText={setOtp}
+                  />
+                </View>
+                <Text style={styles.hintText}>Check your console (Dev) or SMS for OTP</Text>
+              </View>
+
+              <TouchableOpacity
+                style={[styles.submitButton, isVerifyingOtp && styles.submitButtonDisabled]}
+                onPress={handleVerifyOtp}
+                disabled={isVerifyingOtp}
+              >
+                <Text style={styles.submitButtonText}>
+                  {isVerifyingOtp ? "Verifying..." : "Verify OTP"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Important Note */}
           <View style={styles.noteContainer}>
             <View style={styles.noteCard}>
@@ -428,31 +506,33 @@ export default function AddBankAccountScreen() {
           </View>
 
           {/* Verify and Submit Button */}
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                isVerifying && styles.submitButtonDisabled,
-              ]}
-              onPress={handleVerifyAndSubmit}
-              disabled={isVerifying}
-            >
-              {isVerifying ? (
-                <View style={styles.loadingContainer}>
-                  <Text style={styles.submitButtonText}>Verifying...</Text>
-                </View>
-              ) : (
-                <>
-                  <MaterialCommunityIcons
-                    name="shield-check"
-                    size={20}
-                    color="#0D47A1"
-                  />
-                  <Text style={styles.submitButtonText}>Verify & Submit</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
+          {!showOtpInput && (
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  isVerifying && styles.submitButtonDisabled,
+                ]}
+                onPress={handleVerifyAndSubmit}
+                disabled={isVerifying}
+              >
+                {isVerifying ? (
+                  <View style={styles.loadingContainer}>
+                    <Text style={styles.submitButtonText}>Verifying...</Text>
+                  </View>
+                ) : (
+                  <>
+                    <MaterialCommunityIcons
+                      name="shield-check"
+                      size={20}
+                      color="#0D47A1"
+                    />
+                    <Text style={styles.submitButtonText}>Verify & Submit</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Bottom Spacing */}
           <View style={{ height: 30 }} />

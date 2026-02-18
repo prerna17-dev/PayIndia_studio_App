@@ -66,3 +66,20 @@ STACK: Error: Table 'payindia_studio.eseva_applications' doesn't exist
     at Multipart.emit (node:events:518:28)
     at emitCloseNT (node:internal/streams/destroy:148:10)
 ----------------------------------
+
+[2026-02-18T10:22:06.069Z]
+METHOD: GET
+URL: /api/eseva/list
+MESSAGE: Table 'payindia_studio.eseva_applications' doesn't exist
+STACK: Error: Table 'payindia_studio.eseva_applications' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.getByUserId (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\eseva.model.js:31:31)
+    at exports.getApplications (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\eseva.controller.js:74:45)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------

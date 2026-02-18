@@ -1,12 +1,12 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as DocumentPicker from 'expo-document-picker';
-import { Stack, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as DocumentPicker from "expo-document-picker";
+import { Stack, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    BackHandler,
     KeyboardAvoidingView,
     Platform,
     SafeAreaView,
@@ -16,26 +16,18 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-} from 'react-native';
+} from "react-native";
 
-interface UploadedDoc {
+interface UploadedFile {
     name: string;
+    size: string;
     uri: string;
 }
-
-const CORRECTION_TYPES = [
-    { id: 'name', label: 'Name Correction', hindi: 'नाव दुरुस्ती', icon: 'person' },
-    { id: 'dob', label: 'Date of Birth', hindi: 'जन्मतारीख', icon: 'calendar' },
-    { id: 'address', label: 'Address Update', hindi: 'पत्ता बदल', icon: 'home' },
-    { id: 'mobile', label: 'Mobile Number', hindi: 'मोबाईल नंबर', icon: 'call' },
-    { id: 'father', label: "Father's Name", hindi: 'वडिलांचे नाव', icon: 'person' },
-    { id: 'photo', label: 'Photo Update', hindi: 'फोटो बदल', icon: 'camera' },
-];
 
 export default function PANCorrectionScreen() {
     const router = useRouter();
 
-    // Section 1: Verification States
+    // Section 1 States
     const [panNumber, setPanNumber] = useState("");
     const [mobileNumber, setMobileNumber] = useState("");
     const [otp, setOtp] = useState("");
@@ -43,19 +35,50 @@ export default function PANCorrectionScreen() {
     const [isOtpVerified, setIsOtpVerified] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
 
-    // Section 2: Selection States
+    // Section 2 States
     const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
 
-    // Section 3: Form States
+    // Dynamic Form States
     const [newName, setNewName] = useState("");
     const [newDob, setNewDob] = useState("");
     const [newFatherName, setNewFatherName] = useState("");
-    const [newEmail, setNewEmail] = useState("");
+    const [newContact, setNewContact] = useState("");
 
-    // Section 4: Document States
-    const [uploadedDocs, setUploadedDocs] = useState<Record<string, UploadedDoc>>({});
+    // Document States
+    const [uploadedDocs, setUploadedDocs] = useState<Record<string, UploadedFile>>({});
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Handle Back
+    useEffect(() => {
+        const backAction = () => {
+            router.back();
+            return true;
+        };
+        const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
+        return () => backHandler.remove();
+    }, []);
+
+    const handleSendOtp = () => {
+        if (panNumber.length !== 10 || mobileNumber.length !== 10) {
+            Alert.alert("Error", "Please enter valid PAN and Mobile number");
+            return;
+        }
+        setIsOtpSent(true);
+        Alert.alert("OTP Sent", "Verification code has been sent to your mobile");
+    };
+
+    const handleVerifyOtp = () => {
+        if (otp.length !== 6) {
+            Alert.alert("Error", "Please enter 6 digit OTP");
+            return;
+        }
+        setIsVerifying(true);
+        setTimeout(() => {
+            setIsOtpVerified(true);
+            setIsVerifying(false);
+        }, 1500);
+    };
 
     const toggleType = (id: string) => {
         if (selectedTypes.includes(id)) {
@@ -65,46 +88,36 @@ export default function PANCorrectionScreen() {
         }
     };
 
-    const handleSendOtp = () => {
-        if (panNumber.length !== 10 || mobileNumber.length !== 10) {
-            Alert.alert("Error", "Please enter valid PAN and Mobile number");
-            return;
-        }
-        setIsVerifying(true);
-        setTimeout(() => {
-            setIsVerifying(false);
-            setIsOtpSent(true);
-        }, 1500);
-    };
-
-    const handleVerifyOtp = () => {
-        if (otp.length !== 6) {
-            Alert.alert("Error", "Please enter 6-digit OTP");
-            return;
-        }
-        setIsVerifying(true);
-        setTimeout(() => {
-            setIsVerifying(false);
-            setIsOtpVerified(true);
-        }, 1500);
-    };
-
-    const pickDocument = async (type: string) => {
+    const handleFileUpload = async (type: string) => {
         try {
             const result = await DocumentPicker.getDocumentAsync({
-                type: ['application/pdf', 'image/*'],
+                type: ["application/pdf", "image/*"],
             });
 
-            if (result.canceled === false && result.assets && result.assets[0]) {
-                const doc = {
-                    name: result.assets[0].name,
-                    uri: result.assets[0].uri,
-                };
-                setUploadedDocs(prev => ({ ...prev, [type]: doc }));
+            if (!result.canceled && result.assets && result.assets[0]) {
+                const asset = result.assets[0];
+                const sizeInMb = asset.size ? (asset.size / (1024 * 1024)).toFixed(1) : "0.5";
+                setUploadedDocs(prev => ({
+                    ...prev,
+                    [type]: {
+                        name: asset.name,
+                        size: `${sizeInMb} MB`,
+                        uri: asset.uri
+                    }
+                }));
             }
         } catch (err) {
-            Alert.alert('Error', 'Failed to pick document');
+            console.error(err);
         }
+    };
+
+    const isFormValid = () => {
+        if (!isOtpVerified || selectedTypes.length === 0) return false;
+        if (selectedTypes.includes('name') && !newName) return false;
+        if (selectedTypes.includes('dob') && !newDob) return false;
+        if (selectedTypes.includes('father') && !newFatherName) return false;
+        if (Object.keys(uploadedDocs).length === 0) return false;
+        return true;
     };
 
     const handleSubmit = () => {
@@ -117,6 +130,41 @@ export default function PANCorrectionScreen() {
         }, 2000);
     };
 
+    const renderUploadBox = (type: string) => {
+        const doc = uploadedDocs[type];
+        if (doc) {
+            return (
+                <View style={styles.uploadedBox}>
+                    <View style={styles.uploadedInfo}>
+                        <MaterialCommunityIcons name="file-document" size={28} color="#0A4DA3" />
+                        <View style={styles.uploadedTextContainer}>
+                            <Text style={styles.uploadedName} numberOfLines={1}>{doc.name}</Text>
+                            <Text style={styles.uploadedSize}>{doc.size}</Text>
+                            <View style={styles.row}>
+                                <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                                <Text style={styles.uploadedStatusText}>Uploaded Successfully</Text>
+                            </View>
+                        </View>
+                    </View>
+                    <TouchableOpacity onPress={() => setUploadedDocs(prev => {
+                        const next = { ...prev };
+                        delete next[type];
+                        return next;
+                    })}>
+                        <Text style={styles.removeText}>Remove & Re-upload</Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+        return (
+            <TouchableOpacity style={styles.uploadBox} onPress={() => handleFileUpload(type)}>
+                <Ionicons name="cloud-upload-outline" size={32} color="#0A4DA3" />
+                <Text style={styles.uploadText}>Upload Proof Document*</Text>
+                <Text style={styles.uploadNote}>PDF, JPG or PNG (2MB - 5MB)</Text>
+            </TouchableOpacity>
+        );
+    };
+
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
@@ -127,7 +175,10 @@ export default function PANCorrectionScreen() {
                     <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                         <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>PAN Correction</Text>
+                    <View style={styles.headerTitleContainer}>
+                        <Text style={styles.headerTitle}>PAN Correction</Text>
+                        <Text style={styles.headerSubtitle}>Update your PAN details securely</Text>
+                    </View>
                     <View style={styles.placeholder} />
                 </View>
 
@@ -135,33 +186,29 @@ export default function PANCorrectionScreen() {
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                     style={{ flex: 1 }}
                 >
-                    <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
                         {/* SECTION 1: Verification */}
-                        {!isOtpVerified && (
-                            <View style={styles.sectionCard}>
-                                <Text style={styles.sectionTitle}>Verify Identity</Text>
-                                <Text style={styles.sectionSubtitle}>Enter your details to proceed with correction</Text>
-
-                                <View style={styles.formSection}>
-                                    <Text style={styles.formLabel}>PAN Number</Text>
-                                    <View style={styles.formInput}>
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="Enter 10-digit PAN"
-                                            value={panNumber}
-                                            onChangeText={(t) => setPanNumber(t.toUpperCase())}
-                                            autoCapitalize="characters"
-                                            maxLength={10}
-                                            editable={!isOtpSent}
-                                        />
-                                    </View>
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Verification Details</Text>
+                            <View style={styles.card}>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>PAN Number*</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter 10-digit PAN"
+                                        value={panNumber}
+                                        onChangeText={(t) => setPanNumber(t.toUpperCase())}
+                                        autoCapitalize="characters"
+                                        maxLength={10}
+                                        editable={!isOtpVerified}
+                                    />
                                 </View>
 
-                                <View style={styles.formSection}>
-                                    <Text style={styles.formLabel}>Mobile Number</Text>
-                                    <View style={styles.formInput}>
+                                <View style={styles.inputGroup}>
+                                    <Text style={styles.label}>Registered Mobile Number*</Text>
+                                    <View style={styles.row}>
                                         <TextInput
-                                            style={styles.input}
+                                            style={[styles.input, { flex: 1 }]}
                                             placeholder="10-digit mobile number"
                                             value={mobileNumber}
                                             onChangeText={setMobileNumber}
@@ -169,226 +216,192 @@ export default function PANCorrectionScreen() {
                                             maxLength={10}
                                             editable={!isOtpSent}
                                         />
+                                        <TouchableOpacity
+                                            style={[styles.smallButton, (mobileNumber.length !== 10 || panNumber.length !== 10) && styles.disabledButton]}
+                                            onPress={handleSendOtp}
+                                            disabled={mobileNumber.length !== 10 || isOtpVerified}
+                                        >
+                                            <Text style={styles.smallButtonText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                        </TouchableOpacity>
                                     </View>
                                 </View>
 
                                 {isOtpSent && (
-                                    <View style={styles.otpSection}>
-                                        <Text style={styles.formLabel}>Enter OTP</Text>
-                                        <View style={styles.formInput}>
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>OTP Verification Field*</Text>
+                                        <View style={styles.row}>
                                             <TextInput
-                                                style={styles.input}
-                                                placeholder="6-digit OTP"
-                                                value={otp}
-                                                onChangeText={setOtp}
+                                                style={[styles.input, { flex: 1 }]}
+                                                placeholder="6 digit OTP"
                                                 keyboardType="numeric"
                                                 maxLength={6}
+                                                value={otp}
+                                                onChangeText={setOtp}
+                                                editable={!isOtpVerified}
                                             />
+                                            {!isOtpVerified ? (
+                                                <TouchableOpacity
+                                                    style={[styles.smallButton, otp.length !== 6 && styles.disabledButton]}
+                                                    onPress={handleVerifyOtp}
+                                                    disabled={otp.length !== 6 || isVerifying}
+                                                >
+                                                    {isVerifying ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.smallButtonText}>Verify</Text>}
+                                                </TouchableOpacity>
+                                            ) : (
+                                                <View style={styles.successBadge}>
+                                                    <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                                                    <Text style={styles.successBadgeText}>Verified</Text>
+                                                </View>
+                                            )}
                                         </View>
-                                        <TouchableOpacity onPress={handleSendOtp}>
-                                            <Text style={styles.resendText}>Resend OTP</Text>
-                                        </TouchableOpacity>
                                     </View>
                                 )}
-
-                                <TouchableOpacity
-                                    style={[styles.actionBtn, isVerifying && styles.btnDisabled]}
-                                    onPress={isOtpSent ? handleVerifyOtp : handleSendOtp}
-                                    disabled={isVerifying}
-                                >
-                                    <LinearGradient
-                                        colors={['#4CAF50', '#2E7D32']}
-                                        style={styles.btnGradient}
-                                    >
-                                        {isVerifying ? (
-                                            <ActivityIndicator color="#FFF" size="small" />
-                                        ) : (
-                                            <Text style={styles.btnText}>
-                                                {isOtpSent ? 'Verify OTP' : 'Send OTP'}
-                                            </Text>
-                                        )}
-                                    </LinearGradient>
-                                </TouchableOpacity>
                             </View>
-                        )}
+                        </View>
 
                         {/* SECTION 2: Correction Type Selection */}
                         {isOtpVerified && (
-                            <>
-                                <View style={styles.selectionSection}>
-                                    <Text style={styles.sectionTitle}>Select Update Types</Text>
-                                    <Text style={styles.sectionSubtitle}>Choose fields you wish to correct</Text>
+                            <View style={styles.section}>
+                                <Text style={styles.sectionTitle}>Select Update Type</Text>
+                                <View style={styles.typeGrid}>
+                                    {[
+                                        { id: 'name', label: 'Full Name', icon: 'account' },
+                                        { id: 'dob', label: 'Date of Birth', icon: 'calendar' },
+                                        { id: 'father', label: "Father's Name", icon: 'account-plus' },
+                                        { id: 'contact', label: 'Email/Mobile', icon: 'cellphone-link' },
+                                        { id: 'address', label: 'Address Update', icon: 'home' },
+                                        { id: 'photo', label: 'Photo Update', icon: 'camera' },
+                                    ].map((type) => (
+                                        <TouchableOpacity
+                                            key={type.id}
+                                            style={[
+                                                styles.typeCard,
+                                                selectedTypes.includes(type.id) && styles.typeCardSelected
+                                            ]}
+                                            onPress={() => toggleType(type.id)}
+                                        >
+                                            <MaterialCommunityIcons
+                                                name={type.icon as any}
+                                                size={28}
+                                                color={selectedTypes.includes(type.id) ? "#0A4DA3" : "#666"}
+                                            />
+                                            <Text style={[
+                                                styles.typeLabel,
+                                                selectedTypes.includes(type.id) && styles.typeLabelSelected
+                                            ]}>{type.label}</Text>
+                                            {selectedTypes.includes(type.id) && (
+                                                <View style={styles.checkBadge}>
+                                                    <Ionicons name="checkmark" size={10} color="#FFF" />
+                                                </View>
+                                            )}
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
 
-                                    <View style={styles.grid}>
-                                        {[
-                                            { id: 'name', label: 'Full Name', icon: 'person-outline' },
-                                            { id: 'dob', label: 'Date of Birth', icon: 'calendar-outline' },
-                                            { id: 'father', label: "Father's Name", icon: 'people-outline' },
-                                            { id: 'contact', label: 'Email/Mobile', icon: 'mail-outline' },
-                                        ].map((item) => (
-                                            <TouchableOpacity
-                                                key={item.id}
-                                                style={[
-                                                    styles.gridItem,
-                                                    selectedTypes.includes(item.id) && styles.gridItemActive
-                                                ]}
-                                                onPress={() => toggleType(item.id)}
-                                            >
-                                                <Ionicons
-                                                    name={item.icon as any}
-                                                    size={24}
-                                                    color={selectedTypes.includes(item.id) ? '#4CAF50' : '#666'}
+                        {/* SECTION 3: Dynamic Forms */}
+                        {selectedTypes.length > 0 && isOtpVerified && (
+                            <View style={styles.section}>
+                                <Text style={styles.dynamicFormTitle}>Update Details</Text>
+                                <View style={styles.card}>
+                                    {selectedTypes.includes('name') && (
+                                        <View style={{ marginBottom: 20 }}>
+                                            <Text style={styles.formSubtitle}>🔹Name Update</Text>
+                                            <View style={styles.inputGroup}>
+                                                <Text style={styles.label}>New Full Name*</Text>
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="Enter correct full name"
+                                                    value={newName}
+                                                    onChangeText={setNewName}
                                                 />
-                                                <Text style={[
-                                                    styles.gridLabel,
-                                                    selectedTypes.includes(item.id) && styles.gridLabelActive
-                                                ]}>
-                                                    {item.label}
-                                                </Text>
-                                                {selectedTypes.includes(item.id) && (
-                                                    <View style={styles.checkBadge}>
-                                                        <Ionicons name="checkmark" size={12} color="#FFF" />
-                                                    </View>
-                                                )}
-                                            </TouchableOpacity>
-                                        ))}
+                                            </View>
+                                            <View style={styles.noteBox}>
+                                                <Text style={styles.noteText}>📌 Mandatory: Valid proof showing correct updated name</Text>
+                                            </View>
+                                        </View>
+                                    )}
+
+                                    {selectedTypes.includes('dob') && (
+                                        <View style={{ marginBottom: 20 }}>
+                                            <Text style={styles.formSubtitle}>🔹Date of Birth Update</Text>
+                                            <View style={styles.inputGroup}>
+                                                <Text style={styles.label}>Correct Date of Birth*</Text>
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="DD/MM/YYYY"
+                                                    value={newDob}
+                                                    onChangeText={setNewDob}
+                                                    keyboardType="numeric"
+                                                    maxLength={10}
+                                                />
+                                            </View>
+                                            <View style={styles.noteBox}>
+                                                <Text style={styles.noteText}>📌 Format: DD/MM/YYYY</Text>
+                                            </View>
+                                        </View>
+                                    )}
+
+                                    {selectedTypes.includes('father') && (
+                                        <View style={{ marginBottom: 20 }}>
+                                            <Text style={styles.formSubtitle}>🔹Father's Name Update</Text>
+                                            <View style={styles.inputGroup}>
+                                                <Text style={styles.label}>New Father's Name*</Text>
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="Enter correct father's name"
+                                                    value={newFatherName}
+                                                    onChangeText={setNewFatherName}
+                                                />
+                                            </View>
+                                        </View>
+                                    )}
+
+                                    <View style={styles.inputGroup}>
+                                        <Text style={styles.label}>Supporting Proof Documents*</Text>
+                                        {renderUploadBox("mainProof")}
                                     </View>
                                 </View>
-
-                                {/* SECTION 3: Dynamic Forms */}
-                                {selectedTypes.length > 0 && (
-                                    <View style={styles.formCard}>
-                                        <Text style={styles.formCardTitle}>Correction Details</Text>
-
-                                        {selectedTypes.includes('name') && (
-                                            <View style={styles.formSection}>
-                                                <Text style={styles.formLabel}>Correct Full Name</Text>
-                                                <View style={styles.formInput}>
-                                                    <TextInput
-                                                        style={styles.input}
-                                                        placeholder="Enter correct full name"
-                                                        value={newName}
-                                                        onChangeText={setNewName}
-                                                    />
-                                                </View>
-                                            </View>
-                                        )}
-
-                                        {selectedTypes.includes('dob') && (
-                                            <View style={styles.formSection}>
-                                                <Text style={styles.formLabel}>Correct Date of Birth</Text>
-                                                <View style={styles.formInput}>
-                                                    <TextInput
-                                                        style={styles.input}
-                                                        placeholder="DD/MM/YYYY"
-                                                        value={newDob}
-                                                        onChangeText={setNewDob}
-                                                        keyboardType="numeric"
-                                                        maxLength={10}
-                                                    />
-                                                </View>
-                                            </View>
-                                        )}
-
-                                        {selectedTypes.includes('father') && (
-                                            <View style={styles.formSection}>
-                                                <Text style={styles.formLabel}>Correct Father's Name</Text>
-                                                <View style={styles.formInput}>
-                                                    <TextInput
-                                                        style={styles.input}
-                                                        placeholder="Enter father's name"
-                                                        value={newFatherName}
-                                                        onChangeText={setNewFatherName}
-                                                    />
-                                                </View>
-                                            </View>
-                                        )}
-                                    </View>
-                                )}
-
-                                {/* SECTION 4: Document Uploads */}
-                                {selectedTypes.length > 0 && (
-                                    <View style={styles.docsSection}>
-                                        <Text style={styles.sectionTitle}>Supporting Documents</Text>
-                                        <Text style={styles.sectionSubtitle}>Upload proofs for the corrections</Text>
-
-                                        <View style={styles.docCard}>
-                                            <View style={styles.docInfo}>
-                                                <Text style={styles.docTitle}>Identity Proof</Text>
-                                                <Text style={styles.docSub}>Aadhaar/Passport/DL</Text>
-                                            </View>
-                                            <TouchableOpacity
-                                                style={[styles.uploadBtn, uploadedDocs['idProof'] && styles.uploadBtnDone]}
-                                                onPress={() => pickDocument('idProof')}
-                                            >
-                                                <Ionicons
-                                                    name={uploadedDocs['idProof'] ? "checkmark-circle" : "cloud-upload-outline"}
-                                                    size={20}
-                                                    color={uploadedDocs['idProof'] ? "#4CAF50" : "#2196F3"}
-                                                />
-                                                <Text style={[styles.uploadBtnText, uploadedDocs['idProof'] && styles.uploadBtnTextDone]}>
-                                                    {uploadedDocs['idProof'] ? 'Uploaded' : 'Upload'}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
-
-                                        <View style={styles.docCard}>
-                                            <View style={styles.docInfo}>
-                                                <Text style={styles.docTitle}>Correction Proof</Text>
-                                                <Text style={styles.docSub}>Birth Cert/Gazette/Marriage Cert</Text>
-                                            </View>
-                                            <TouchableOpacity
-                                                style={[styles.uploadBtn, uploadedDocs['proof'] && styles.uploadBtnDone]}
-                                                onPress={() => pickDocument('proof')}
-                                            >
-                                                <Ionicons
-                                                    name={uploadedDocs['proof'] ? "checkmark-circle" : "cloud-upload-outline"}
-                                                    size={20}
-                                                    color={uploadedDocs['proof'] ? "#4CAF50" : "#2196F3"}
-                                                />
-                                                <Text style={[styles.uploadBtnText, uploadedDocs['proof'] && styles.uploadBtnTextDone]}>
-                                                    {uploadedDocs['proof'] ? 'Uploaded' : 'Upload'}
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
-
-                                        <TouchableOpacity
-                                            style={[styles.submitBtn, isSubmitting && styles.btnDisabled]}
-                                            onPress={handleSubmit}
-                                            disabled={isSubmitting}
-                                        >
-                                            <LinearGradient
-                                                colors={['#4CAF50', '#2E7D32']}
-                                                style={styles.btnGradient}
-                                            >
-                                                {isSubmitting ? (
-                                                    <ActivityIndicator color="#FFF" size="small" />
-                                                ) : (
-                                                    <Text style={styles.btnText}>Submit Correction</Text>
-                                                )}
-                                            </LinearGradient>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
-                            </>
+                            </View>
                         )}
+
+                        <View style={styles.disclaimerBox}>
+                            <Text style={styles.disclaimerText}>
+                                "Final verification may require official document validation."
+                            </Text>
+                        </View>
+
+                        <View style={{ height: 100 }} />
                     </ScrollView>
                 </KeyboardAvoidingView>
+
+                <View style={styles.footer}>
+                    <TouchableOpacity
+                        style={[styles.continueButton, !isFormValid() && styles.continueButtonDisabled]}
+                        disabled={!isFormValid() || isSubmitting}
+                        onPress={handleSubmit}
+                    >
+                        {isSubmitting ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.continueButtonText}>Submit Correction</Text>}
+                    </TouchableOpacity>
+                </View>
             </SafeAreaView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#F8F9FA' },
+    container: { flex: 1, backgroundColor: "#F5F7FA" },
     safeArea: { flex: 1 },
     header: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         paddingHorizontal: 20,
-        paddingTop: 50,
         paddingBottom: 20,
-        backgroundColor: '#FFF',
+        backgroundColor: "#FFF",
+        borderBottomWidth: 1,
+        borderBottomColor: "#EEE",
+        paddingTop: 50,
     },
     backButton: {
         width: 40,
@@ -398,119 +411,144 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#1A1A1A',
-        textAlign: 'center',
-        flex: 1,
-    },
+    headerTitleContainer: { flex: 1, alignItems: 'center' },
+    headerTitle: { fontSize: 20, fontWeight: "bold", color: "#1A1A1A", textAlign: 'center' },
+    headerSubtitle: { fontSize: 13, color: "#666", textAlign: 'center' },
     placeholder: { width: 40 },
-    scrollContent: { padding: 20 },
-
-    sectionCard: {
-        backgroundColor: '#FFF',
-        borderRadius: 20,
-        padding: 24,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-    },
-    sectionTitle: { fontSize: 20, fontWeight: '800', color: '#1A1A1A', marginBottom: 4 },
-    sectionSubtitle: { fontSize: 13, color: '#6B7280', marginBottom: 24 },
-
-    formSection: { marginBottom: 20 },
-    formLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 },
-    formInput: {
-        borderWidth: 1.5,
-        borderColor: '#E5E7EB',
-        borderRadius: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        backgroundColor: '#F9FAFB',
-    },
-    input: { fontSize: 15, color: '#111827', fontWeight: '500' },
-
-    otpSection: { marginTop: 10, paddingBottom: 10 },
-    resendText: {
-        fontSize: 13,
-        color: '#2196F3',
-        fontWeight: '600',
-        marginTop: 10,
-        textAlign: 'right',
-    },
-
-    actionBtn: { borderRadius: 12, overflow: 'hidden', marginTop: 10 },
-    submitBtn: { borderRadius: 12, overflow: 'hidden', marginTop: 30 },
-    btnGradient: {
-        paddingVertical: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    btnText: { fontSize: 16, fontWeight: '700', color: '#FFF' },
-    btnDisabled: { opacity: 0.7 },
-
-    selectionSection: { marginBottom: 24 },
-    grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16 },
-    gridItem: {
-        width: '48%',
-        backgroundColor: '#FFF',
+    scrollContainer: { padding: 20 },
+    section: { marginBottom: 25 },
+    sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#2E7D32", marginBottom: 15 },
+    card: {
+        backgroundColor: "#FFF",
         borderRadius: 16,
-        padding: 16,
-        alignItems: 'center',
-        borderWidth: 1.5,
-        borderColor: '#E5E7EB',
-        position: 'relative',
+        padding: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
     },
-    gridItemActive: { borderColor: '#4CAF50', backgroundColor: '#F0FDF4' },
-    gridLabel: { fontSize: 13, fontWeight: '600', color: '#4B5563', marginTop: 10 },
-    gridLabelActive: { color: '#15803D' },
-    checkBadge: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        backgroundColor: '#4CAF50',
+    inputGroup: { marginBottom: 15 },
+    label: { fontSize: 13, fontWeight: "600", color: "#333", marginBottom: 8 },
+    input: {
+        backgroundColor: "#F8FAFC",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
         borderRadius: 10,
-        width: 18,
-        height: 18,
-        alignItems: 'center',
-        justifyContent: 'center',
+        padding: 12,
+        fontSize: 15,
+        color: "#1A1A1A",
     },
-
-    formCard: {
-        backgroundColor: '#FFF',
-        borderRadius: 20,
-        padding: 24,
-        marginBottom: 20,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
+    row: { flexDirection: "row", alignItems: "center", gap: 10 },
+    smallButton: {
+        backgroundColor: "#0A4DA3",
+        paddingHorizontal: 15,
+        paddingVertical: 12,
+        borderRadius: 10,
+        minWidth: 80,
+        alignItems: "center",
     },
-    formCardTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937', marginBottom: 20 },
-
-    docsSection: { marginBottom: 30 },
-    docCard: {
-        backgroundColor: '#FFF',
-        borderRadius: 16,
-        padding: 16,
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-    },
-    docInfo: { flex: 1 },
-    docTitle: { fontSize: 14, fontWeight: '700', color: '#111827' },
-    docSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-    uploadBtn: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#EFF6FF',
-        paddingHorizontal: 12,
+    smallButtonText: { color: "#FFF", fontSize: 13, fontWeight: "bold" },
+    disabledButton: { backgroundColor: "#CBD5E1" },
+    successBadge: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#E8F5E9",
+        paddingHorizontal: 10,
         paddingVertical: 8,
         borderRadius: 8,
-        gap: 6,
+        gap: 5,
     },
-    uploadBtnDone: { backgroundColor: '#F0FDF4' },
-    uploadBtnText: { fontSize: 12, color: '#2563EB', fontWeight: '700' },
-    uploadBtnTextDone: { color: '#15803D' },
+    successBadgeText: { color: "#2E7D32", fontSize: 13, fontWeight: "600" },
+    typeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+    typeCard: {
+        width: "31%",
+        aspectRatio: 1,
+        backgroundColor: "#FFF",
+        borderRadius: 16,
+        padding: 10,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 2,
+        borderColor: "transparent",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+        elevation: 2,
+        position: 'relative',
+    },
+    typeCardSelected: { borderColor: "#0A4DA3", backgroundColor: "#F0F7FF" },
+    typeLabel: { fontSize: 11, color: "#666", marginTop: 8, textAlign: "center" },
+    typeLabelSelected: { color: "#0A4DA3", fontWeight: "bold" },
+    checkBadge: {
+        position: 'absolute',
+        top: 6,
+        right: 6,
+        backgroundColor: '#0A4DA3',
+        borderRadius: 8,
+        width: 16,
+        height: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    dynamicFormTitle: { fontSize: 18, fontWeight: "bold", color: "#0A4DA3", marginBottom: 15 },
+    formSubtitle: { fontSize: 16, fontWeight: "bold", color: "#333", marginBottom: 15 },
+    uploadBox: {
+        borderWidth: 2,
+        borderStyle: "dashed",
+        borderColor: "#CBD5E1",
+        borderRadius: 12,
+        padding: 20,
+        alignItems: "center",
+        backgroundColor: "#F8FAFC",
+    },
+    uploadText: { fontSize: 14, fontWeight: "600", color: "#0A4DA3", marginTop: 5 },
+    uploadNote: { fontSize: 11, color: "#999", marginTop: 2 },
+    uploadedBox: {
+        backgroundColor: "#F0F7FF",
+        borderRadius: 12,
+        padding: 15,
+        borderWidth: 1,
+        borderColor: "#BBDEFB",
+    },
+    uploadedInfo: { flexDirection: "row", alignItems: "center", gap: 12 },
+    uploadedTextContainer: { flex: 1 },
+    uploadedName: { fontSize: 14, fontWeight: "600", color: "#1A1A1A" },
+    uploadedStatusText: { fontSize: 13, color: "#2E7D32", fontWeight: "600", marginTop: 2 },
+    uploadedSize: { fontSize: 11, color: "#666", marginTop: 2 },
+    removeText: { fontSize: 12, color: "#D32F2F", fontWeight: "600", marginTop: 10, textAlign: "right" },
+    disclaimerBox: {
+        backgroundColor: "#F8FAFC",
+        padding: 15,
+        marginHorizontal: 0,
+        marginTop: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+    },
+    disclaimerText: { fontSize: 12, color: "#666", textAlign: "center", fontStyle: "italic" },
+    noteBox: {
+        backgroundColor: "#FFF7ED",
+        padding: 10,
+        borderRadius: 8,
+        borderLeftWidth: 4,
+        borderLeftColor: "#F57C00",
+        marginTop: 10
+    },
+    noteText: { fontSize: 12, color: "#C2410C", fontWeight: "500", marginBottom: 2 },
+    footer: {
+        padding: 20,
+        backgroundColor: "#FFF",
+        borderTopWidth: 1,
+        borderTopColor: "#EEE",
+    },
+    continueButton: {
+        backgroundColor: "#0A4DA3",
+        padding: 16,
+        borderRadius: 14,
+        alignItems: "center",
+    },
+    continueButtonDisabled: { backgroundColor: "#CBD5E1", opacity: 0.7 },
+    continueButtonText: { color: "#FFF", fontSize: 16, fontWeight: "bold" },
 });

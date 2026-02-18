@@ -12,7 +12,7 @@ exports.addBankAccount = async (req, res) => {
       linked_mobile,
     } = req.body;
 
-    await pool.query(
+    const [result] = await pool.query(
       `INSERT INTO user_bank_accounts
       (user_id, bank_id, account_number, account_holder_name, ifsc_code, linked_mobile)
       VALUES (?, ?, ?, ?, ?, ?)`,
@@ -26,7 +26,10 @@ exports.addBankAccount = async (req, res) => {
       ]
     );
 
-    res.json({ message: "Bank account added successfully" });
+    res.json({
+      message: "Bank account added successfully",
+      account_id: result.insertId
+    });
   } catch (err) {
     console.error("Add bank account error:", err.message);
     res.status(500).json({ message: err.message });

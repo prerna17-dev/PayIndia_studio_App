@@ -1,0 +1,26 @@
+# Logs
+Recharge_backend/src/logs/*.log
+*.log
+
+# Dependencies
+node_modules/
+Recharge_backend/node_modules/
+Recharge_frontend/node_modules/
+
+# Environment
+.env
+Recharge_backend/.env
+Recharge_frontend/.env
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Build/Dist
+Recharge_frontend/.expo/
+Recharge_frontend/dist/
+Recharge_frontend/build/
+Recharge_frontend/web-build/
+
+# Temp
+.tmp/
