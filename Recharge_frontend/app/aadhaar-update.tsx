@@ -201,6 +201,7 @@ export default function AadhaarUpdateRedesign() {
                         <Text style={styles.headerTitle}>Aadhaar Update</Text>
                         <Text style={styles.headerSubtitle}>Update your Aadhaar details securely</Text>
                     </View>
+                    <View style={styles.placeholder} />
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContainer}>
@@ -540,16 +541,25 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: "row",
         alignItems: "center",
-        padding: 20,
+        paddingHorizontal: 20,
+        paddingBottom: 20,
         backgroundColor: "#FFF",
         borderBottomWidth: 1,
         borderBottomColor: "#EEE",
         paddingTop: 50,
     },
-    backButton: { marginRight: 15 },
-    headerTitleContainer: { flex: 1 },
-    headerTitle: { fontSize: 20, fontWeight: "bold", color: "#1A1A1A" },
-    headerSubtitle: { fontSize: 13, color: "#666" },
+    backButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#F3F4F6',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    headerTitleContainer: { flex: 1, alignItems: 'center' },
+    headerTitle: { fontSize: 20, fontWeight: "bold", color: "#1A1A1A", textAlign: 'center' },
+    headerSubtitle: { fontSize: 13, color: "#666", textAlign: 'center' },
+    placeholder: { width: 40 },
     scrollContainer: { padding: 20 },
     section: { marginBottom: 25 },
     sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#2E7D32", marginBottom: 15 },

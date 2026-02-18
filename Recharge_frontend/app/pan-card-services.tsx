@@ -30,10 +30,12 @@ export default function PANCardServicesScreen() {
         return () => backHandler.remove();
     }, []);
 
+    // Handle New PAN
     const handleNewPAN = () => {
         router.push('/new-pan');
     };
 
+    // Handle PAN Correction
     const handlePANCorrection = () => {
         router.push('/pan-correction');
     };
@@ -61,7 +63,7 @@ export default function PANCardServicesScreen() {
                     contentContainerStyle={styles.scrollContent}
                 >
                     {/* PAN Services Info Card */}
-                    <View style={styles.infoCard}>
+                    <View style={styles.panInfoCard}>
                         <View style={styles.blueLeftBorder} />
                         <View style={styles.cardContent}>
                             <View style={styles.cardHeader}>
@@ -73,7 +75,7 @@ export default function PANCardServicesScreen() {
                                     />
                                 </View>
                                 <View style={styles.titleSection}>
-                                    <Text style={styles.cardMainTitle}>Income Tax Department</Text>
+                                    <Text style={styles.cardTitle}>Income Tax Department</Text>
                                     <Text style={styles.cardSubtitle}>
                                         Authorized PAN Service Provider
                                     </Text>
@@ -158,41 +160,41 @@ export default function PANCardServicesScreen() {
                     <View style={styles.whyChooseCard}>
                         <View style={styles.whyChooseHeader}>
                             <Ionicons name="information-circle" size={24} color="#0A4DA3" />
-                            <Text style={styles.whyChooseTitle}>Required Documents</Text>
+                            <Text style={styles.whyChooseTitle}>Why Choose Us?</Text>
                         </View>
 
                         <View style={styles.featuresGrid}>
                             <View style={styles.featureRow}>
                                 <View style={styles.feature}>
-                                    <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Aadhaar Card (आधार कार्ड)</Text>
+                                    <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                                    <Text style={styles.featureText}>Secure Handling</Text>
                                 </View>
                                 <View style={styles.feature}>
-                                    <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Address Proof (पत्त्याचा पुरावा)</Text>
+                                    <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                                    <Text style={styles.featureText}>Verified Process</Text>
                                 </View>
                             </View>
                             <View style={styles.featureRow}>
                                 <View style={styles.feature}>
-                                    <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Passport Photo (फोटो)</Text>
+                                    <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                                    <Text style={styles.featureText}>Pan India Support</Text>
                                 </View>
                                 <View style={styles.feature}>
-                                    <MaterialCommunityIcons name="check-circle" size={18} color="#F57C00" />
-                                    <Text style={styles.featureText}>DOB Proof (जन्मतारीख पुरावा)</Text>
+                                    <MaterialCommunityIcons name="check-circle" size={20} color="#F57C00" />
+                                    <Text style={styles.featureText}>Fast Processing</Text>
                                 </View>
                             </View>
                         </View>
                     </View>
 
-                    {/* Note Card */}
+                    {/* Disclaimer Note */}
                     <View style={styles.noteCard}>
                         <View style={styles.noteHeader}>
                             <Ionicons name="alert-circle" size={20} color="#F57C00" />
                             <Text style={styles.noteTitle}>Note:</Text>
                         </View>
                         <Text style={styles.noteText}>
-                            PAN allotement usually takes 15-20 working days. Aadhaar linking is mandatory.
+                            PAN allotment usually takes 15-20 working days. Aadhaar linking is mandatory.
                         </Text>
                     </View>
 
@@ -249,8 +251,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
 
-    // Info Card with Blue Left Border
-    infoCard: {
+    // Info Card
+    panInfoCard: {
         flexDirection: 'row',
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
@@ -287,7 +289,7 @@ const styles = StyleSheet.create({
     titleSection: {
         flex: 1,
     },
-    cardMainTitle: {
+    cardTitle: {
         fontSize: 15,
         fontWeight: 'bold',
         color: '#1A1A1A',
@@ -408,7 +410,7 @@ const styles = StyleSheet.create({
         color: '#F57C00',
     },
 
-    // Required Documents
+    // Why Choose Us
     whyChooseCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
