@@ -12,9 +12,8 @@ import {
     View,
 } from 'react-native';
 
-export default function AadhaarServicesScreen() {
+export default function DeathCertificateServicesScreen() {
     const router = useRouter();
-
     const { from } = useLocalSearchParams();
     const backPath = from === 'more-seva' ? '/more-seva' : '/(tabs)/explore';
 
@@ -33,14 +32,8 @@ export default function AadhaarServicesScreen() {
         return () => backHandler.remove();
     }, [backPath]);
 
-    // Handle New Aadhaar
-    const handleNewAadhaar = () => {
-        router.push('/new-aadhaar');
-    };
-
-    // Handle Aadhaar Update
-    const handleAadhaarUpdate = () => {
-        router.push('/update-aadhaar');
+    const handleStartApplication = () => {
+        router.push('/new-death-certificate');
     };
 
     return (
@@ -55,8 +48,8 @@ export default function AadhaarServicesScreen() {
                         <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
-                        <Text style={styles.headerTitle}>Aadhaar Enrollment & Update</Text>
-                        <Text style={styles.headerSubtitle}>Apply for new Aadhaar or update details</Text>
+                        <Text style={styles.headerTitle}>Death Certificate</Text>
+                        <Text style={styles.headerSubtitle}>मृत्यू प्रमाणपत्र</Text>
                     </View>
                     <View style={styles.placeholder} />
                 </View>
@@ -65,143 +58,86 @@ export default function AadhaarServicesScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
                 >
-                    {/* Aadhaar Services Info Card */}
-                    <View style={styles.uidaiCard}>
+                    {/* Authority Information Card */}
+                    <View style={styles.infoCard}>
                         <View style={styles.blueLeftBorder} />
                         <View style={styles.cardContent}>
                             <View style={styles.cardHeader}>
                                 <View style={styles.iconCircle}>
                                     <MaterialCommunityIcons
-                                        name="card-account-details"
+                                        name="office-building"
                                         size={28}
-                                        color="#0A4DA3"
+                                        color="#0D47A1"
                                     />
                                 </View>
                                 <View style={styles.titleSection}>
-                                    <Text style={styles.cardTitle}>Aadhaar Services</Text>
+                                    <Text style={styles.cardTitle}>Civil Registration System</Text>
                                     <Text style={styles.cardSubtitle}>
-                                        Authorized UIDAI Support Center
+                                        Authorized Support for Death Registration
                                     </Text>
                                 </View>
                             </View>
 
-                            {/* Trust Badges */}
+                            {/* Trust Badges / Features */}
                             <View style={styles.badgesRow}>
                                 <View style={styles.badge}>
                                     <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
-                                    <Text style={styles.badgeText}>Secure</Text>
+                                    <Text style={styles.badgeText}>Secure Application</Text>
                                 </View>
                                 <View style={styles.badge}>
                                     <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
-                                    <Text style={styles.badgeText}>OTP Verified</Text>
+                                    <Text style={styles.badgeText}>Official Record Registration</Text>
                                 </View>
                                 <View style={styles.badge}>
                                     <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
                                     <Text style={styles.badgeText}>Document Assisted</Text>
                                 </View>
+                                <View style={styles.badge}>
+                                    <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                                    <Text style={styles.badgeText}>Municipal Authority Processing</Text>
+                                </View>
                             </View>
                         </View>
                     </View>
 
-                    {/* New Aadhaar Enrollment Card */}
+                    {/* Service Card - New Death Certificate */}
                     <View style={styles.serviceCard}>
-                        <View style={styles.greenGradient}>
+                        <View style={styles.blueGradient}>
                             <View style={styles.serviceHeaderRow}>
                                 <View style={styles.serviceIcon}>
                                     <MaterialCommunityIcons
-                                        name="card-plus"
+                                        name="file-certificate"
                                         size={28}
-                                        color="#2E7D32"
+                                        color="#0D47A1"
                                     />
                                 </View>
                                 <View style={styles.serviceContent}>
-                                    <Text style={styles.serviceTitle}>New Aadhaar Enrollment</Text>
-                                    <Text style={styles.serviceHindi}>नवीन आधार नोंदणी</Text>
+                                    <Text style={styles.serviceTitle}>New Death Certificate</Text>
+                                    <Text style={styles.serviceHindi}>नवीन मृत्यू प्रमाणपत्र</Text>
                                 </View>
                             </View>
 
                             <View style={styles.serviceBottomRow}>
-                                <Text style={styles.serviceDesc}>Apply for new Aadhaar registration</Text>
+                                <Text style={styles.serviceDesc}>Register death and apply for official certificate</Text>
                                 <TouchableOpacity
-                                    style={styles.greenButton}
-                                    onPress={handleNewAadhaar}
+                                    style={styles.blueButton}
+                                    onPress={handleStartApplication}
                                 >
-                                    <Text style={styles.buttonTextGreen}>Enroll Now</Text>
-                                    <Ionicons name="arrow-forward" size={16} color="#2E7D32" />
+                                    <Text style={styles.buttonTextBlue}>Start Application</Text>
+                                    <Ionicons name="arrow-forward" size={16} color="#0D47A1" />
                                 </TouchableOpacity>
                             </View>
                         </View>
                     </View>
 
-                    {/* Aadhaar Update Services Card */}
-                    <View style={styles.serviceCard}>
-                        <View style={styles.orangeGradient}>
-                            <View style={styles.serviceHeaderRow}>
-                                <View style={styles.serviceIcon}>
-                                    <MaterialCommunityIcons
-                                        name="pencil"
-                                        size={28}
-                                        color="#F57C00"
-                                    />
-                                </View>
-                                <View style={styles.serviceContent}>
-                                    <Text style={styles.serviceTitle}>Aadhaar Update Services</Text>
-                                    <Text style={styles.serviceHindi}>नाव / पत्ता / मोबाईल / जन्मतारीख बदल</Text>
-                                </View>
-                            </View>
-
-                            <View style={styles.serviceBottomRow}>
-                                <Text style={styles.serviceDesc}>Update details securely</Text>
-                                <TouchableOpacity
-                                    style={styles.orangeButton}
-                                    onPress={handleAadhaarUpdate}
-                                >
-                                    <Text style={styles.buttonTextOrange}>Update Details</Text>
-                                    <Ionicons name="arrow-forward" size={16} color="#F57C00" />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Why Choose Us Section */}
-                    <View style={styles.whyChooseCard}>
-                        <View style={styles.whyChooseHeader}>
-                            <Ionicons name="information-circle" size={24} color="#0A4DA3" />
-                            <Text style={styles.whyChooseTitle}>Why Choose Us?</Text>
-                        </View>
-
-                        <View style={styles.featuresGrid}>
-                            <View style={styles.featureRow}>
-                                <View style={styles.feature}>
-                                    <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Secure Data Handling</Text>
-                                </View>
-                                <View style={styles.feature}>
-                                    <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
-                                    <Text style={styles.featureText}>OTP Based Verification</Text>
-                                </View>
-                            </View>
-                            <View style={styles.featureRow}>
-                                <View style={styles.feature}>
-                                    <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Document Encryption</Text>
-                                </View>
-                                <View style={styles.feature}>
-                                    <MaterialCommunityIcons name="check-circle" size={20} color="#F57C00" />
-                                    <Text style={styles.featureText}>Pan India Support</Text>
-                                </View>
-                            </View>
-                        </View>
-                    </View>
-
-                    {/* Disclaimer Note */}
+                    {/* Important Note Section */}
                     <View style={styles.noteCard}>
                         <View style={styles.noteHeader}>
-                            <Ionicons name="alert-circle" size={20} color="#F57C00" />
-                            <Text style={styles.noteTitle}>Note:</Text>
+                            <Ionicons name="information-circle" size={20} color="#EF6C00" />
+                            <Text style={styles.noteTitle}>Important Note:</Text>
                         </View>
                         <Text style={styles.noteText}>
-                            Final biometric verification may require visit to Aadhaar Seva Kendra.
+                            Death certificate issuance is subject to verification by municipal or local authority. Additional inquiry may be conducted if required.
                         </Text>
                     </View>
 
@@ -251,15 +187,12 @@ const styles = StyleSheet.create({
     placeholder: {
         width: 34,
     },
-
     scrollContent: {
         paddingTop: 12,
         paddingBottom: 20,
         paddingHorizontal: 20,
     },
-
-    // UIDAI Card with Blue Left Border
-    uidaiCard: {
+    infoCard: {
         flexDirection: 'row',
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
@@ -273,7 +206,7 @@ const styles = StyleSheet.create({
     },
     blueLeftBorder: {
         width: 4,
-        backgroundColor: '#0A4DA3',
+        backgroundColor: '#0D47A1',
     },
     cardContent: {
         flex: 1,
@@ -321,8 +254,6 @@ const styles = StyleSheet.create({
         color: '#666',
         fontWeight: '500',
     },
-
-    // Service Cards
     serviceCard: {
         borderRadius: 16,
         marginBottom: 12,
@@ -333,12 +264,8 @@ const styles = StyleSheet.create({
         elevation: 2,
         overflow: 'hidden',
     },
-    greenGradient: {
-        backgroundColor: '#F1FBF4',
-        padding: 16,
-    },
-    orangeGradient: {
-        backgroundColor: '#FFF9F2',
+    blueGradient: {
+        backgroundColor: '#F1F8FE',
         padding: 16,
     },
     serviceHeaderRow: {
@@ -384,100 +311,39 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#777',
     },
-    greenButton: {
+    blueButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#E8F5E9',
+        backgroundColor: '#E3F2FD',
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#C8E6C9',
+        borderColor: '#BBDEFB',
     },
-    orangeButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-        backgroundColor: '#FFF3E0',
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#FFE0B2',
-    },
-    buttonTextGreen: {
+    buttonTextBlue: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#2E7D32',
+        color: '#0D47A1',
     },
-    buttonTextOrange: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#F57C00',
-    },
-
-    // Why Choose Us
-    whyChooseCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 5,
-        elevation: 2,
-    },
-    whyChooseHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 12,
-    },
-    whyChooseTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
-    featuresGrid: {
-        gap: 8,
-    },
-    featureRow: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    feature: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 6,
-    },
-    featureText: {
-        fontSize: 12,
-        color: '#666',
-        fontWeight: '500',
-        flex: 1,
-    },
-
-    // Note Card
     noteCard: {
-        backgroundColor: '#FFF9E6',
+        backgroundColor: '#FFF8E1',
         borderRadius: 12,
-        padding: 12,
+        padding: 16,
         borderWidth: 1,
-        borderColor: '#FFE0B2',
+        borderColor: '#FFECB3',
     },
     noteHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        marginBottom: 4,
+        gap: 8,
+        marginBottom: 8,
     },
     noteTitle: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#1A1A1A',
+        color: '#EF6C00',
     },
     noteText: {
         fontSize: 12,

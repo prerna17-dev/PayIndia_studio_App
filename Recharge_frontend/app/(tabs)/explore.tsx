@@ -118,6 +118,54 @@ export default function HomeScreen({
       <StatusBar style="dark" />
 
       <SafeAreaView style={styles.safeArea}>
+        {/* Fixed Header Row - Stays at top while scrolling */}
+        <LinearGradient
+          colors={["#E1F5FE", "#B3E5FC", "#81D4FA", "#4FC3F7"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 4, y: 4 }}
+          style={styles.fixedHeader}
+        >
+          <View style={styles.topRow}>
+            {/* Left Side - Logo and App Name */}
+            <View style={styles.leftSection}>
+              <Image
+                source={require("../../assets/images/logo.png")}
+                style={styles.headerLogo}
+                resizeMode="contain"
+              />
+              <Text style={styles.appNameHeader}>PayIndia</Text>
+            </View>
+
+            {/* Right Icons - Notification & Profile */}
+            <View style={styles.headerIcons}>
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={() => router.push("/notifications")}
+              >
+                <View style={styles.iconWrapper}>
+                  <Ionicons
+                    name="notifications-outline"
+                    size={22}
+                    color="#1976D2"
+                  />
+                  {hasNewNotifications && (
+                    <View style={styles.notificationDot} />
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.headerIconButton}
+                onPress={() => router.push("/account")}
+              >
+                <View style={[styles.iconWrapper, styles.profileWrapper]}>
+                  <Ionicons name="person" size={22} color="#1976D2" />
+                </View>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
+
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Header Section - Blue Gradient with Mountains & Trees */}
           <LinearGradient
@@ -128,45 +176,6 @@ export default function HomeScreen({
           >
             {/* Decorative Wave */}
             <View style={styles.decorativeWave} />
-
-            {/* Top Row - App Name on Left, Notification & Profile on Right */}
-            <View style={styles.topRow}>
-              {/* Left Side - Logo and App Name */}
-              <View style={styles.leftSection}>
-                <Image
-                  source={require("../../assets/images/logo.png")}
-                  style={styles.headerLogo}
-                  resizeMode="contain"
-                />
-                <Text style={styles.appNameHeader}>PayIndia</Text>
-              </View>
-
-              {/* Right Icons - Notification & Profile */}
-              <View style={styles.headerIcons}>
-                <TouchableOpacity
-                  style={styles.headerIconButton}
-                  onPress={() => router.push("/notifications")}
-                >
-                  <View style={styles.iconWrapper}>
-                    <Ionicons
-                      name="notifications-outline"
-                      size={22}
-                      color="#1976D2"
-                    />
-                    {hasNewNotifications && <View style={styles.notificationDot} />}
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.headerIconButton}
-                  onPress={() => router.push("/account")}
-                >
-                  <View style={[styles.iconWrapper, styles.profileWrapper]}>
-                    <Ionicons name="person" size={22} color="#1976D2" />
-                  </View>
-                </TouchableOpacity>
-              </View>
-            </View>
 
             {/* Centered Tagline */}
             <View style={styles.taglineSection}>
@@ -282,7 +291,7 @@ export default function HomeScreen({
                   {/* Aadhar Update */}
                   <TouchableOpacity
                     style={styles.serviceCardHorizontal}
-                    onPress={() => router.push("/aadhaar-services")}
+                    onPress={() => router.push("/aadhaar-services?from=explore")}
                   >
                     <View style={styles.iconCircle}>
                       <MaterialCommunityIcons
@@ -297,7 +306,7 @@ export default function HomeScreen({
                   {/* Pan Card */}
                   <TouchableOpacity
                     style={styles.serviceCardHorizontal}
-                    onPress={() => router.push("/pan-card-services")}
+                    onPress={() => router.push("/pan-card-services?from=explore")}
                   >
                     <View style={styles.iconCircle}>
                       <MaterialCommunityIcons
@@ -310,7 +319,10 @@ export default function HomeScreen({
                   </TouchableOpacity>
 
                   {/* Udyam */}
-                  <TouchableOpacity style={styles.serviceCardHorizontal}>
+                  <TouchableOpacity
+                    style={styles.serviceCardHorizontal}
+                    onPress={() => router.push("/udyam-services?from=explore")}
+                  >
                     <View style={styles.iconCircle}>
                       <MaterialCommunityIcons
                         name="factory"
@@ -326,7 +338,7 @@ export default function HomeScreen({
                   {/* Income Certificate */}
                   <TouchableOpacity
                     style={styles.serviceCardHorizontal}
-                    onPress={() => router.push("/income-certificate")}
+                    onPress={() => router.push("/income-certificate-services?from=explore")}
                   >
                     <View style={styles.iconCircle}>
                       <MaterialCommunityIcons
@@ -352,7 +364,9 @@ export default function HomeScreen({
 
                 <View style={styles.travelServicesRow}>
                   {/* Flight */}
-                  <TouchableOpacity style={styles.serviceCardHorizontal}>
+                  <TouchableOpacity
+                    style={styles.serviceCardHorizontal}
+                    onPress={() => router.push("/flight-booking")}>
                     <View style={styles.iconCircle}>
                       <MaterialCommunityIcons
                         name="airplane"
@@ -364,7 +378,10 @@ export default function HomeScreen({
                   </TouchableOpacity>
 
                   {/* Train */}
-                  <TouchableOpacity style={styles.serviceCardHorizontal}>
+                  <TouchableOpacity
+                    style={styles.serviceCardHorizontal}
+                    onPress={() => router.push("/train-booking")}
+                  >
                     <View style={styles.iconCircle}>
                       <MaterialCommunityIcons
                         name="train"
@@ -376,7 +393,10 @@ export default function HomeScreen({
                   </TouchableOpacity>
 
                   {/* Bus */}
-                  <TouchableOpacity style={styles.serviceCardHorizontal}>
+                  <TouchableOpacity
+                    style={styles.serviceCardHorizontal}
+                    onPress={() => router.push("/bus-booking")}
+                  >
                     <View style={styles.iconCircle}>
                       <MaterialCommunityIcons
                         name="bus"
@@ -616,11 +636,18 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: 10,
     paddingBottom: 25,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
     position: "relative",
     overflow: "hidden",
     marginBottom: 20,
+  },
+
+  fixedHeader: {
+    zIndex: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
 
   decorativeWave: {
@@ -638,8 +665,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 30,
-    zIndex: 1,
+    paddingTop: 40, // Increased padding for better spacing
+    paddingBottom: 8,
   },
 
   leftSection: {
@@ -708,8 +735,8 @@ const styles = StyleSheet.create({
   taglineSection: {
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -10,
-    marginBottom: 30,
+    marginTop: 20,
+    marginBottom: 40,
     zIndex: 1,
   },
   taglineText: {

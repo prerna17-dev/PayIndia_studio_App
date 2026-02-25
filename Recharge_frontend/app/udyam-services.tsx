@@ -12,9 +12,8 @@ import {
     View,
 } from 'react-native';
 
-export default function AadhaarServicesScreen() {
+export default function UdyamRegistrationScreen() {
     const router = useRouter();
-
     const { from } = useLocalSearchParams();
     const backPath = from === 'more-seva' ? '/more-seva' : '/(tabs)/explore';
 
@@ -33,14 +32,12 @@ export default function AadhaarServicesScreen() {
         return () => backHandler.remove();
     }, [backPath]);
 
-    // Handle New Aadhaar
-    const handleNewAadhaar = () => {
-        router.push('/new-aadhaar');
+    const handleNewRegistration = () => {
+        router.push('/new-udyam');
     };
 
-    // Handle Aadhaar Update
-    const handleAadhaarUpdate = () => {
-        router.push('/update-aadhaar');
+    const handleUpdateDetails = () => {
+        router.push('/update-udyam');
     };
 
     return (
@@ -55,8 +52,8 @@ export default function AadhaarServicesScreen() {
                         <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
-                        <Text style={styles.headerTitle}>Aadhaar Enrollment & Update</Text>
-                        <Text style={styles.headerSubtitle}>Apply for new Aadhaar or update details</Text>
+                        <Text style={styles.headerTitle}>Udyam Registration</Text>
+                        <Text style={styles.headerSubtitle}>Authorized MSME Support Center</Text>
                     </View>
                     <View style={styles.placeholder} />
                 </View>
@@ -65,22 +62,22 @@ export default function AadhaarServicesScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
                 >
-                    {/* Aadhaar Services Info Card */}
-                    <View style={styles.uidaiCard}>
+                    {/* MSME Services Info Card */}
+                    <View style={styles.infoCard}>
                         <View style={styles.blueLeftBorder} />
                         <View style={styles.cardContent}>
                             <View style={styles.cardHeader}>
                                 <View style={styles.iconCircle}>
                                     <MaterialCommunityIcons
-                                        name="card-account-details"
+                                        name="factory"
                                         size={28}
                                         color="#0A4DA3"
                                     />
                                 </View>
                                 <View style={styles.titleSection}>
-                                    <Text style={styles.cardTitle}>Aadhaar Services</Text>
+                                    <Text style={styles.cardTitle}>Udyam Services</Text>
                                     <Text style={styles.cardSubtitle}>
-                                        Authorized UIDAI Support Center
+                                        Register your MSME under Government of India
                                     </Text>
                                 </View>
                             </View>
@@ -93,7 +90,7 @@ export default function AadhaarServicesScreen() {
                                 </View>
                                 <View style={styles.badge}>
                                     <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
-                                    <Text style={styles.badgeText}>OTP Verified</Text>
+                                    <Text style={styles.badgeText}>Aadhaar Verified</Text>
                                 </View>
                                 <View style={styles.badge}>
                                     <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
@@ -103,58 +100,58 @@ export default function AadhaarServicesScreen() {
                         </View>
                     </View>
 
-                    {/* New Aadhaar Enrollment Card */}
+                    {/* New Udyam Registration Card */}
                     <View style={styles.serviceCard}>
                         <View style={styles.greenGradient}>
                             <View style={styles.serviceHeaderRow}>
                                 <View style={styles.serviceIcon}>
                                     <MaterialCommunityIcons
-                                        name="card-plus"
+                                        name="factory"
                                         size={28}
                                         color="#2E7D32"
                                     />
                                 </View>
                                 <View style={styles.serviceContent}>
-                                    <Text style={styles.serviceTitle}>New Aadhaar Enrollment</Text>
-                                    <Text style={styles.serviceHindi}>नवीन आधार नोंदणी</Text>
+                                    <Text style={styles.serviceTitle}>New Udyam Registration</Text>
+                                    <Text style={styles.serviceHindi}>नवीन उद्योग नोंदणी</Text>
                                 </View>
                             </View>
 
                             <View style={styles.serviceBottomRow}>
-                                <Text style={styles.serviceDesc}>Apply for new Aadhaar registration</Text>
+                                <Text style={styles.serviceDesc}>Apply for new MSME registration</Text>
                                 <TouchableOpacity
                                     style={styles.greenButton}
-                                    onPress={handleNewAadhaar}
+                                    onPress={handleNewRegistration}
                                 >
-                                    <Text style={styles.buttonTextGreen}>Enroll Now</Text>
+                                    <Text style={styles.buttonTextGreen}>Register Now</Text>
                                     <Ionicons name="arrow-forward" size={16} color="#2E7D32" />
                                 </TouchableOpacity>
                             </View>
                         </View>
                     </View>
 
-                    {/* Aadhaar Update Services Card */}
+                    {/* Update Udyam Details Card */}
                     <View style={styles.serviceCard}>
                         <View style={styles.orangeGradient}>
                             <View style={styles.serviceHeaderRow}>
                                 <View style={styles.serviceIcon}>
                                     <MaterialCommunityIcons
-                                        name="pencil"
+                                        name="file-document-edit"
                                         size={28}
                                         color="#F57C00"
                                     />
                                 </View>
                                 <View style={styles.serviceContent}>
-                                    <Text style={styles.serviceTitle}>Aadhaar Update Services</Text>
-                                    <Text style={styles.serviceHindi}>नाव / पत्ता / मोबाईल / जन्मतारीख बदल</Text>
+                                    <Text style={styles.serviceTitle}>Update Udyam Details</Text>
+                                    <Text style={styles.serviceHindi}>उद्योग तपशील बदल</Text>
                                 </View>
                             </View>
 
                             <View style={styles.serviceBottomRow}>
-                                <Text style={styles.serviceDesc}>Update details securely</Text>
+                                <Text style={styles.serviceDesc}>Update enterprise information</Text>
                                 <TouchableOpacity
                                     style={styles.orangeButton}
-                                    onPress={handleAadhaarUpdate}
+                                    onPress={handleUpdateDetails}
                                 >
                                     <Text style={styles.buttonTextOrange}>Update Details</Text>
                                     <Ionicons name="arrow-forward" size={16} color="#F57C00" />
@@ -184,7 +181,7 @@ export default function AadhaarServicesScreen() {
                             <View style={styles.featureRow}>
                                 <View style={styles.feature}>
                                     <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Document Encryption</Text>
+                                    <Text style={styles.featureText}>MSME Compliant</Text>
                                 </View>
                                 <View style={styles.feature}>
                                     <MaterialCommunityIcons name="check-circle" size={20} color="#F57C00" />
@@ -194,14 +191,14 @@ export default function AadhaarServicesScreen() {
                         </View>
                     </View>
 
-                    {/* Disclaimer Note */}
+                    {/* Note Card */}
                     <View style={styles.noteCard}>
                         <View style={styles.noteHeader}>
                             <Ionicons name="alert-circle" size={20} color="#F57C00" />
                             <Text style={styles.noteTitle}>Note:</Text>
                         </View>
                         <Text style={styles.noteText}>
-                            Final biometric verification may require visit to Aadhaar Seva Kendra.
+                            Final verification may require Aadhaar authentication and PAN validation.
                         </Text>
                     </View>
 
@@ -258,8 +255,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
 
-    // UIDAI Card with Blue Left Border
-    uidaiCard: {
+    // Info Card with Blue Left Border
+    infoCard: {
         flexDirection: 'row',
         backgroundColor: '#FFFFFF',
         borderRadius: 16,

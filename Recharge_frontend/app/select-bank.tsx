@@ -14,6 +14,7 @@ import {
     View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface Bank {
     bank_id: string;
@@ -48,7 +49,7 @@ export default function SelectBankScreen() {
         setError("");
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch("http://192.168.1.26:5000/api/banking/bank-list", {
+            const response = await fetch(API_ENDPOINTS.BANK_LIST, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },

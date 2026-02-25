@@ -305,7 +305,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 30,
+    paddingTop: 60, // Increased padding
+    paddingBottom: 15,
     zIndex: 1,
   },
 

@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_ENDPOINTS } from "../../constants/api";
 
 export default function AddBankAccountScreen() {
   const router = useRouter();
@@ -158,7 +159,7 @@ export default function AddBankAccountScreen() {
       const token = await AsyncStorage.getItem("userToken");
 
       // 1. Add Bank Account
-      const addResponse = await fetch("http://192.168.1.26:5000/api/banking/add-account", {
+      const addResponse = await fetch(API_ENDPOINTS.ADD_ACCOUNT, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -180,7 +181,7 @@ export default function AddBankAccountScreen() {
         setNewAccountId(accId);
 
         // 2. Trigger Verification (Send OTP)
-        const verifyResponse = await fetch("http://192.168.1.26:5000/api/banking/verify-account", {
+        const verifyResponse = await fetch(API_ENDPOINTS.VERIFY_ACCOUNT, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -217,7 +218,7 @@ export default function AddBankAccountScreen() {
     setIsVerifyingOtp(true);
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch("http://192.168.1.26:5000/api/banking/verify-otp", {
+      const response = await fetch(API_ENDPOINTS.BANK_VERIFY_OTP, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

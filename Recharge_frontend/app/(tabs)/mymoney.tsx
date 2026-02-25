@@ -120,34 +120,35 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
       <StatusBar style="dark" />
 
       <SafeAreaView style={styles.safeArea}>
+        {/* Header Section - Yellow Gradient */}
+        <LinearGradient
+          colors={["#E1F5FE", "#B3E5FC", "#81D4FA", "#4FC3F7"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 4, y: 4 }}
+          style={styles.header}
+        >
+          {/* Decorative Wave */}
+          <View style={styles.decorativeWave} />
+
+          {/* Top Row - Back Button & Title */}
+          <View style={styles.topRow}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBackPress}
+            >
+              <Ionicons name="arrow-back" size={24} color="#0D47A1" />
+            </TouchableOpacity>
+
+            <Text style={styles.headerTitle}>My Money</Text>
+
+            <View style={styles.placeholder} />
+          </View>
+        </LinearGradient>
+
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {/* Header Section - Yellow Gradient */}
-          <LinearGradient
-            colors={["#E1F5FE", "#B3E5FC", "#81D4FA", "#4FC3F7"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 4, y: 4 }}
-            style={styles.header}
-          >
-            {/* Decorative Wave */}
-            <View style={styles.decorativeWave} />
-
-            {/* Top Row - Back Button & Title */}
-            <View style={styles.topRow}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={handleBackPress}
-              >
-                <Ionicons name="arrow-back" size={24} color="#0D47A1" />
-              </TouchableOpacity>
-
-              <Text style={styles.headerTitle}>My Money</Text>
-
-              <View style={styles.placeholder} />
-            </View>
-          </LinearGradient>
 
           {/* Month Selector */}
           <View style={styles.monthSelectorContainer}>
@@ -521,6 +522,7 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     marginBottom: 20,
+    zIndex: 10,
   },
 
   decorativeWave: {
@@ -538,7 +540,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 30,
+    paddingTop: 60, // Increased padding
+    paddingBottom: 15,
     zIndex: 1,
   },
 

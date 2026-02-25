@@ -390,6 +390,7 @@ const styles = StyleSheet.create({
     position: "relative",
     overflow: "hidden",
     marginBottom: 20,
+    zIndex: 10,
   },
 
   decorativeWave: {
@@ -407,7 +408,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingVertical: 30,
+    paddingTop: 60, // Increased padding
+    paddingBottom: 15,
     zIndex: 1,
   },
 

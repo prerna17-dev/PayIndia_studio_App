@@ -16,6 +16,7 @@ import {
     Alert,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_ENDPOINTS } from "../../constants/api";
 
 interface BankAccount {
     id: number;
@@ -58,7 +59,7 @@ export default function BankAccountsScreen() {
         setError("");
         try {
             const token = await AsyncStorage.getItem("userToken");
-            const response = await fetch("http://192.168.1.26:5000/api/banking/accounts", {
+            const response = await fetch(API_ENDPOINTS.BANK_ACCOUNTS, {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -118,7 +119,7 @@ export default function BankAccountsScreen() {
                         setIsLoading(true);
                         try {
                             const token = await AsyncStorage.getItem("userToken");
-                            const response = await fetch("http://192.168.1.26:5000/api/banking/remove-account", {
+                            const response = await fetch(API_ENDPOINTS.REMOVE_ACCOUNT, {
                                 method: "DELETE",
                                 headers: {
                                     "Content-Type": "application/json",

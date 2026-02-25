@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_ENDPOINTS } from "../../constants/api";
 
 const { width, height } = Dimensions.get("window");
 
@@ -45,7 +46,7 @@ export default function LoginScreen() {
     if (phoneNumber.length === 10) {
       setIsLoading(true);
       try {
-        const response = await fetch("http://192.168.1.26:5000/api/auth/send-otp", {
+        const response = await fetch(API_ENDPOINTS.SEND_OTP, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mobile: phoneNumber }),
@@ -102,7 +103,7 @@ export default function LoginScreen() {
     if (otpCode.length === 6) {
       setIsLoading(true);
       try {
-        const response = await fetch("http://192.168.1.26:5000/api/auth/verify-otp", {
+        const response = await fetch(API_ENDPOINTS.VERIFY_OTP, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mobile: phoneNumber, otp: otpCode }),
@@ -112,8 +113,8 @@ export default function LoginScreen() {
 
         if (response.ok) {
           console.log("Login successful. Token:", data.token);
-          console.log("User data:", data.user);
-          // TODO: Store token securely
+          // Store token securely
+          await AsyncStorage.setItem("userToken", data.token);
           router.replace("/(tabs)/explore");
         } else {
           alert(data.message || "Invalid OTP. Please try again.");

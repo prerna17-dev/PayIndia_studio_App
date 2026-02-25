@@ -1,5 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect } from 'react';
 import {
@@ -12,13 +12,16 @@ import {
     View,
 } from 'react-native';
 
-export default function IncomeCertificateScreen() {
+export default function VoterIDServicesScreen() {
     const router = useRouter();
+
+    const { from } = useLocalSearchParams();
+    const backPath = from === 'more-seva' ? '/more-seva' : '/(tabs)/explore';
 
     // Handle back navigation
     useEffect(() => {
         const backAction = () => {
-            router.replace('/explore');
+            router.replace(backPath as any);
             return true;
         };
 
@@ -28,14 +31,16 @@ export default function IncomeCertificateScreen() {
         );
 
         return () => backHandler.remove();
-    }, []);
+    }, [backPath]);
 
-    const handleApplyNow = () => {
-        router.push('/income-certificate-form');
+    // Handle New Voter ID
+    const handleNewVoterID = () => {
+        router.push('/new-voter-id');
     };
 
-    const handleTrackStatus = () => {
-        // Implement track status logic or navigate to status screen
+    // Handle Voter ID Correction
+    const handleVoterIDCorrection = () => {
+        router.push('/update-voter-id');
     };
 
     return (
@@ -46,12 +51,12 @@ export default function IncomeCertificateScreen() {
             <SafeAreaView style={styles.safeArea}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/explore')}>
+                    <TouchableOpacity style={styles.backButton} onPress={() => router.replace(backPath as any)}>
                         <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
-                        <Text style={styles.headerTitle}>Income Certificate</Text>
-                        <Text style={styles.headerSubtitle}>Apply for income certificate issued by revenue authority</Text>
+                        <Text style={styles.headerTitle}>Voter ID Services</Text>
+                        <Text style={styles.headerSubtitle}>Apply for new Voter ID or request correction</Text>
                     </View>
                     <View style={styles.placeholder} />
                 </View>
@@ -60,22 +65,22 @@ export default function IncomeCertificateScreen() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={styles.scrollContent}
                 >
-                    {/* Information Card */}
-                    <View style={styles.infoCard}>
-                        <View style={styles.blueLeftBorder} />
+                    {/* Authority Info Card */}
+                    <View style={styles.authorityCard}>
+                        <View style={styles.cardIndicator} />
                         <View style={styles.cardContent}>
                             <View style={styles.cardHeader}>
                                 <View style={styles.iconCircle}>
                                     <MaterialCommunityIcons
-                                        name="certificate-outline"
+                                        name="account-check"
                                         size={28}
                                         color="#0A4DA3"
                                     />
                                 </View>
                                 <View style={styles.titleSection}>
-                                    <Text style={styles.cardMainTitle}>Revenue Department</Text>
+                                    <Text style={styles.cardTitle}>Election Services</Text>
                                     <Text style={styles.cardSubtitle}>
-                                        Official Certificate Issuance
+                                        Authorized Voter Registration Support Center
                                     </Text>
                                 </View>
                             </View>
@@ -84,86 +89,122 @@ export default function IncomeCertificateScreen() {
                             <View style={styles.badgesRow}>
                                 <View style={styles.badge}>
                                     <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
-                                    <Text style={styles.badgeText}>Digital India</Text>
+                                    <Text style={styles.badgeText}>Secure</Text>
                                 </View>
                                 <View style={styles.badge}>
                                     <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
-                                    <Text style={styles.badgeText}>QR Verified</Text>
+                                    <Text style={styles.badgeText}>OTP Verified</Text>
+                                </View>
+                                <View style={styles.badge}>
+                                    <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                                    <Text style={styles.badgeText}>Document Assisted</Text>
                                 </View>
                             </View>
                         </View>
                     </View>
 
-                    {/* Apply Now Card */}
+                    {/* New Voter ID Card */}
                     <View style={styles.serviceCard}>
                         <View style={styles.greenGradient}>
                             <View style={styles.serviceHeaderRow}>
                                 <View style={styles.serviceIcon}>
                                     <MaterialCommunityIcons
-                                        name="file-document-edit"
+                                        name="card-account-details-outline"
                                         size={28}
                                         color="#2E7D32"
                                     />
+                                    <View style={styles.plusOverlay}>
+                                        <Ionicons name="add" size={12} color="#2E7D32" />
+                                    </View>
                                 </View>
                                 <View style={styles.serviceContent}>
-                                    <Text style={styles.serviceTitle}>New Application</Text>
-                                    <Text style={styles.serviceHindi}>उत्पन्न दाखला नवीन अर्ज</Text>
+                                    <Text style={styles.serviceTitle}>New Voter ID</Text>
+                                    <Text style={styles.serviceHindi}>नवीन मतदार कार्ड</Text>
                                 </View>
                             </View>
 
                             <View style={styles.serviceBottomRow}>
-                                <Text style={styles.serviceDesc}>Process takes 7-10 working days</Text>
+                                <Text style={styles.serviceDesc}>Apply for new voter registration</Text>
                                 <TouchableOpacity
                                     style={styles.greenButton}
-                                    onPress={handleApplyNow}
+                                    onPress={handleNewVoterID}
                                 >
-                                    <Text style={styles.buttonTextGreen}>Apply Now</Text>
+                                    <Text style={styles.buttonTextGreen}>Start Registration</Text>
                                     <Ionicons name="arrow-forward" size={16} color="#2E7D32" />
                                 </TouchableOpacity>
                             </View>
                         </View>
                     </View>
 
+                    {/* Voter ID Correction Card */}
+                    <View style={styles.serviceCard}>
+                        <View style={styles.orangeGradient}>
+                            <View style={styles.serviceHeaderRow}>
+                                <View style={styles.serviceIcon}>
+                                    <MaterialCommunityIcons
+                                        name="pencil"
+                                        size={28}
+                                        color="#F57C00"
+                                    />
+                                </View>
+                                <View style={styles.serviceContent}>
+                                    <Text style={styles.serviceTitle}>Voter ID Correction</Text>
+                                    <Text style={styles.serviceHindi}>मतदार कार्ड दुरुस्ती</Text>
+                                </View>
+                            </View>
 
-                    {/* Required Documents Section */}
+                            <View style={styles.serviceBottomRow}>
+                                <Text style={styles.serviceDesc}>Update or correct your voter ID details</Text>
+                                <TouchableOpacity
+                                    style={styles.orangeButton}
+                                    onPress={handleVoterIDCorrection}
+                                >
+                                    <Text style={styles.buttonTextOrange}>Update Details</Text>
+                                    <Ionicons name="arrow-forward" size={16} color="#F57C00" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Why Choose Us Section */}
                     <View style={styles.whyChooseCard}>
                         <View style={styles.whyChooseHeader}>
                             <Ionicons name="information-circle" size={24} color="#0A4DA3" />
-                            <Text style={styles.whyChooseTitle}>Documents Required</Text>
+                            <Text style={styles.whyChooseTitle}>Why Choose Us?</Text>
                         </View>
 
                         <View style={styles.featuresGrid}>
                             <View style={styles.featureRow}>
                                 <View style={styles.feature}>
                                     <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Aadhaar Card (आधार)</Text>
+                                    <Text style={styles.featureText}>Secure Data Handling</Text>
                                 </View>
                                 <View style={styles.feature}>
                                     <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Address Proof (पत्ता)</Text>
+                                    <Text style={styles.featureText}>OTP Based Verification</Text>
                                 </View>
                             </View>
                             <View style={styles.featureRow}>
                                 <View style={styles.feature}>
                                     <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Ration Card (रेशन कार्ड)</Text>
+                                    <Text style={styles.featureText}>Document Encryption</Text>
                                 </View>
                                 <View style={styles.feature}>
                                     <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
-                                    <Text style={styles.featureText}>Income Proof (उत्पन्न)</Text>
+                                    <Text style={styles.featureText}>Pan India Support</Text>
                                 </View>
                             </View>
                         </View>
                     </View>
 
-                    {/* Service Fee Info Card */}
+                    {/* Important Note Section */}
                     <View style={styles.noteCard}>
                         <View style={styles.noteHeader}>
-                            <MaterialCommunityIcons name="currency-inr" size={20} color="#F57C00" />
-                            <Text style={styles.noteTitle}>Service Fee:</Text>
+                            <Ionicons name="alert-circle" size={22} color="#F57C00" />
+                            <Text style={styles.noteTitle}>Note:</Text>
                         </View>
                         <Text style={styles.noteText}>
-                            A nominal fee of ₹50 is applicable for this service. Digital signatures are legally valid.
+                            Final approval of Voter ID application depends on Election Commission verification. Field verification may be required.
                         </Text>
                     </View>
 
@@ -220,8 +261,8 @@ const styles = StyleSheet.create({
         paddingHorizontal: 20,
     },
 
-    // Info Card with Blue Left Border
-    infoCard: {
+    // Authority Card
+    authorityCard: {
         flexDirection: 'row',
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
@@ -233,7 +274,7 @@ const styles = StyleSheet.create({
         elevation: 3,
         overflow: 'hidden',
     },
-    blueLeftBorder: {
+    cardIndicator: {
         width: 4,
         backgroundColor: '#0A4DA3',
     },
@@ -258,7 +299,7 @@ const styles = StyleSheet.create({
     titleSection: {
         flex: 1,
     },
-    cardMainTitle: {
+    cardTitle: {
         fontSize: 15,
         fontWeight: 'bold',
         color: '#1A1A1A',
@@ -327,6 +368,20 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        position: 'relative'
+    },
+    plusOverlay: {
+        position: 'absolute',
+        bottom: 8,
+        right: 8,
+        backgroundColor: '#E8F5E9',
+        borderRadius: 8,
+        width: 16,
+        height: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: '#C8E6C9'
     },
     serviceContent: {
         flex: 1,
@@ -379,7 +434,7 @@ const styles = StyleSheet.create({
         color: '#F57C00',
     },
 
-    // Documents Section
+    // Why Choose Us
     whyChooseCard: {
         backgroundColor: '#FFFFFF',
         borderRadius: 16,
@@ -403,10 +458,11 @@ const styles = StyleSheet.create({
         color: '#1A1A1A',
     },
     featuresGrid: {
-        gap: 8,
+        gap: 10,
     },
     featureRow: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         gap: 12,
     },
     feature: {
@@ -433,8 +489,8 @@ const styles = StyleSheet.create({
     noteHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
-        marginBottom: 4,
+        gap: 8,
+        marginBottom: 6,
     },
     noteTitle: {
         fontSize: 14,

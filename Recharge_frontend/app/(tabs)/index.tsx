@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
 import { Animated, Dimensions, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width, height } = Dimensions.get("window");
 
@@ -29,7 +30,7 @@ export default function SplashScreen() {
         Animated.sequence([
           Animated.timing(dot1, {
             toValue: -15,
-            duration: 400,
+            duration: 300,
             useNativeDriver: true,
           }),
           Animated.timing(dot1, {
@@ -77,12 +78,25 @@ export default function SplashScreen() {
 
     animateDots();
 
-    // Navigate after 1 second
-    const timer = setTimeout(() => {
-      router.replace("/auth/login");
-    }, 1000);
+    // Navigate after check
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem("userToken");
+        // Allow splash to show for at least 1.5s
+        setTimeout(() => {
+          if (token) {
+            router.replace("/(tabs)/explore");
+          } else {
+            router.replace("/auth/login");
+          }
+        }, 1500);
+      } catch (error) {
+        console.error("Auth check error:", error);
+        router.replace("/auth/login");
+      }
+    };
 
-    return () => clearTimeout(timer);
+    checkAuth();
   }, []);
 
   return (
