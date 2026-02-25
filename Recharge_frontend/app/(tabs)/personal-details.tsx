@@ -46,13 +46,6 @@ export default function PersonalDetailsScreen() {
     setIsFetching(true);
     try {
       const token = await AsyncStorage.getItem("userToken");
-      if (!token) {
-        Alert.alert("Session Expired", "Please login again to continue.", [
-          { text: "OK", onPress: () => router.replace("/auth/login") }
-        ]);
-        return;
-      }
-
       const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -66,11 +59,6 @@ export default function PersonalDetailsScreen() {
         setGender(data.gender || "");
         setDateOfBirth(data.date_of_birth || "");
         setProfileImage(data.profile_image || null);
-      } else if (response.status === 401) {
-        // Token invalid or expired
-        Alert.alert("Session Expired", "Please login again to continue.", [
-          { text: "OK", onPress: () => router.replace("/auth/login") }
-        ]);
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -337,13 +325,6 @@ export default function PersonalDetailsScreen() {
           setIsLoading(true);
           try {
             const token = await AsyncStorage.getItem("userToken");
-            if (!token) {
-              Alert.alert("Session Expired", "Please login again to continue.", [
-                { text: "OK", onPress: () => router.replace("/auth/login") }
-              ]);
-              return;
-            }
-
             const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
               method: "PUT",
               headers: {
@@ -367,10 +348,6 @@ export default function PersonalDetailsScreen() {
                   text: "OK",
                   onPress: () => router.replace("/account"),
                 },
-              ]);
-            } else if (response.status === 401) {
-              Alert.alert("Session Expired", "Please login again to continue.", [
-                { text: "OK", onPress: () => router.replace("/auth/login") }
               ]);
             } else {
               Alert.alert("Error", data.message || "Failed to update profile.");
