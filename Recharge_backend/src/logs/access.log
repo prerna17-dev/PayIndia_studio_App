@@ -460,3 +460,7 @@
 2026-02-26T09:40:42.227Z | GET /api/user/profile | 200 | 7ms | ::ffff:192.168.1.32
 2026-02-27T03:56:34.381Z | POST /api/auth/send-otp | 200 | 17ms | ::ffff:192.168.1.22
 2026-02-27T03:56:44.725Z | POST /api/auth/verify-otp | 200 | 51ms | ::ffff:192.168.1.22
+2026-02-27T06:21:16.007Z | POST /api/auth/send-otp | 200 | 155ms | ::ffff:192.168.1.16
+2026-02-27T06:22:17.848Z | POST /api/auth/verify-otp | 200 | 79ms | ::ffff:192.168.1.16
+2026-02-27T06:25:40.577Z | GET /api/banking/bank-list | 200 | 581ms | ::ffff:192.168.1.16
+2026-02-27T06:25:42.579Z | GET /api/banking/bank-list | 304 | 84ms | ::ffff:192.168.1.16

@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -58,6 +58,7 @@ export default function ElectricityBillScreen() {
     const [billDetails, setBillDetails] = useState<BillDetails | null>(null);
     const [fetchError, setFetchError] = useState("");
     const [consumerNumberError, setConsumerNumberError] = useState("");
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
 
     // Animation
     const slideAnim = React.useRef(new Animated.Value(50)).current;
@@ -156,15 +157,20 @@ export default function ElectricityBillScreen() {
 
     const handlePayNow = () => {
         if (!billDetails) return;
-        // Navigate to payment screen with bill details
-        // Note: "/payment" needs to be implemented or replaced with an existing route
+        setShowPaymentModal(true);
+    };
+
+    const handleSelectPaymentMethod = (method: string) => {
+        setShowPaymentModal(false);
+        // Navigate to payment screen with bill details and selected method
         router.push({
             pathname: "/wallet" as any,
             params: {
-                amount: billDetails.amount.toString(),
+                amount: billDetails?.amount.toString(),
                 billType: "electricity",
-                consumerName: billDetails.consumerName,
-                billNumber: billDetails.billNumber,
+                consumerName: billDetails?.consumerName,
+                billNumber: billDetails?.billNumber,
+                paymentMethod: method,
             },
         });
     };
@@ -177,7 +183,7 @@ export default function ElectricityBillScreen() {
             <StatusBar style="dark" />
 
             <SafeAreaView style={styles.safeArea}>
-                {/* Header */}
+                {/* Professional Header */}
                 <View style={styles.header}>
                     <TouchableOpacity
                         style={styles.backButton}
@@ -185,155 +191,159 @@ export default function ElectricityBillScreen() {
                     >
                         <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
-                    <View style={styles.headerTextContainer}>
+                    <View style={styles.headerCenter}>
                         <Text style={styles.headerTitle}>Electricity Bill</Text>
-                        <Text style={styles.headerSubtext}>
-                            Pay any electricity board across India
-                        </Text>
+                        <Text style={styles.headerSubtitle}>Official Bill Payment Portal</Text>
                     </View>
                     <View style={styles.placeholder} />
                 </View>
 
                 <ScrollView showsVerticalScrollIndicator={false}>
                     <View style={styles.content}>
-                        {/* Electricity Banner */}
-                        <LinearGradient
-                            colors={["#E3F2FD", "#BBDEFB"]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.banner}
-                        >
-                            <View style={styles.bannerIconCircle}>
-                                <Ionicons name="flash" size={28} color="#1976D2" />
-                            </View>
-                            <View style={styles.bannerTextContainer}>
-                                <Text style={styles.bannerTitle}>
-                                    Instant Electricity Bill Payment
-                                </Text>
-                                <View style={styles.bannerFeatures}>
-                                    <View style={styles.featureItem}>
-                                        <Ionicons name="shield-checkmark" size={14} color="#1976D2" />
-                                        <Text style={styles.featureText}>Secure</Text>
+                        {/* Information Card */}
+                        <View style={styles.infoCard}>
+                            <View style={styles.blueLeftBorder} />
+                            <View style={styles.infoContent}>
+                                <View style={styles.infoHeader}>
+                                    <View style={styles.infoIconCircle}>
+                                        <MaterialCommunityIcons name="flash" size={24} color="#0D47A1" />
                                     </View>
-                                    <View style={styles.featureDot} />
-                                    <View style={styles.featureItem}>
-                                        <Ionicons name="location" size={14} color="#1976D2" />
-                                        <Text style={styles.featureText}>PAN India</Text>
+                                    <View>
+                                        <Text style={styles.infoTitle}>Electricity Bill Payment</Text>
+                                        <Text style={styles.infoSubtitle}>Select board and enter consumer ID</Text>
                                     </View>
-                                    <View style={styles.featureDot} />
+                                </View>
+                                <View style={styles.featureRow}>
                                     <View style={styles.featureItem}>
-                                        <Ionicons name="checkmark-circle" size={14} color="#1976D2" />
-                                        <Text style={styles.featureText}>Instant Confirmation</Text>
+                                        <Ionicons name="shield-checkmark" size={14} color="#2E7D32" />
+                                        <Text style={styles.featureText}>Safe Payment</Text>
+                                    </View>
+                                    <View style={styles.featureItem}>
+                                        <Ionicons name="flash" size={14} color="#2E7D32" />
+                                        <Text style={styles.featureText}>Instant Fetch</Text>
                                     </View>
                                 </View>
                             </View>
-                        </LinearGradient>
-
-                        {/* Select State */}
-                        <View style={styles.inputCard}>
-                            <Text style={styles.inputLabel}>State</Text>
-                            <TouchableOpacity
-                                style={styles.selectField}
-                                onPress={() => setShowStateModal(true)}
-                            >
-                                <Text style={[styles.selectText, !selectedState && styles.placeholderText]}>
-                                    {selectedState || "Select State"}
-                                </Text>
-                                <Ionicons name="chevron-down" size={20} color="#666" />
-                            </TouchableOpacity>
                         </View>
 
-                        {/* Select Board */}
-                        <View style={[styles.inputCard, !selectedState && styles.disabledCard]}>
-                            <Text style={styles.inputLabel}>Electricity Board</Text>
-                            <TouchableOpacity
-                                style={styles.selectField}
-                                onPress={() => selectedState && setShowBoardModal(true)}
-                                disabled={!selectedState}
-                            >
-                                <Text style={[styles.selectText, !selectedBoard && styles.placeholderText]}>
-                                    {selectedBoard || "Select Board"}
-                                </Text>
-                                <Ionicons name="chevron-down" size={20} color="#666" />
-                            </TouchableOpacity>
-                        </View>
+                        {/* Aesthetic Form Section */}
+                        <View style={styles.formCard}>
+                            {/* Select State */}
+                            <View style={styles.fieldGroup}>
+                                <Text style={styles.fieldLabel}>Select State</Text>
+                                <TouchableOpacity
+                                    style={styles.fieldInput}
+                                    onPress={() => setShowStateModal(true)}
+                                >
+                                    <Ionicons name="map-outline" size={20} color="#64748B" style={{ marginRight: 10 }} />
+                                    <Text style={[styles.fieldText, !selectedState && styles.placeholderText]}>
+                                        {selectedState || "Select State"}
+                                    </Text>
+                                    <Ionicons name="chevron-down" size={18} color="#94A3B8" />
+                                </TouchableOpacity>
+                            </View>
 
-                        {/* Consumer Number Input */}
-                        <View style={styles.inputCard}>
-                            <Text style={styles.inputLabel}>Consumer Number / CA Number</Text>
-                            <TextInput
-                                style={styles.textInput}
-                                placeholder="Enter Consumer Number"
-                                value={consumerNumber}
-                                onChangeText={(text) => {
-                                    setConsumerNumber(text);
-                                    setConsumerNumberError("");
-                                }}
-                                onBlur={validateConsumerNumber}
-                            />
-                            <Text style={styles.helperText}>
-                                Enter number as per your electricity bill
-                            </Text>
-                            {consumerNumberError ? (
-                                <Text style={styles.errorText}>{consumerNumberError}</Text>
-                            ) : null}
+                            {/* Select Board */}
+                            <View style={[styles.fieldGroup, !selectedState && styles.disabledField]}>
+                                <Text style={styles.fieldLabel}>Electricity Board</Text>
+                                <TouchableOpacity
+                                    style={styles.fieldInput}
+                                    onPress={() => selectedState && setShowBoardModal(true)}
+                                    disabled={!selectedState}
+                                >
+                                    <Ionicons name="business-outline" size={20} color="#64748B" style={{ marginRight: 10 }} />
+                                    <Text style={[styles.fieldText, !selectedBoard && styles.placeholderText]}>
+                                        {selectedBoard || "Select Board"}
+                                    </Text>
+                                    <Ionicons name="chevron-down" size={18} color="#94A3B8" />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Consumer Number Input */}
+                            <View style={styles.fieldGroup}>
+                                <Text style={styles.fieldLabel}>Consumer / CA Number</Text>
+                                <View style={styles.fieldInput}>
+                                    <Ionicons name="person-outline" size={20} color="#64748B" style={{ marginRight: 10 }} />
+                                    <TextInput
+                                        style={styles.textInputField}
+                                        placeholder="Enter Consumer Number"
+                                        placeholderTextColor="#94A3B8"
+                                        value={consumerNumber}
+                                        onChangeText={(text) => {
+                                            setConsumerNumber(text);
+                                            setConsumerNumberError("");
+                                        }}
+                                        onBlur={validateConsumerNumber}
+                                    />
+                                </View>
+                                <View style={styles.inputFooter}>
+                                    <Text style={styles.fieldHelper}>
+                                        Available on your recent bill
+                                    </Text>
+                                    {consumerNumberError ? (
+                                        <Text style={styles.errorTextSmall}>{consumerNumberError}</Text>
+                                    ) : null}
+                                </View>
+                            </View>
                         </View>
 
                         {/* Fetch Bill Button */}
                         <TouchableOpacity
-                            style={[styles.fetchButton, !isFormValid && styles.fetchButtonDisabled]}
                             onPress={handleFetchBill}
                             disabled={!isFormValid || isLoading}
+                            style={{ marginBottom: 24 }}
                         >
-                            {isLoading ? (
-                                <ActivityIndicator color="#FFFFFF" />
-                            ) : (
-                                <Text style={styles.fetchButtonText}>Fetch Bill</Text>
-                            )}
+                            <LinearGradient
+                                colors={!isFormValid || isLoading ? ["#E0E0E0", "#E0E0E0"] : ["#0D47A1", "#1565C0"]}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.actionButton}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator color="#FFFFFF" />
+                                ) : (
+                                    <Text style={styles.actionButtonText}>Fetch Bill Details</Text>
+                                )}
+                            </LinearGradient>
                         </TouchableOpacity>
 
-                        {/* Bill Details Card (After Fetch) */}
+                        {/* Bill Information Summary */}
                         {billDetails && (
                             <Animated.View
                                 style={[
-                                    styles.billDetailsCard,
+                                    styles.reviewCard,
                                     {
                                         opacity: fadeAnim,
                                         transform: [{ translateY: slideAnim }],
                                     },
                                 ]}
                             >
-                                <View style={styles.billHeader}>
-                                    <View style={styles.billIconCircle}>
-                                        <Ionicons name="flash" size={24} color="#4CAF50" />
-                                    </View>
-                                    <Text style={styles.billBoardName}>{billDetails.boardName}</Text>
-                                </View>
+                                <Text style={styles.reviewTitle}>Bill Summary</Text>
+                                <View style={styles.reviewDivider} />
 
-                                <View style={styles.billRow}>
-                                    <Text style={styles.billLabel}>Consumer Name</Text>
-                                    <Text style={styles.billValue}>{billDetails.consumerName}</Text>
+                                <View style={styles.reviewItem}>
+                                    <Text style={styles.reviewLabel}>Authority</Text>
+                                    <Text style={styles.reviewValue}>{billDetails.boardName}</Text>
                                 </View>
-
-                                <View style={styles.billRow}>
-                                    <Text style={styles.billLabel}>Bill Number</Text>
-                                    <Text style={styles.billValue}>{billDetails.billNumber}</Text>
+                                <View style={styles.reviewItem}>
+                                    <Text style={styles.reviewLabel}>Consumer Name</Text>
+                                    <Text style={styles.reviewValue}>{billDetails.consumerName}</Text>
                                 </View>
-
-                                <View style={styles.billRow}>
-                                    <Text style={styles.billLabel}>Billing Period</Text>
-                                    <Text style={styles.billValue}>{billDetails.billingPeriod}</Text>
+                                <View style={styles.reviewItem}>
+                                    <Text style={styles.reviewLabel}>Consumer ID</Text>
+                                    <Text style={styles.reviewValue}>{billDetails.billNumber}</Text>
                                 </View>
-
-                                <View style={styles.billRow}>
-                                    <Text style={styles.billLabel}>Due Date</Text>
-                                    <Text style={[styles.billValue, styles.dueDateValue]}>
-                                        {billDetails.dueDate}
-                                    </Text>
+                                <View style={styles.reviewItem}>
+                                    <Text style={styles.reviewLabel}>Billing Period</Text>
+                                    <Text style={styles.reviewValue}>{billDetails.billingPeriod}</Text>
+                                </View>
+                                <View style={styles.reviewItem}>
+                                    <Text style={styles.reviewLabel}>Due Date</Text>
+                                    <Text style={[styles.reviewValue, { color: '#D32F2F' }]}>{billDetails.dueDate}</Text>
                                 </View>
 
                                 <View style={styles.amountSection}>
-                                    <Text style={styles.amountLabel}>Amount Payable</Text>
+                                    <Text style={styles.amountLabel}>Payable Amount</Text>
                                     <Text style={styles.amountValue}>₹{billDetails.amount}</Text>
                                 </View>
                             </Animated.View>
@@ -350,16 +360,16 @@ export default function ElectricityBillScreen() {
                         {/* Pay Now Button */}
                         {billDetails && (
                             <TouchableOpacity
-                                style={styles.payButton}
                                 onPress={handlePayNow}
+                                style={{ marginBottom: 40 }}
                             >
                                 <LinearGradient
-                                    colors={["#66BB6A", "#4CAF50"]}
+                                    colors={["#0D47A1", "#1565C0"]}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 0 }}
-                                    style={styles.payGradient}
+                                    style={styles.actionButton}
                                 >
-                                    <Text style={styles.payButtonText}>Pay ₹{billDetails.amount}</Text>
+                                    <Text style={styles.actionButtonText}>Proceed to Pay ₹{billDetails.amount}</Text>
                                 </LinearGradient>
                             </TouchableOpacity>
                         )}
@@ -453,6 +463,60 @@ export default function ElectricityBillScreen() {
                         </View>
                     </View>
                 </Modal>
+
+                {/* Payment Options Modal */}
+                <Modal
+                    visible={showPaymentModal}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setShowPaymentModal(false)}
+                >
+                    <View style={styles.modalOverlay}>
+                        <View style={[styles.modalContent, { height: 'auto', paddingBottom: 40 }]}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Select Payment Method</Text>
+                                <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+                                    <Ionicons name="close" size={24} color="#666" />
+                                </TouchableOpacity>
+                            </View>
+
+                            <View style={{ padding: 20 }}>
+                                <TouchableOpacity
+                                    style={styles.paymentOptionItem}
+                                    onPress={() => handleSelectPaymentMethod('wallet')}
+                                >
+                                    <View style={styles.paymentIconCircle}>
+                                        <Ionicons name="wallet-outline" size={22} color="#0D47A1" />
+                                    </View>
+                                    <Text style={styles.paymentOptionText}>Wallet</Text>
+                                    <Ionicons name="chevron-forward" size={18} color="#999" />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.paymentOptionItem}
+                                    onPress={() => handleSelectPaymentMethod('debit_card')}
+                                >
+                                    <View style={styles.paymentIconCircle}>
+                                        <Ionicons name="card-outline" size={22} color="#0D47A1" />
+                                    </View>
+                                    <Text style={styles.paymentOptionText}>Debit Card</Text>
+                                    <Ionicons name="chevron-forward" size={18} color="#999" />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.paymentOptionItem}
+                                    onPress={() => handleSelectPaymentMethod('credit_card')}
+                                >
+                                    <View style={styles.paymentIconCircle}>
+                                        <MaterialCommunityIcons name="credit-card-outline" size={22} color="#0D47A1" />
+                                    </View>
+                                    <Text style={styles.paymentOptionText}>Credit Card</Text>
+                                    <Ionicons name="chevron-forward" size={18} color="#999" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
             </SafeAreaView>
         </View>
     );
@@ -461,7 +525,7 @@ export default function ElectricityBillScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F6F9FC",
+        backgroundColor: "#F5F7FA",
     },
     safeArea: {
         flex: 1,
@@ -474,11 +538,13 @@ const styles = StyleSheet.create({
         paddingTop: 50,
         paddingBottom: 20,
         backgroundColor: '#FFFFFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
     },
     backButton: {
         padding: 5,
     },
-    headerTextContainer: {
+    headerCenter: {
         flex: 1,
         alignItems: "center",
     },
@@ -487,343 +553,305 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: "#1A1A1A",
     },
-    headerSubtext: {
-        fontSize: 12,
-        color: "#999",
+    headerSubtitle: {
+        fontSize: 11,
+        color: "#666",
         marginTop: 2,
     },
     placeholder: {
         width: 34,
     },
-
     content: {
         padding: 20,
     },
 
-    // Banner
-    banner: {
-        flexDirection: "row",
-        alignItems: "center",
-        padding: 16,
-        borderRadius: 24,
-        marginBottom: 20,
-        shadowColor: "#2196F3",
+    // Info Card
+    infoCard: {
+        flexDirection: 'row',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        marginBottom: 24,
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 6,
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
         elevation: 3,
+        overflow: 'hidden',
     },
-
-    bannerIconCircle: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: "rgba(255, 255, 255, 0.5)",
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 12,
+    blueLeftBorder: {
+        width: 4,
+        backgroundColor: '#0D47A1',
     },
-
-    bannerTextContainer: {
+    infoContent: {
         flex: 1,
-    },
-
-    bannerTitle: {
-        fontSize: 15,
-        fontWeight: "600",
-        color: "#1976D2",
-        marginBottom: 6,
-    },
-
-    bannerFeatures: {
-        flexDirection: "row",
-        alignItems: "center",
-        flexWrap: "wrap",
-    },
-
-    featureItem: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-    },
-
-    featureText: {
-        fontSize: 11,
-        color: "#1976D2",
-    },
-
-    featureDot: {
-        width: 3,
-        height: 3,
-        borderRadius: 1.5,
-        backgroundColor: "#1976D2",
-        marginHorizontal: 6,
-    },
-
-    // Input Cards
-    inputCard: {
-        backgroundColor: "#FFFFFF",
         padding: 16,
-        borderRadius: 20,
-        marginBottom: 20,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 2,
     },
-
-    disabledCard: {
-        opacity: 0.5,
-    },
-
-    inputLabel: {
-        fontSize: 13,
-        fontWeight: "600",
-        color: "#666",
+    infoHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginBottom: 12,
     },
+    infoIconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: '#E3F2FD',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    infoTitle: {
+        fontSize: 15,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+    },
+    infoSubtitle: {
+        fontSize: 11,
+        color: '#666',
+    },
+    featureRow: {
+        flexDirection: 'row',
+        gap: 16,
+    },
+    featureItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    featureText: {
+        fontSize: 12,
+        color: '#2E7D32',
+        fontWeight: '500',
+    },
 
-    selectField: {
+    // Form Section
+    formCard: {
+        marginBottom: 24,
+    },
+    fieldGroup: {
+        marginBottom: 20,
+    },
+    fieldLabel: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: "#333",
+        marginBottom: 8,
+    },
+    fieldInput: {
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
-        paddingVertical: 8,
+        backgroundColor: "#F5F7FA",
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderWidth: 1,
+        borderColor: "#E0E0E0",
     },
-
-    selectText: {
-        fontSize: 16,
-        color: "#1A1A1A",
+    fieldText: {
+        flex: 1,
+        fontSize: 15,
+        color: "#333",
     },
-
+    textInputField: {
+        flex: 1,
+        fontSize: 15,
+        color: "#333",
+        padding: 0,
+    },
     placeholderText: {
         color: "#999",
     },
-
-    textInput: {
-        fontSize: 16,
-        color: "#1A1A1A",
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: "#E0E0E0",
+    disabledField: {
+        opacity: 0.6,
+    },
+    inputFooter: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 6,
+    },
+    fieldHelper: {
+        fontSize: 11,
+        color: "#666",
+    },
+    errorTextSmall: {
+        fontSize: 11,
+        color: "#D32F2F",
+        fontWeight: "500",
     },
 
-    helperText: {
-        fontSize: 12,
-        color: "#999",
-        marginTop: 8,
-    },
-
-    errorText: {
-        fontSize: 12,
-        color: "#E53935",
-        marginTop: 4,
-    },
-
-    // Fetch Button
-    fetchButton: {
-        backgroundColor: "#2196F3",
+    // Action Button Styles
+    actionButton: {
+        flexDirection: 'row',
         paddingVertical: 16,
-        borderRadius: 24,
+        borderRadius: 12,
         alignItems: "center",
-        marginBottom: 20,
-        shadowColor: "#2196F3",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 5,
+        justifyContent: "center",
+        shadowColor: "#0D47A1",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
     },
-
-    fetchButtonDisabled: {
-        backgroundColor: "#E0E0E0",
-        shadowOpacity: 0,
-    },
-
-    fetchButtonText: {
+    actionButtonText: {
         fontSize: 16,
         fontWeight: "bold",
         color: "#FFFFFF",
     },
 
-    // Bill Details Card
-    billDetailsCard: {
-        backgroundColor: "#F1F8FE",
+    // Review/Bill Info Card
+    reviewCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
         padding: 20,
-        borderRadius: 20,
-        marginBottom: 20,
+        marginBottom: 24,
         borderWidth: 1,
-        borderColor: "#BBDEFB",
+        borderColor: '#E0E0E0',
     },
-
-    billHeader: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginBottom: 16,
-        paddingBottom: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: "#BBDEFB",
-    },
-
-    billIconCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: "#E8F5E9",
-        justifyContent: "center",
-        alignItems: "center",
-        marginRight: 12,
-    },
-
-    billBoardName: {
+    reviewTitle: {
         fontSize: 16,
-        fontWeight: "600",
-        color: "#1A1A1A",
-        flex: 1,
-    },
-
-    billRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
+        fontWeight: 'bold',
+        color: '#1A1A1A',
         marginBottom: 12,
     },
-
-    billLabel: {
-        fontSize: 14,
-        color: "#666",
+    reviewDivider: {
+        height: 1,
+        backgroundColor: '#F0F0F0',
+        marginBottom: 16,
     },
-
-    billValue: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1A1A1A",
+    reviewItem: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 12,
     },
-
-    dueDateValue: {
-        color: "#FF9800",
+    reviewLabel: {
+        fontSize: 13,
+        color: '#666',
+        flex: 1,
     },
-
+    reviewValue: {
+        fontSize: 13,
+        fontWeight: 'bold',
+        color: '#1A1A1A',
+        flex: 1.5,
+        textAlign: 'right',
+    },
     amountSection: {
-        marginTop: 16,
+        marginTop: 8,
         paddingTop: 16,
         borderTopWidth: 1,
-        borderTopColor: "#BBDEFB",
-        alignItems: "center",
+        borderTopColor: '#F0F0F0',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     },
-
     amountLabel: {
         fontSize: 14,
-        color: "#666",
-        marginBottom: 8,
+        color: '#1A1A1A',
+        fontWeight: '500',
     },
-
     amountValue: {
-        fontSize: 32,
-        fontWeight: "bold",
-        color: "#4CAF50",
+        fontSize: 24,
+        fontWeight: 'bold',
+        color: '#0D47A1',
     },
 
     // Error Card
     errorCard: {
         backgroundColor: "#FFEBEE",
-        padding: 24,
-        borderRadius: 20,
+        padding: 20,
+        borderRadius: 16,
         alignItems: "center",
-        marginBottom: 20,
+        marginBottom: 24,
+        borderWidth: 1,
+        borderColor: "#FFCDD2",
     },
-
     errorCardText: {
-        fontSize: 14,
-        color: "#E53935",
+        fontSize: 13,
+        color: "#D32F2F",
         textAlign: "center",
-        marginTop: 12,
-    },
-
-    // Pay Button
-    payButton: {
-        borderRadius: 24,
-        overflow: "hidden",
-        shadowColor: "#4CAF50",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 5,
-    },
-
-    payGradient: {
-        paddingVertical: 16,
-        alignItems: "center",
-    },
-
-    payButtonText: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#FFFFFF",
+        marginTop: 8,
+        fontWeight: "500",
     },
 
     // Modal Styles
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        justifyContent: "flex-end",
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
     },
-
     modalContent: {
-        backgroundColor: "#FFFFFF",
+        backgroundColor: '#FFFFFF',
         borderTopLeftRadius: 24,
         borderTopRightRadius: 24,
+        height: '80%',
         paddingTop: 20,
-        maxHeight: "80%",
     },
-
     modalHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         paddingHorizontal: 20,
-        marginBottom: 16,
+        paddingBottom: 20,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
     },
-
     modalTitle: {
         fontSize: 18,
-        fontWeight: "600",
-        color: "#1A1A1A",
+        fontWeight: 'bold',
+        color: '#1A1A1A',
     },
-
     searchContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "#F6F9FC",
-        marginHorizontal: 20,
-        paddingHorizontal: 16,
-        paddingVertical: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#F5F7FA',
+        margin: 20,
+        paddingHorizontal: 15,
         borderRadius: 12,
-        marginBottom: 16,
+        height: 44,
     },
-
     searchInput: {
         flex: 1,
-        fontSize: 16,
-        color: "#1A1A1A",
-        marginLeft: 12,
+        marginLeft: 10,
+        fontSize: 14,
+        color: '#333',
     },
-
     optionsList: {
-        maxHeight: 400,
+        paddingHorizontal: 10,
     },
-
     optionItem: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 16,
         borderBottomWidth: 1,
-        borderBottomColor: "#F0F0F0",
+        borderBottomColor: '#F5F7FA',
     },
-
     optionText: {
         fontSize: 15,
-        color: "#1A1A1A",
+        color: '#333',
         flex: 1,
+    },
+    paymentOptionItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F0F0F0',
+    },
+    paymentIconCircle: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#E3F2FD',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    paymentOptionText: {
+        flex: 1,
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#1A1A1A',
     },
 });

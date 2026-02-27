@@ -36,14 +36,17 @@ export default function ElectricityServicesScreen() {
             <StatusBar style="dark" />
 
             <SafeAreaView style={styles.safeArea}>
-                {/* Header */}
+                {/* Professional Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                    <TouchableOpacity
+                        style={styles.backButton}
+                        onPress={() => router.back()}
+                    >
+                        <Ionicons name="arrow-back" size={24} color="#0F172A" />
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
-                        <Text style={styles.headerTitle}>Electricity Bill Services</Text>
-                        <Text style={styles.headerSubtitle}>View & Update Electricity Details</Text>
+                        <Text style={styles.headerTitle}>Electricity Services</Text>
+                        <Text style={styles.headerSubtitle}>Official Management Portal</Text>
                     </View>
                     <View style={styles.placeholder} />
                 </View>
@@ -65,18 +68,18 @@ export default function ElectricityServicesScreen() {
                                     />
                                 </View>
                                 <View style={styles.titleSection}>
-                                    <Text style={styles.cardTitle}>MAHADISCOM / BEST / Adani</Text>
+                                    <Text style={styles.cardTitle}>Official Utility Hub</Text>
                                     <Text style={styles.cardSubtitle}>
-                                        Official Electricity Service Hub
+                                        MAHADISCOM • BEST • Adani • Tata
                                     </Text>
                                 </View>
                             </View>
 
                             <View style={styles.badgesRow}>
-                                <Badge text="Instant Bill Fetch" />
+                                <Badge text="Instant Fetch" />
                                 <Badge text="Safe & Secure" />
-                                <Badge text="Official Updates" />
-                                <Badge text="Government Linked" />
+                                <Badge text="Live Updates" />
+                                <Badge text="Official Portal" />
                             </View>
                         </View>
                     </View>
@@ -91,12 +94,12 @@ export default function ElectricityServicesScreen() {
                                         <MaterialCommunityIcons
                                             name="account-edit-outline"
                                             size={28}
-                                            color="#0D47A1"
+                                            color="#0A4DA3"
                                         />
                                     </View>
                                     <View style={styles.serviceContent}>
                                         <Text style={styles.serviceTitle}>Update Details</Text>
-                                        <Text style={styles.serviceSubtitle}>तपशील अद्ययावत करा</Text>
+                                        <Text style={styles.serviceHindi}>तपशील अद्ययावत करा</Text>
                                     </View>
                                 </View>
 
@@ -106,31 +109,62 @@ export default function ElectricityServicesScreen() {
                                         style={styles.blueButton}
                                         onPress={() => router.push("/update-electricity-details")}
                                     >
-                                        <Text style={styles.buttonTextBlue}>Update Details</Text>
-                                        <Ionicons name="arrow-forward" size={16} color="#0D47A1" />
+                                        <Text style={styles.buttonTextBlue}>Start Process</Text>
+                                        <Ionicons name="arrow-forward" size={16} color="#0A4DA3" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Pay Bill (Shortcut) */}
+                        <View style={styles.serviceCard}>
+                            <View style={styles.blueGradient}>
+                                <View style={styles.serviceHeaderRow}>
+                                    <View style={styles.serviceIcon}>
+                                        <MaterialCommunityIcons
+                                            name="credit-card-outline"
+                                            size={28}
+                                            color="#0A4DA3"
+                                        />
+                                    </View>
+                                    <View style={styles.serviceContent}>
+                                        <Text style={styles.serviceTitle}>Pay Electricity Bill</Text>
+                                        <Text style={styles.serviceHindi}>वीज बिल भरा</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.serviceBottomRow}>
+                                    <Text style={styles.serviceDesc}>Quick and secure payment for all electricity boards</Text>
+                                    <TouchableOpacity
+                                        style={styles.blueButton}
+                                        onPress={() => router.push("/electricity-bill")}
+                                    >
+                                        <Text style={styles.buttonTextBlue}>Pay Now</Text>
+                                        <Ionicons name="arrow-forward" size={16} color="#0A4DA3" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
                         </View>
                     </View>
 
-                    {/* Important Note */}
-                    <View style={styles.processCard}>
-                        <View style={styles.processHeader}>
-                            <MaterialCommunityIcons name="alert-circle-outline" size={24} color="#0A4DA3" />
-                            <Text style={styles.processTitle}>Important Note</Text>
+                    {/* Important Note Section */}
+                    <View style={styles.noteCard}>
+                        <View style={styles.noteHeader}>
+                            <Ionicons name="information-circle" size={20} color="#EF6C00" />
+                            <Text style={styles.noteTitle}>Important Note:</Text>
                         </View>
                         <Text style={styles.noteText}>
-                            Ensure you have your Consumer Number and a copy of your recent electricity bill before starting the update process. Name and address corrections require supporting documents like Aadhaar or Identity Proof.
+                            Ensure you have your Consumer Number ready before starting. Profile updates require supporting documents like Aadhaar, PAN, or Address Proof for verification.
                         </Text>
                     </View>
 
-                    <View style={{ height: 20 }} />
+                    <View style={{ height: 40 }} />
                 </ScrollView>
             </SafeAreaView>
         </View>
     );
 }
+
 
 const Badge = ({ text }: { text: string }) => (
     <View style={styles.badge}>
@@ -183,6 +217,8 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
         paddingHorizontal: 20,
     },
+
+    // Info Card
     infoCard: {
         flexDirection: 'row',
         backgroundColor: '#FFFFFF',
@@ -206,7 +242,7 @@ const styles = StyleSheet.create({
     cardHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 12,
+        marginBottom: 8,
     },
     iconCircle: {
         width: 36,
@@ -224,6 +260,7 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: 'bold',
         color: '#1A1A1A',
+        marginBottom: 1,
     },
     cardSubtitle: {
         fontSize: 11,
@@ -237,19 +274,21 @@ const styles = StyleSheet.create({
     badge: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
+        gap: 6,
     },
     badgeText: {
-        fontSize: 11,
+        fontSize: 12,
         color: '#666',
         fontWeight: '500',
     },
+
+    // Service Cards
     serviceRow: {
         marginBottom: 12,
     },
     serviceCard: {
         borderRadius: 16,
-        marginBottom: 16,
+        marginBottom: 12,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.05,
@@ -295,7 +334,7 @@ const styles = StyleSheet.create({
         color: '#1A1A1A',
         marginBottom: 2,
     },
-    serviceSubtitle: {
+    serviceHindi: {
         fontSize: 12,
         color: '#666',
     },
@@ -316,39 +355,33 @@ const styles = StyleSheet.create({
         borderColor: '#BBDEFB',
     },
     buttonTextBlue: {
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: '#0D47A1',
-    },
-    processCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-    },
-    processHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
-        paddingBottom: 12,
-    },
-    processTitle: {
-        fontSize: 18,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#0A4DA3',
     },
+
+    // Note Card
+    noteCard: {
+        backgroundColor: '#FFF8E1',
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#FFECB3',
+    },
+    noteHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 8,
+    },
+    noteTitle: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#EF6C00',
+    },
     noteText: {
-        fontSize: 13,
-        color: '#64748B',
-        lineHeight: 20,
-    }
+        fontSize: 12,
+        color: '#666',
+        lineHeight: 18,
+    },
 });
