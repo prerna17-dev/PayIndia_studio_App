@@ -256,3 +256,13 @@
 2026-03-02T06:04:49.299Z | POST /api/auth/verify-otp | 200 | 60ms | ::1
 2026-03-02T06:07:39.124Z | PUT /api/user/profile | 200 | 227ms | ::1
 2026-03-02T06:13:16.635Z | PUT /api/user/profile | 200 | 122ms | ::1
+2026-03-02T06:44:26.691Z | PUT /api/user/profile | 200 | 89ms | ::1
+2026-03-02T06:45:01.074Z | PUT /api/user/profile | 200 | 10ms | ::1
+2026-03-02T10:18:52.938Z | GET /api/eseva/requirements | 401 | 112ms | ::1
+2026-03-02T10:19:27.065Z | GET /api/eseva/requirements | 200 | 40ms | ::1
+2026-03-02T11:13:35.930Z | POST /api/pan/apply | 201 | 89ms | ::1
+2026-03-02T11:16:25.254Z | POST /api/pan/apply | 201 | 76ms | ::1
+2026-03-02T11:17:42.162Z | GET /api/pan/list | 200 | 27ms | ::1
+2026-03-02T11:51:55.957Z | POST /api/pan/correction/send-otp | 200 | 454ms | ::1
+2026-03-02T11:53:51.039Z | POST /api/pan/correction/verify-otp | 200 | 88ms | ::1
+2026-03-02T11:58:13.540Z | POST /api/pan/correction/submit | 201 | 343ms | ::1

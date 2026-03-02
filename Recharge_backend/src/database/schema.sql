@@ -1,4 +1,4 @@
-  create database payindia_studio;
+create database payindia_studio;
 use payindia_studio;
 
 CREATE TABLE users (
@@ -162,6 +162,43 @@ CREATE TABLE bill_payments (
   INDEX idx_transaction_bill (transaction_id)
 );
 
+CREATE TABLE pan_applications (
+  application_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  full_name VARCHAR(100) NOT NULL,
+  father_name VARCHAR(100) NOT NULL,
+  mother_name VARCHAR(100) NOT NULL,
+  date_of_birth DATE NOT NULL,
+  mobile_number VARCHAR(15) NOT NULL,
+  email_address VARCHAR(100) NOT NULL,
+  aadhar_number VARCHAR(12) NOT NULL,
+  full_address TEXT NOT NULL,
+  city VARCHAR(100) NOT NULL,
+  district VARCHAR(100) NOT NULL,
+  state VARCHAR(100) NOT NULL,
+  pincode VARCHAR(6) NOT NULL,
+  status ENUM('Pending', 'Approved', 'Rejected', 'Processed') DEFAULT 'Pending',
+  admin_id INT,
+  agent_id INT,
+  admin_remarks TEXT,
+  agent_remarks TEXT,
+  processed_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (admin_id) REFERENCES users(user_id),
+  FOREIGN KEY (agent_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE pan_documents (
+  document_id INT AUTO_INCREMENT PRIMARY KEY,
+  application_id INT NOT NULL,
+  document_type ENUM('Aadhaar', 'Address_Proof', 'DOB_Proof', 'Passport_Photo') NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (application_id) REFERENCES pan_applications(application_id) ON DELETE CASCADE
+);
+
 CREATE TABLE aadhar_enrollments (
   enrollment_id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
@@ -188,21 +225,24 @@ CREATE TABLE aadhar_enrollments (
   FOREIGN KEY (agent_id) REFERENCES users(user_id)
 );
 
-CREATE TABLE eseva_applications (
-  application_id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE verification_otps (
+  otp_id INT AUTO_INCREMENT PRIMARY KEY,
+  mobile_number VARCHAR(15) NOT NULL,
+  otp_code VARCHAR(10) NOT NULL,
+  purpose VARCHAR(50) NOT NULL,
+  is_verified BOOLEAN DEFAULT FALSE,
+  expires_at TIMESTAMP NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE pan_corrections (
+  correction_id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  service_type ENUM(
-    'Birth_Certificate',
-    'Death_Certificate',
-    'Income_Certificate',
-    'Caste_Certificate',
-    'Domicile_Certificate',
-    'Marriage_Certificate',
-    'Senior_Citizen_Certificate',
-    'Disability_Certificate'
-  ) NOT NULL,
-  applicant_name VARCHAR(100) NOT NULL,
-  applicant_details JSON,
+  pan_number VARCHAR(10) NOT NULL,
+  mobile_number VARCHAR(15) NOT NULL,
+  corrected_name VARCHAR(100),
+  corrected_dob DATE,
+  correction_type VARCHAR(50),
   status ENUM('Pending', 'Approved', 'Rejected', 'Processed') DEFAULT 'Pending',
   admin_id INT,
   agent_id INT,
@@ -216,37 +256,11 @@ CREATE TABLE eseva_applications (
   FOREIGN KEY (agent_id) REFERENCES users(user_id)
 );
 
-CREATE TABLE eseva_documents (
+CREATE TABLE pan_correction_documents (
   document_id INT AUTO_INCREMENT PRIMARY KEY,
-  application_id INT NOT NULL,
-  document_name VARCHAR(100) NOT NULL,
+  correction_id INT NOT NULL,
+  document_type ENUM('Proof_of_Name', 'Identity_Proof', 'Proof_of_DOB', 'Photo_Sign') NOT NULL,
   file_path VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (application_id) REFERENCES eseva_applications(application_id) ON DELETE CASCADE
+  FOREIGN KEY (correction_id) REFERENCES pan_corrections(correction_id) ON DELETE CASCADE
 );
-
-  CREATE TABLE pan_applications (
-    application_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    full_name VARCHAR(100) NOT NULL,
-    father_name VARCHAR(100) NOT NULL,
-    mother_name VARCHAR(100) NOT NULL,
-    date_of_birth DATE NOT NULL,
-    mobile_number VARCHAR(15) NOT NULL,
-    email_address VARCHAR(100) NOT NULL,
-    aadhar_number VARCHAR(12) NOT NULL,
-    full_address TEXT NOT NULL,
-    city VARCHAR(100) NOT NULL,
-    pincode VARCHAR(6) NOT NULL,
-    status ENUM('Pending', 'Approved', 'Rejected', 'Processed') DEFAULT 'Pending',
-    admin_id INT,
-    agent_id INT,
-    admin_remarks TEXT,
-    agent_remarks TEXT,
-    processed_at TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (admin_id) REFERENCES users(user_id),
-    FOREIGN KEY (agent_id) REFERENCES users(user_id)
-  );
