@@ -38,8 +38,11 @@ export default function MobileRechargeScreen() {
             if (data.length > 0) {
                 const contact = data[0];
                 if (contact.phoneNumbers && contact.phoneNumbers.length > 0) {
-                    const phone = contact.phoneNumbers[0].number.replace(/\D/g, '').slice(-10);
-                    setMobileNumber(phone);
+                    const phoneNumber = contact.phoneNumbers[0].number;
+                    if (phoneNumber) {
+                        const phone = phoneNumber.replace(/\D/g, '').slice(-10);
+                        setMobileNumber(phone);
+                    }
                 }
             }
         }

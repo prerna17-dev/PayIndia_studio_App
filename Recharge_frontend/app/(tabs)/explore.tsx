@@ -1,4 +1,4 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+﻿import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -13,9 +13,120 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Animated,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
+
+// Animated Quick Action Chip
+function AnimatedChip({
+  icon,
+  label,
+  onPress,
+  delay = 0,
+  bgColor = "#F1F8FE",
+  borderColor = "#BBDEFB",
+  iconColor = "#0D47A1",
+  textColor = "#0D47A1",
+}: {
+  icon: string;
+  label: string;
+  onPress: () => void;
+  delay?: number;
+  bgColor?: string;
+  borderColor?: string;
+  iconColor?: string;
+  textColor?: string;
+}) {
+  const scaleAnim = useRef(new Animated.Value(0.6)).current;
+  const pressAnim = useRef(new Animated.Value(1)).current;
+  const iconBounce = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Staggered entrance pop
+    setTimeout(() => {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        tension: 80,
+        friction: 6,
+        useNativeDriver: true,
+      }).start();
+    }, delay);
+
+    // Icon subtle bounce loop
+    setTimeout(() => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(iconBounce, {
+            toValue: -4,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(iconBounce, {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.delay(1800),
+        ])
+      ).start();
+    }, delay + 400);
+  }, []);
+
+  const handlePressIn = () => {
+    Animated.spring(pressAnim, {
+      toValue: 0.92,
+      tension: 200,
+      friction: 10,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(pressAnim, {
+      toValue: 1,
+      tension: 100,
+      friction: 5,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale: Animated.multiply(scaleAnim, pressAnim) }] }}>
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
+        style={[chipStyles.chip, { backgroundColor: bgColor, borderColor }]}
+      >
+        <Animated.View style={{ transform: [{ translateY: iconBounce }] }}>
+          <Ionicons name={icon as any} size={16} color={iconColor} />
+        </Animated.View>
+        <Text style={[chipStyles.chipText, { color: textColor }]}>{label}</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+const chipStyles = StyleSheet.create({
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F1F8FE",
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "#BBDEFB",
+  },
+  chipText: {
+    fontSize: 13,
+    color: "#0D47A1",
+    fontWeight: "600",
+  },
+});
 
 export default function HomeScreen({
   userName = "User",
@@ -50,7 +161,7 @@ export default function HomeScreen({
       id: 1,
       title: "Mobile Recharge",
       discount: "Get 10% Cashback",
-      description: "On recharges above ₹299",
+      description: "On recharges above â‚¹299",
       code: "MOBILE10",
       colors: ["#B3E5FC", "#4FC3F7"] as [string, string],
       iconName: "phone-portrait",
@@ -63,7 +174,7 @@ export default function HomeScreen({
     {
       id: 2,
       title: "DTH Recharge",
-      discount: "Flat ₹50 OFF",
+      discount: "Flat 150 OFF",
       description: "On all DTH subscriptions",
       code: "DTH50",
       colors: ["#FFE0B2", "#FF9800"] as [string, string],
@@ -78,7 +189,7 @@ export default function HomeScreen({
       id: 3,
       title: "Electricity Bill",
       discount: "5% Cashback",
-      description: "Max cashback ₹100",
+      description: "Max cashback â‚¹100",
       code: "POWER5",
       colors: ["#C8E6C9", "#4CAF50"] as [string, string],
       iconName: "bulb",
@@ -219,6 +330,73 @@ export default function HomeScreen({
               </View>
             </View>
           </LinearGradient>
+
+          {/* Quick Actions Strip */}
+          <View style={styles.quickActionsSection}>
+            <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsRow}>
+              <AnimatedChip
+                delay={0}
+                icon="phone-portrait-outline"
+                label="Recharge"
+                bgColor="#E8F5E9"
+                borderColor="#A5D6A7"
+                iconColor="#2E7D32"
+                textColor="#2E7D32"
+                onPress={() => router.push("/mobile-recharge")}
+              />
+              <AnimatedChip
+                delay={80}
+                icon="bulb-outline"
+                label="Electricity"
+                bgColor="#FFF8E1"
+                borderColor="#FFE082"
+                iconColor="#F57F17"
+                textColor="#F57F17"
+                onPress={() => router.push("/electricity-bill")}
+              />
+              <AnimatedChip
+                delay={160}
+                icon="tv-outline"
+                label="DTH"
+                bgColor="#F3E5F5"
+                borderColor="#CE93D8"
+                iconColor="#6A1B9A"
+                textColor="#6A1B9A"
+                onPress={() => router.push("/dth-recharge")}
+              />
+              <AnimatedChip
+                delay={240}
+                icon="water-outline"
+                label="Water Bill"
+                bgColor="#E1F5FE"
+                borderColor="#81D4FA"
+                iconColor="#0277BD"
+                textColor="#0277BD"
+                onPress={() => router.push("/water-services")}
+              />
+              <AnimatedChip
+                delay={320}
+                icon="train-outline"
+                label="Train"
+                bgColor="#FCE4EC"
+                borderColor="#F48FB1"
+                iconColor="#C62828"
+                textColor="#C62828"
+                onPress={() => router.push("/train-booking")}
+              />
+              <AnimatedChip
+                delay={400}
+                icon="gift-outline"
+                label="Refer & Earn"
+                bgColor="#FFF3E0"
+                borderColor="#FFCC80"
+                iconColor="#E65100"
+                textColor="#E65100"
+                onPress={() => router.push("/refer-earn")}
+              />
+            </ScrollView>
+          </View>
 
           {/* Main Content */}
           <View style={styles.content}>
@@ -428,9 +606,17 @@ export default function HomeScreen({
               </View>
             </View>
 
-            {/* Deals & Offers Section - Auto-scrollable Ads Box */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Deals & Offers</Text>
+            {/* Deals & Offers Section */}
+            <View style={styles.dealsSection}>
+              <View style={styles.dealsSectionHeader}>
+                <View style={styles.dealsTitleRow}>
+
+                  <Text style={styles.dealsTitle}>Deals & Offers</Text>
+                </View>
+                <TouchableOpacity>
+                  <Text style={styles.dealsSeeAll}>See All</Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.adsContainer}>
                 <ScrollView
@@ -446,7 +632,7 @@ export default function HomeScreen({
                     <TouchableOpacity
                       key={ad.id}
                       style={styles.adCard}
-                      activeOpacity={0.9}
+                      activeOpacity={0.92}
                     >
                       <LinearGradient
                         colors={ad.colors}
@@ -454,66 +640,36 @@ export default function HomeScreen({
                         end={{ x: 1, y: 1 }}
                         style={styles.adGradient}
                       >
-                        <View
-                          style={[
-                            styles.adBadge,
-                            { backgroundColor: ad.badgeColor },
-                          ]}
-                        >
-                          <Text style={styles.adBadgeText}>{ad.badge}</Text>
-                        </View>
+                        {/* Decorative circles */}
+                        <View style={[styles.adCircle, styles.adCircleLg]} />
+                        <View style={[styles.adCircle, styles.adCircleSm]} />
 
-                        <View style={styles.adIconContainer}>
-                          <View
-                            style={[
-                              styles.adIconCircle,
-                              { backgroundColor: "rgba(255, 255, 255, 0.3)" },
-                            ]}
-                          >
-                            {ad.iconType === "ionicon" ? (
-                              <Ionicons
-                                name={ad.iconName as any}
-                                size={18}
-                                color={ad.iconColor}
-                              />
-                            ) : (
-                              <MaterialCommunityIcons
-                                name={ad.iconName as any}
-                                size={18}
-                                color={ad.iconColor}
-                              />
-                            )}
+                        {/* Left: info */}
+                        <View style={styles.adLeft}>
+                          <View style={[styles.adBadge, { backgroundColor: ad.badgeColor }]}>
+                            <Text style={styles.adBadgeText}>{ad.badge}</Text>
+                          </View>
+                          <Text style={[styles.adTitle, { color: ad.textColor }]}>{ad.title}</Text>
+                          <Text style={[styles.adDescription, { color: ad.textColor }]}>{ad.description}</Text>
+                          <View style={styles.adCodeChip}>
+                            <Text style={[styles.adCodeLabel, { color: ad.textColor }]}>USE </Text>
+                            <Text style={[styles.adCodeValue, { color: ad.badgeColor }]}>{ad.code}</Text>
                           </View>
                         </View>
 
-                        <Text style={[styles.adTitle, { color: ad.textColor }]}>
-                          {ad.title}
-                        </Text>
-                        <Text
-                          style={[styles.adDiscount, { color: ad.textColor }]}
-                        >
-                          {ad.discount}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.adDescription,
-                            { color: ad.textColor },
-                          ]}
-                        >
-                          {ad.description}
-                        </Text>
-
-                        <View style={styles.adFooter}>
-                          <Text
-                            style={[styles.adCode, { color: ad.textColor }]}
-                          >
-                            Use: {ad.code}
-                          </Text>
-                          <Ionicons
-                            name="arrow-forward-circle"
-                            size={18}
-                            color={ad.textColor}
-                          />
+                        {/* Right: big discount */}
+                        <View style={styles.adRight}>
+                          <View style={[styles.adIconBubble, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
+                            {ad.iconType === "ionicon" ? (
+                              <Ionicons name={ad.iconName as any} size={26} color={ad.iconColor} />
+                            ) : (
+                              <MaterialCommunityIcons name={ad.iconName as any} size={26} color={ad.iconColor} />
+                            )}
+                          </View>
+                          <Text style={[styles.adDiscountBig, { color: ad.textColor }]}>{ad.discount}</Text>
+                          <View style={[styles.adClaimBtn, { borderColor: ad.textColor }]}>
+                            <Text style={[styles.adClaimText, { color: ad.textColor }]}>Claim  →</Text>
+                          </View>
                         </View>
                       </LinearGradient>
                     </TouchableOpacity>
@@ -955,86 +1111,6 @@ const styles = StyleSheet.create({
     width: width - 40,
   },
 
-  adCard: {
-    width: width - 40,
-    height: 95,
-    borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 5,
-  },
-
-  adGradient: {
-    flex: 1,
-    padding: 8,
-    justifyContent: "space-between",
-  },
-
-  adBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 1,
-    borderRadius: 8,
-  },
-
-  adBadgeText: {
-    color: "#FFFFFF",
-    fontSize: 10,
-    fontWeight: "bold",
-    letterSpacing: 0.5,
-  },
-
-  adIconContainer: {
-    marginTop: 4,
-  },
-
-  adIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  adTitle: {
-    fontSize: 12,
-    fontWeight: "bold",
-    marginTop: 2,
-    letterSpacing: 0.3,
-  },
-
-  adDiscount: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginTop: 1,
-  },
-
-  adDescription: {
-    fontSize: 9,
-    opacity: 0.9,
-    marginTop: 0,
-  },
-
-  adFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 3,
-    paddingTop: 3,
-    borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.1)",
-  },
-
-  adCode: {
-    fontSize: 9,
-    fontWeight: "600",
-    letterSpacing: 0.5,
-  },
 
   // Pagination Dots
   paginationContainer: {
@@ -1122,4 +1198,164 @@ const styles = StyleSheet.create({
     color: "#2196F3",
     fontWeight: "600",
   },
+
+  // Wallet Balance Card
+  walletCard: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowColor: "#0D47A1",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  walletGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+  },
+  walletLeft: {
+    flex: 1,
+  },
+  walletIconRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  walletLabel: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.8)",
+    fontWeight: "500",
+  },
+  walletBalance: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  walletSub: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.65)",
+    fontWeight: "400",
+  },
+  walletRight: {
+    alignItems: "flex-end",
+    gap: 10,
+  },
+  addMoneyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FFFFFF",
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+  },
+  addMoneyText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#0D47A1",
+  },
+  walletHistoryBtn: {
+    paddingVertical: 2,
+  },
+  walletHistoryText: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "500",
+  },
+
+  // Quick Actions
+  quickActionsSection: {
+    marginBottom: 16,
+    paddingTop: 4,
+  },
+  quickActionsTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#1A1A1A",
+    marginBottom: 10,
+    paddingHorizontal: 20,
+    letterSpacing: 0.3,
+  },
+  quickActionsRow: {
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  quickChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#F1F8FE",
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: "#BBDEFB",
+  },
+  quickChipText: {
+    fontSize: 13,
+    color: "#0D47A1",
+    fontWeight: "600",
+  },
+
+  // Deals & Offers section header
+  dealsSection: { marginBottom: 16 },
+  dealsSectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, marginBottom: 12 },
+  dealsTitleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  dealsFire: { fontSize: 20 },
+  dealsTitle: { fontSize: 18, fontWeight: "bold", color: "#1A1A1A", letterSpacing: 0.3 },
+  dealsSeeAll: { fontSize: 13, color: "#2196F3", fontWeight: "600" },
+
+  // Ad card redesign
+  adCard: { width: width - 40, height: 140, borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.18, shadowRadius: 10, elevation: 8 },
+  adGradient: { flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 18, paddingVertical: 16, overflow: "hidden" },
+  adCircle: { position: "absolute", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.12)" },
+  adCircleLg: { width: 130, height: 130, bottom: -40, right: -20 },
+  adCircleSm: { width: 70, height: 70, top: -25, right: 80 },
+  adLeft: { flex: 1, justifyContent: "center", paddingRight: 10 },
+  adRight: { alignItems: "center", justifyContent: "center", gap: 8 },
+  adBadge: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, marginBottom: 8 },
+  adBadgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "bold", letterSpacing: 0.5 },
+  adIconBubble: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
+  adTitle: { fontSize: 13, fontWeight: "800", letterSpacing: 0.2, marginBottom: 2 },
+  adDiscountBig: { fontSize: 18, fontWeight: "900", textAlign: "center", letterSpacing: 0.5 },
+  adDescription: { fontSize: 10, opacity: 0.85, marginBottom: 8 },
+  adCodeChip: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.35)", paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8, alignSelf: "flex-start" },
+  adCodeLabel: { fontSize: 10, fontWeight: "600" },
+  adCodeValue: { fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
+  adClaimBtn: { borderWidth: 1.5, borderRadius: 12, paddingVertical: 4, paddingHorizontal: 12 },
+  adClaimText: { fontSize: 11, fontWeight: "700" },
+
+
+  // Trust Stats Strip
+  statsStrip: { flexDirection: "row", alignItems: "center", justifyContent: "space-evenly", marginHorizontal: 20, marginBottom: 20, backgroundColor: "#FFFFFF", borderRadius: 16, paddingVertical: 16, paddingHorizontal: 8, shadowColor: "#0D47A1", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 5, borderWidth: 1, borderColor: "#E3F2FD" },
+  statItem: { alignItems: "center", flex: 1 },
+  statNumber: { fontSize: 18, fontWeight: "900", color: "#0D47A1", letterSpacing: 0.3 },
+  statLabel: { fontSize: 10, color: "#757575", fontWeight: "500", marginTop: 2, textAlign: "center" },
+  statDivider: { width: 1, height: 32, backgroundColor: "#BBDEFB" },
+
+  // Refer & Earn Banner
+  referSection: { marginHorizontal: 20, marginBottom: 24, borderRadius: 20, overflow: "hidden", shadowColor: "#6A1B9A", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 10 },
+  referGradient: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 20, overflow: "hidden" },
+  referCircle1: { position: "absolute", width: 150, height: 150, borderRadius: 75, backgroundColor: "rgba(255,255,255,0.1)", top: -50, right: -30 },
+  referCircle2: { position: "absolute", width: 90, height: 90, borderRadius: 45, backgroundColor: "rgba(255,255,255,0.08)", bottom: -30, right: 60 },
+  referLeft: { flex: 1, paddingRight: 12 },
+  referBadge: { alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.25)", paddingVertical: 3, paddingHorizontal: 10, borderRadius: 12, marginBottom: 8 },
+  referBadgeText: { fontSize: 10, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.5 },
+  referHeadline: { fontSize: 26, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5, marginBottom: 2 },
+  referSub: { fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: "400", marginBottom: 12, lineHeight: 15 },
+  referBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FFFFFF", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, alignSelf: "flex-start" },
+  referBtnText: { fontSize: 13, fontWeight: "700", color: "#6A1B9A" },
+  referRight: { alignItems: "center", gap: 8 },
+  referIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: "rgba(255,255,255,0.2)", justifyContent: "center", alignItems: "center", marginBottom: 4 },
+  referCode: { fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: "500" },
+  referCodeBox: { backgroundColor: "rgba(255,255,255,0.25)", paddingVertical: 4, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.4)" },
+  referCodeText: { fontSize: 13, fontWeight: "900", color: "#FFFFFF", letterSpacing: 1.5 },
 });

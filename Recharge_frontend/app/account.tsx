@@ -83,7 +83,10 @@ export default function AccountScreen() {
           </View>
 
           {/* Refer & Earn Banner */}
-          <View style={styles.referBannerContainer}>
+          <TouchableOpacity
+            style={styles.referBannerContainer}
+            onPress={() => router.push("/refer-earn")}
+          >
             <LinearGradient
               colors={["#F1F8FE", "#BBDEFB"]}
               start={{ x: 0, y: 0 }}
@@ -101,7 +104,7 @@ export default function AccountScreen() {
               </View>
               <Ionicons name="chevron-forward" size={20} color="#0D47A1" />
             </LinearGradient>
-          </View>
+          </TouchableOpacity>
 
           {/* Add Bank Account Section */}
           <View style={styles.section}>
