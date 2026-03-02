@@ -1,9 +1,12 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Stack, useRouter } from "expo-router";
-import React from "react";
+import { Stack, useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import React, { useState, useEffect, useCallback } from "react";
 import {
+  ActivityIndicator,
+  BackHandler,
   Dimensions,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -16,19 +19,45 @@ const { width } = Dimensions.get("window");
 
 export default function WalletScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
-  // State for auto-use toggle
-  const [isAutoUseEnabled, setIsAutoUseEnabled] = React.useState(false);
+  // Payment related params
+  const { amount, billType, consumerNumber, lenderName, policyNumber, borrowerName, loanAccountNumber } = params;
+  const isPaymentFlow = !!amount;
+
+  // State
+  const [isAutoUseEnabled, setIsAutoUseEnabled] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
 
   const handleToggle = () => {
     setIsAutoUseEnabled(!isAutoUseEnabled);
   };
 
-  const handleBackPress = () => {
-    router.push({
-      pathname: "/(tabs)/explore",
-      params: {},
-    });
+  const handleBackPress = useCallback(() => {
+    router.replace("/(tabs)/explore");
+    return true;
+  }, [router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        handleBackPress();
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => subscription.remove();
+    }, [handleBackPress])
+  );
+
+  const handleConfirmPayment = () => {
+    setIsLoading(true);
+    // Simulate payment process
+    setTimeout(() => {
+      setIsLoading(false);
+      setShowPaymentSuccess(true);
+    }, 2000);
   };
 
   return (
@@ -156,6 +185,69 @@ export default function WalletScreen() {
             </LinearGradient>
           </View>
 
+          {isPaymentFlow && (
+            <View style={styles.paymentConfirmSection}>
+              <View style={styles.confirmCard}>
+                <View style={styles.confirmHeader}>
+                  <MaterialCommunityIcons name="credit-card-check" size={24} color="#0D47A1" />
+                  <Text style={styles.confirmTitle}>Confirm Payment</Text>
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.confirmRow}>
+                  <Text style={styles.confirmLabel}>Bill Type</Text>
+                  <Text style={styles.confirmValue}>{String(billType).toUpperCase()}</Text>
+                </View>
+                {lenderName && (
+                  <View style={styles.confirmRow}>
+                    <Text style={styles.confirmLabel}>Lender/Bank</Text>
+                    <Text style={styles.confirmValue}>{lenderName}</Text>
+                  </View>
+                )}
+                {consumerNumber && (
+                  <View style={styles.confirmRow}>
+                    <Text style={styles.confirmLabel}>Consumer No.</Text>
+                    <Text style={styles.confirmValue}>{consumerNumber}</Text>
+                  </View>
+                )}
+                {policyNumber && (
+                  <View style={styles.confirmRow}>
+                    <Text style={styles.confirmLabel}>Policy No.</Text>
+                    <Text style={styles.confirmValue}>{policyNumber}</Text>
+                  </View>
+                )}
+                {loanAccountNumber && (
+                  <View style={styles.confirmRow}>
+                    <Text style={styles.confirmLabel}>Loan Acc No.</Text>
+                    <Text style={styles.confirmValue}>{loanAccountNumber}</Text>
+                  </View>
+                )}
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Amount to Pay</Text>
+                  <Text style={styles.totalValue}>₹{amount}</Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleConfirmPayment}
+                  disabled={isLoading}
+                  style={{ marginTop: 20 }}
+                >
+                  <LinearGradient
+                    colors={["#0D47A1", "#1565C0"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.confirmButton}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.confirmButtonText}>Confirm and Pay</Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Auto-use Toggle */}
           <View style={styles.autoUseSection}>
             <View style={styles.autoUseContent}>
@@ -206,29 +298,75 @@ export default function WalletScreen() {
             </View>
           </View>
 
-          {/* Empty State - No Activity */}
-          <View style={styles.emptyStateContainer}>
-            <View style={styles.emptyStateIcon}>
-              <MaterialCommunityIcons
-                name="wallet-outline"
-                size={80}
-                color="#E0E0E0"
-              />
+          {/* Activity Section */}
+          {!isPaymentFlow && (
+            <View style={styles.emptyStateContainer}>
+              <View style={styles.emptyStateIcon}>
+                <MaterialCommunityIcons
+                  name="wallet-outline"
+                  size={80}
+                  color="#E0E0E0"
+                />
+              </View>
+              <Text style={styles.emptyStateTitle}>No Activity Yet</Text>
+              <Text style={styles.emptyStateText}>
+                Your wallet transactions will appear here
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                Add money to get started with your wallet
+              </Text>
             </View>
-            <Text style={styles.emptyStateTitle}>No Activity Yet</Text>
-            <Text style={styles.emptyStateText}>
-              Your wallet transactions will appear here
-            </Text>
-            <Text style={styles.emptyStateSubtext}>
-              Add money to get started with your wallet
-            </Text>
-          </View>
+          )}
 
           <TouchableOpacity style={styles.walletInfo}>
             <Ionicons name="information-circle" size={20} color="#999" />
             <Text style={styles.walletInfoText}>Wallet Info</Text>
           </TouchableOpacity>
         </ScrollView>
+
+        {/* Success Modal */}
+        <Modal
+          visible={showPaymentSuccess}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowPaymentSuccess(false)}
+        >
+          <View style={styles.successOverlay}>
+            <View style={styles.successCard}>
+              <View style={styles.successIcon}>
+                <Ionicons name="checkmark" size={50} color="#FFFFFF" />
+              </View>
+              <Text style={styles.successTitle}>Payment Successful</Text>
+              <View style={styles.receipt}>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>Transaction ID</Text>
+                  <Text style={styles.receiptValue}>W-TXN-{Math.floor(Math.random() * 900000) + 100000}</Text>
+                </View>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>Amount Paid</Text>
+                  <Text style={styles.receiptValue}>₹{amount}</Text>
+                </View>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>Mode</Text>
+                  <Text style={styles.receiptValue}>Wallet balance</Text>
+                </View>
+                <View style={styles.receiptRow}>
+                  <Text style={styles.receiptLabel}>Date</Text>
+                  <Text style={styles.receiptValue}>{new Date().toLocaleDateString()}</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.backHomeButtonSuccess}
+                onPress={() => {
+                  setShowPaymentSuccess(false);
+                  router.replace("/(tabs)/explore");
+                }}
+              >
+                <Text style={styles.backHomeTextSuccess}>Back to Home</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* Bottom Navigation */}
         <View style={styles.bottomNav}>
@@ -616,5 +754,146 @@ const styles = StyleSheet.create({
   navTextActive: {
     color: "#2196F3",
     fontWeight: "600",
+  },
+
+  // Payment Confirmation Styles
+  paymentConfirmSection: {
+    paddingHorizontal: 20,
+    marginBottom: 30,
+  },
+  confirmCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: "#E3F2FD",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  confirmHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 16,
+  },
+  confirmTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#0D47A1",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#F0F0F0",
+    marginBottom: 16,
+  },
+  confirmRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  confirmLabel: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+  confirmValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1A1A1A",
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#F0F0F0",
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#1A1A1A",
+  },
+  totalValue: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#0D47A1",
+  },
+  confirmButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  confirmButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+
+  // Success Modal Styles
+  successOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  successCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 30,
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 400,
+  },
+  successIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "#4CAF50",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  successTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#1A1A1A",
+    marginBottom: 24,
+  },
+  receipt: {
+    width: "100%",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 30,
+  },
+  receiptRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 12,
+  },
+  receiptLabel: {
+    fontSize: 14,
+    color: "#64748B",
+  },
+  receiptValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1A1A1A",
+  },
+  backHomeButtonSuccess: {
+    backgroundColor: "#0D47A1",
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 12,
+  },
+  backHomeTextSuccess: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

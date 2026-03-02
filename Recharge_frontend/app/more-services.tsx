@@ -200,21 +200,30 @@ export default function MoreServicesScreen() {
                 <Text style={styles.serviceText}>Credit{'\n'}card</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity
+                style={styles.serviceCard}
+                onPress={() => router.push('/loan-repayment')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="cash-multiple" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>Loan{'\n'}repayment</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity
+                style={styles.serviceCard}
+                onPress={() => router.push('/lic-insurance-payment')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="shield-check-outline" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>LIC /{'\n'}insurance</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity
+                style={styles.serviceCard}
+                onPress={() => router.push('/recurring-deposit-payment')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="calendar-clock" size={30} color="#0D47A1" />
                 </View>
@@ -248,21 +257,30 @@ export default function MoreServicesScreen() {
                 <Text style={styles.serviceText}>LPG{'\n'}cylinder</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity
+                style={styles.serviceCard}
+                onPress={() => router.push('/water-bill-payment')}
+              >
                 <View style={styles.iconCircle}>
                   <Ionicons name="water-outline" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>Water{'\n'}bill</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity
+                style={styles.serviceCard}
+                onPress={() => router.push('/piped-gas-payment')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="pipe" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>Piped{'\n'}gas</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity
+                style={styles.serviceCard}
+                onPress={() => router.push('/municipal-services')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="office-building" size={30} color="#0D47A1" />
                 </View>

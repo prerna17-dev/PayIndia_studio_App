@@ -163,7 +163,7 @@ export default function ElectricityBillScreen() {
     const handleSelectPaymentMethod = (method: string) => {
         setShowPaymentModal(false);
         // Navigate to payment screen with bill details and selected method
-        router.push({
+        router.replace({
             pathname: "/wallet" as any,
             params: {
                 amount: billDetails?.amount.toString(),
