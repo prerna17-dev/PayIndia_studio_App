@@ -266,3 +266,12 @@
 2026-03-02T11:51:55.957Z | POST /api/pan/correction/send-otp | 200 | 454ms | ::1
 2026-03-02T11:53:51.039Z | POST /api/pan/correction/verify-otp | 200 | 88ms | ::1
 2026-03-02T11:58:13.540Z | POST /api/pan/correction/submit | 201 | 343ms | ::1
+2026-03-04T04:21:47.473Z | POST /api/auth/send-otp | 200 | 834ms | ::ffff:192.168.1.22
+2026-03-04T04:22:06.512Z | POST /api/auth/verify-otp | 200 | 223ms | ::ffff:192.168.1.22
+2026-03-04T05:31:14.092Z | POST /api/voter/apply | 201 | 606ms | ::1
+2026-03-04T05:34:29.744Z | GET /api/voter/list | 200 | 113ms | ::1
+2026-03-04T05:37:30.422Z | POST /api/voter/correction/send-otp | 200 | 938ms | ::1
+2026-03-04T05:38:48.659Z | POST /api/voter/correction/verify-otp | 401 | 5ms | ::1
+2026-03-04T05:39:02.669Z | POST /api/voter/correction/verify-otp | 200 | 28ms | ::1
+2026-03-04T05:44:59.223Z | POST /api/voter/correction/submit | 400 | 127ms | ::1
+2026-03-04T05:45:32.866Z | POST /api/voter/correction/submit | 201 | 153ms | ::1

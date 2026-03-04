@@ -264,3 +264,68 @@ CREATE TABLE pan_correction_documents (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (correction_id) REFERENCES pan_corrections(correction_id) ON DELETE CASCADE
 );
+
+
+CREATE TABLE voter_applications (
+  application_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  full_name VARCHAR(100) NOT NULL,
+  date_of_birth DATE NOT NULL,
+  gender ENUM('Male','Female','Other') NOT NULL,
+  aadhar_number VARCHAR(12) NOT NULL,
+  house_no VARCHAR(255),
+  assembly_constituency VARCHAR(255),
+  city VARCHAR(100),
+  district VARCHAR(100),
+  state VARCHAR(100),
+  pincode VARCHAR(6),
+  mobile_number VARCHAR(15) NOT NULL,
+  status ENUM('Pending', 'Approved', 'Rejected', 'Processed') DEFAULT 'Pending',
+  admin_id INT,
+  agent_id INT,
+  admin_remarks TEXT,
+  agent_remarks TEXT,
+  processed_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (admin_id) REFERENCES users(user_id),
+  FOREIGN KEY (agent_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE voter_documents (
+  document_id INT AUTO_INCREMENT PRIMARY KEY,
+  application_id INT NOT NULL,
+  document_type ENUM('Aadhaar', 'Address_Proof', 'DOB_Proof', 'Passport_Photo') NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (application_id) REFERENCES voter_applications(application_id) ON DELETE CASCADE
+);
+
+CREATE TABLE voter_corrections (
+  correction_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  voter_id_number VARCHAR(20) NOT NULL,
+  aadhar_number VARCHAR(12) NOT NULL,
+  mobile_number VARCHAR(15) NOT NULL,
+  status ENUM('Pending', 'Approved', 'Rejected', 'Processed') DEFAULT 'Pending',
+  admin_id INT,
+  agent_id INT,
+  admin_remarks TEXT,
+  agent_remarks TEXT,
+  processed_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (admin_id) REFERENCES users(user_id),
+  FOREIGN KEY (agent_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE voter_correction_documents (
+  document_id INT AUTO_INCREMENT PRIMARY KEY,
+  correction_id INT NOT NULL,
+  document_type ENUM('Identity_Proof', 'Address_Proof', 'DOB_Proof', 'Photo') NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (correction_id) REFERENCES voter_corrections(correction_id) ON DELETE CASCADE
+);

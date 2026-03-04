@@ -23,6 +23,16 @@ const bill = require("./routes/bill.routes");
 const operatorRoutes = require("./routes/operator.routes");
 const aadharRoutes = require("./routes/aadhar.routes");
 const panRoutes = require("./routes/pan.routes");
+const voterRoutes = require("./routes/voter.routes");
+const incomeRoutes = require("./routes/income.routes");
+const casteRoutes = require("./routes/caste.routes");
+const domicileRoutes = require("./routes/domicile.routes");
+const birthRoutes = require("./routes/birth.routes");
+const deathRoutes = require("./routes/death.routes");
+const marriageRoutes = require("./routes/marriage.routes");
+const ewsRoutes = require("./routes/ews.routes");
+const nclRoutes = require("./routes/ncl.routes");
+
 
 const app = express();
 
@@ -80,6 +90,16 @@ app.use("/api/bill", bill);
 app.use("/api/operators", operatorRoutes);
 app.use("/api/aadhar", aadharRoutes);
 app.use("/api/pan", panRoutes);
+app.use("/api/voter", voterRoutes);
+app.use("/api/certificate/income", incomeRoutes);
+app.use("/api/certificate/caste", casteRoutes);
+app.use("/api/certificate/domicile", domicileRoutes);
+app.use("/api/certificate/birth", birthRoutes);
+app.use("/api/certificate/death", deathRoutes);
+app.use("/api/certificate/marriage", marriageRoutes);
+app.use("/api/certificate/ews", ewsRoutes);
+app.use("/api/certificate/ncl", nclRoutes);
+
 /* -------------------- 404 HANDLER -------------------- */
 app.use((req, res) => {
   res.status(404).json({
