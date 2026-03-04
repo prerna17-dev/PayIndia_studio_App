@@ -16,7 +16,7 @@ exports.mobileRecharge = async (data) => {
 
   try {
     const response = await instance.post(
-      "/recharge/recharge/dorecharge",
+      "recharge/recharge/dorecharge",
       payload,
       { headers: getHeaders() }
     );
@@ -42,7 +42,7 @@ exports.checkRechargeStatus = async (referenceid) => {
 
   try {
     const response = await instance.post(
-      "/recharge/recharge/status",
+      "recharge/recharge/status",
       payload,
       { headers: getHeaders() }
     );

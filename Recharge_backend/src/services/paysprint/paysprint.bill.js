@@ -7,7 +7,7 @@ const { instance, getHeaders } = require("./paysprint.helper");
 exports.getBillOperators = async () => {
   try {
     const response = await instance.get(
-      "/bill-payment/bill/getoperator",
+      "bill-payment/bill/getoperator",
       { headers: getHeaders() }
     );
 
@@ -28,7 +28,7 @@ exports.getBillOperators = async () => {
 exports.fetchBill = async (data) => {
   try {
     const response = await instance.post(
-      "/bill-payment/bill/fetchbill",
+      "bill-payment/bill/fetchbill",
       data,
       { headers: getHeaders() }
     );
@@ -59,7 +59,7 @@ exports.payBill = async (data) => {
 
   try {
     const response = await instance.post(
-      "/bill-payment/bill/paybill",
+      "bill-payment/bill/paybill",
       payload,
       { headers: getHeaders() }
     );
@@ -82,7 +82,7 @@ exports.payBill = async (data) => {
 exports.checkBillStatus = async (referenceid) => {
   try {
     const response = await instance.post(
-      "/bill-payment/bill/status",
+      "bill-payment/bill/status",
       { referenceid },
       { headers: getHeaders() }
     );

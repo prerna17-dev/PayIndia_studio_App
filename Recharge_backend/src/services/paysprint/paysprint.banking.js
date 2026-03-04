@@ -59,7 +59,7 @@ const { instance, getHeaders } = require("./paysprint.helper");
 exports.verifyBankAccount = async (payload) => {
   try {
     const response = await instance.post(
-      "/bank/verify",
+      "bank/verify",
       payload,
       { headers: getHeaders(payload) }
     );
@@ -73,7 +73,7 @@ exports.verifyBankAccount = async (payload) => {
 exports.moneyTransfer = async (payload) => {
   try {
     const response = await instance.post(
-      "/dmt/transfer",
+      "dmt/transfer",
       payload,
       { headers: getHeaders(payload) }
     );
@@ -91,7 +91,7 @@ exports.moneyTransfer = async (payload) => {
 exports.fetchBankList = async () => {
   try {
     const response = await instance.post(
-      "/aeps/banklist/index",
+      "aeps/banklist/index",
       {},
       { headers: getHeaders() }
     );

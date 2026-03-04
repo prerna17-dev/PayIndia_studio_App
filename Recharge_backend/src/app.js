@@ -32,6 +32,16 @@ const deathRoutes = require("./routes/death.routes");
 const marriageRoutes = require("./routes/marriage.routes");
 const ewsRoutes = require("./routes/ews.routes");
 const nclRoutes = require("./routes/ncl.routes");
+const land712Routes = require("./routes/land_712.routes");
+const land8aRoutes = require("./routes/land_8a.routes");
+const propertyTaxRoutes = require("./routes/property_tax.routes");
+const ferfarRoutes = require("./routes/ferfar.routes");
+const udyamRoutes = require("./routes/udyam.routes");
+const pmKisanRoutes = require("./routes/pm_kisan.routes");
+const seniorCitizenRoutes = require("./routes/senior_citizen.routes");
+const employmentRoutes = require("./routes/employment.routes");
+const ayushmanRoutes = require("./routes/ayushman.routes");
+
 
 
 const app = express();
@@ -99,6 +109,16 @@ app.use("/api/certificate/death", deathRoutes);
 app.use("/api/certificate/marriage", marriageRoutes);
 app.use("/api/certificate/ews", ewsRoutes);
 app.use("/api/certificate/ncl", nclRoutes);
+app.use("/api/land/712", land712Routes);
+app.use("/api/land/8a", land8aRoutes);
+app.use("/api/land/property-tax", propertyTaxRoutes);
+app.use("/api/land/ferfar", ferfarRoutes);
+app.use("/api/business/udyam", udyamRoutes);
+app.use("/api/social/pm-kisan", pmKisanRoutes);
+app.use("/api/social/senior-citizen", seniorCitizenRoutes);
+app.use("/api/social/employment", employmentRoutes);
+app.use("/api/social/ayushman", ayushmanRoutes);
+
 
 /* -------------------- 404 HANDLER -------------------- */
 app.use((req, res) => {
