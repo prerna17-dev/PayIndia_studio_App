@@ -18,6 +18,7 @@ exports.create = async (data) => {
         house_no,
         street,
         village,
+        taluka,
         district,
         state,
         pincode,
@@ -34,12 +35,12 @@ exports.create = async (data) => {
     const [result] = await pool.query(
         `INSERT INTO domicile_certificates 
         (user_id, full_name, aadhaar_number, mobile_number, email, dob, gender, years_in_state, occupation, reason, 
-        house_no, street, village, district, state, pincode, reference_id,
+        house_no, street, village, taluka, district, state, pincode, reference_id,
         aadhaar_card_url, ration_card_url, birth_cert_url, school_leaving_url, residence_proof_url, self_declaration_url, photo_url) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             user_id, full_name, aadhaar_number, mobile_number, email, dob, gender, years_in_state, occupation, reason,
-            house_no, street, village, district, state, pincode, reference_id,
+            house_no, street, village, taluka, district, state, pincode, reference_id,
             aadhaar_card_url, ration_card_url, birth_cert_url, school_leaving_url, residence_proof_url, self_declaration_url, photo_url
         ]
     );

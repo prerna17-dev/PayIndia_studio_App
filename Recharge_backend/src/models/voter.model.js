@@ -181,13 +181,20 @@ exports.createCorrection = async (data) => {
         voter_id_number,
         aadhar_number,
         mobile_number,
+        corrected_name,
+        corrected_dob,
+        corrected_gender,
+        corrected_address,
+        corrected_state,
+        corrected_pincode,
+        correction_type
     } = data;
 
     const [result] = await pool.query(
         `INSERT INTO voter_corrections 
-     (user_id, voter_id_number, aadhar_number, mobile_number) 
-     VALUES (?, ?, ?, ?)`,
-        [user_id, voter_id_number, aadhar_number, mobile_number]
+     (user_id, voter_id_number, aadhar_number, mobile_number, corrected_name, corrected_dob, corrected_gender, corrected_address, corrected_state, corrected_pincode, correction_type) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [user_id, voter_id_number, aadhar_number, mobile_number, corrected_name, corrected_dob, corrected_gender, corrected_address, corrected_state, corrected_pincode, correction_type]
     );
     return result.insertId;
 };

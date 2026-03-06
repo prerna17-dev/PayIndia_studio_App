@@ -1,4 +1,5 @@
 const VoterModel = require("../models/voter.model");
+const { formatDateToMySQL } = require("../utils/date.helper");
 const SmsService = require("../services/sms.service");
 
 /**
@@ -45,18 +46,19 @@ exports.createApplication = async (req, res, next) => {
         const documentFiles = req.files;
         if (documentFiles) {
             const uploadTasks = [];
+            const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/.*src\/uploads\//, '') : null;
 
             if (documentFiles.aadhar_card) {
-                uploadTasks.push(VoterModel.addDocument(applicationId, 'Aadhaar', documentFiles.aadhar_card[0].path));
+                uploadTasks.push(VoterModel.addDocument(applicationId, 'Aadhaar', normalizePath(documentFiles.aadhar_card[0].path)));
             }
             if (documentFiles.address_proof) {
-                uploadTasks.push(VoterModel.addDocument(applicationId, 'Address_Proof', documentFiles.address_proof[0].path));
+                uploadTasks.push(VoterModel.addDocument(applicationId, 'Address_Proof', normalizePath(documentFiles.address_proof[0].path)));
             }
             if (documentFiles.dob_proof) {
-                uploadTasks.push(VoterModel.addDocument(applicationId, 'DOB_Proof', documentFiles.dob_proof[0].path));
+                uploadTasks.push(VoterModel.addDocument(applicationId, 'DOB_Proof', normalizePath(documentFiles.dob_proof[0].path)));
             }
             if (documentFiles.passport_photo) {
-                uploadTasks.push(VoterModel.addDocument(applicationId, 'Passport_Photo', documentFiles.passport_photo[0].path));
+                uploadTasks.push(VoterModel.addDocument(applicationId, 'Passport_Photo', normalizePath(documentFiles.passport_photo[0].path)));
             }
 
             await Promise.all(uploadTasks);
@@ -230,7 +232,7 @@ exports.verifyCorrectionOTP = async (req, res, next) => {
 };
 
 /**
- * Submit Voter Correction Request
+ * Submit Voter Correction request with documents
  */
 exports.submitCorrection = async (req, res, next) => {
     try {
@@ -239,10 +241,17 @@ exports.submitCorrection = async (req, res, next) => {
             voter_id_number,
             aadhar_number,
             mobile_number,
+            corrected_name,
+            corrected_dob,
+            corrected_gender,
+            corrected_address,
+            corrected_state,
+            corrected_pincode,
+            correction_type
         } = req.body;
 
-        if (!voter_id_number || !mobile_number) {
-            return res.status(400).json({ success: false, message: "Voter ID number and mobile number are required" });
+        if (!voter_id_number || !aadhar_number || !mobile_number) {
+            return res.status(400).json({ success: false, message: "Missing required details" });
         }
 
         const correctionId = await VoterModel.createCorrection({
@@ -250,28 +259,26 @@ exports.submitCorrection = async (req, res, next) => {
             voter_id_number,
             aadhar_number,
             mobile_number,
+            corrected_name,
+            corrected_dob: corrected_dob ? formatDateToMySQL(corrected_dob) : null,
+            corrected_gender,
+            corrected_address,
+            corrected_state,
+            corrected_pincode,
+            correction_type
         });
 
-        // Handle File Uploads
-        const documentFiles = req.files;
-        if (documentFiles) {
-            const uploadTasks = [];
+        // Handle file uploads
+        const files = req.files || {};
+        const uploadTasks = [];
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
-            if (documentFiles.identity_proof) {
-                uploadTasks.push(VoterModel.addCorrectionDocument(correctionId, 'Identity_Proof', documentFiles.identity_proof[0].path));
-            }
-            if (documentFiles.address_proof) {
-                uploadTasks.push(VoterModel.addCorrectionDocument(correctionId, 'Address_Proof', documentFiles.address_proof[0].path));
-            }
-            if (documentFiles.dob_proof) {
-                uploadTasks.push(VoterModel.addCorrectionDocument(correctionId, 'DOB_Proof', documentFiles.dob_proof[0].path));
-            }
-            if (documentFiles.photo) {
-                uploadTasks.push(VoterModel.addCorrectionDocument(correctionId, 'Photo', documentFiles.photo[0].path));
-            }
+        Object.keys(files).forEach((fieldName) => {
+            const file = files[fieldName][0];
+            uploadTasks.push(VoterModel.addCorrectionDocument(correctionId, fieldName, normalizePath(file.path)));
+        });
 
-            await Promise.all(uploadTasks);
-        }
+        await Promise.all(uploadTasks);
 
         res.status(201).json({
             success: true,

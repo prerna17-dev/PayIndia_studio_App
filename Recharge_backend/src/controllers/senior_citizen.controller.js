@@ -1,4 +1,5 @@
 const SeniorCitizenModel = require("../models/senior_citizen.model");
+const { formatDateToMySQL } = require("../utils/date.helper");
 
 /**
  * Submit a new Senior Citizen Certificate application
@@ -27,13 +28,13 @@ exports.createApplication = async (req, res, next) => {
 
         const reference_id = "SNR" + Math.random().toString(36).substr(2, 9).toUpperCase();
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
         const applicationData = {
             user_id: userId,
             full_name,
             aadhaar_number,
-            dob,
+            dob: formatDateToMySQL(dob),
             gender,
             mobile_number,
             email,
@@ -44,10 +45,10 @@ exports.createApplication = async (req, res, next) => {
             district,
             pincode,
             reference_id,
-            aadhaar_card_url: getFilePath('aadhaar_card'),
-            age_proof_url: getFilePath('age_proof'),
-            address_proof_url: getFilePath('address_proof'),
-            photo_url: getFilePath('photo')
+            aadhaar_card_url: normalizePath(files.aadhaar_card?.[0]?.path),
+            age_proof_url: normalizePath(files.age_proof?.[0]?.path),
+            address_proof_url: normalizePath(files.address_proof?.[0]?.path),
+            photo_url: normalizePath(files.photo?.[0]?.path)
         };
 
         const applicationId = await SeniorCitizenModel.create(applicationData);

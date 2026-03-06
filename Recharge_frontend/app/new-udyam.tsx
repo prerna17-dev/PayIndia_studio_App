@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     Modal,
@@ -26,8 +27,7 @@ const STATES = ["Maharashtra", "Karnataka", "Gujarat", "Tamil Nadu", "Delhi", "O
 const REQUIRED_DOCS = [
     { id: "aadhaar", name: "Aadhaar Card (Front & Back)", icon: "card-account-details-outline", color: "#2196F3" },
     { id: "pan", name: "PAN Card", icon: "card-bulleted-outline", color: "#4CAF50" },
-    { id: "address", name: "Business Address Proof", icon: "home-city-outline", color: "#FF9800" },
-    { id: "cheque", name: "Bank Cancelled Cheque", icon: "bank-outline", color: "#673AB7" },
+    { id: "cheque", name: "Bank Passbook / Cancelled Cheque", icon: "bank-outline", color: "#673AB7" },
     { id: "photo", name: "Photograph of Owner", icon: "account-box-outline", color: "#E53935" },
 ];
 
@@ -120,7 +120,13 @@ export default function NewUdyamRegistrationScreen() {
             if (!r.canceled && r.assets?.[0]) {
                 const f = r.assets[0];
                 if (f.size && f.size > 2 * 1024 * 1024) return Alert.alert("Too Large", "Max 2MB");
-                setDocs({ ...docs, [id]: f });
+                setDocs({ 
+                    ...docs, 
+                    [id]: {
+                        ...f,
+                        mimeType: f.mimeType
+                    } 
+                });
             }
         } catch (e) {
             Alert.alert("Error", "Upload failed");
@@ -133,16 +139,74 @@ export default function NewUdyamRegistrationScreen() {
         setStep(3);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!agreedDeclaration) return Alert.alert("Required", "Please agree to the declaration");
         setIsSubmitting(true);
-        // Simulate API call
-        setTimeout(() => {
-            const refId = "UD2026" + Math.random().toString(36).substring(2, 9).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const formDataObj = new FormData();
+
+            // Text fields
+            formDataObj.append('full_name', form.name);
+            formDataObj.append('aadhaar_number', form.aadhaar.replace(/\s/g, ''));
+            formDataObj.append('pan_number', form.pan);
+            formDataObj.append('mobile_number', form.mobile);
+            formDataObj.append('email', ""); // Not in form but expected by backend
+            formDataObj.append('organization_type', form.orgType);
+            formDataObj.append('unit_name', form.enterpriseName);
+            formDataObj.append('office_address', `${form.flat}, ${form.street}, ${form.city}, ${form.district}, ${form.state} - ${form.pincode}`);
+            formDataObj.append('bank_name', form.bankName);
+            formDataObj.append('ifsc', form.ifsc);
+            formDataObj.append('account_number', form.accountNumber);
+            formDataObj.append('business_activity', form.activity);
+            formDataObj.append('employees_count', form.employees);
+            formDataObj.append('investment', form.investment);
+            formDataObj.append('turnover', form.turnover);
+            formDataObj.append('registration_date', form.dateOfCommencement);
+
+            // Documents
+            if (docs.aadhaar) {
+                formDataObj.append('aadhaar_card', {
+                    uri: docs.aadhaar.uri,
+                    name: docs.aadhaar.name,
+                    type: docs.aadhaar.mimeType || 'application/octet-stream',
+                } as any);
+            }
+            if (docs.pan) {
+                formDataObj.append('pan_card', {
+                    uri: docs.pan.uri,
+                    name: docs.pan.name,
+                    type: docs.pan.mimeType || 'application/octet-stream',
+                } as any);
+            }
+            if (docs.cheque) {
+                formDataObj.append('bank_passbook', {
+                    uri: docs.cheque.uri,
+                    name: docs.cheque.name,
+                    type: docs.cheque.mimeType || 'application/octet-stream',
+                } as any);
+            }
+            if (docs.photo) {
+                formDataObj.append('photo', {
+                    uri: docs.photo.uri,
+                    name: docs.photo.name,
+                    type: docs.photo.mimeType || 'application/octet-stream',
+                } as any);
+            }
+
+            const response = await api.post('/certificate/udyam/apply', formDataObj);
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.reference_id);
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
+            console.error("Udyam integration error:", error);
+            Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
     };
 
     const handleBack = () => {

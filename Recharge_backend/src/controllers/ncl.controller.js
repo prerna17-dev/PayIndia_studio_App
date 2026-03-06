@@ -1,5 +1,6 @@
 const NCLModel = require("../models/ncl.model");
 const path = require("path");
+const { formatDateToMySQL } = require("../utils/date.helper");
 
 /**
  * Submit a new Non-Creamy Layer Certificate application
@@ -46,13 +47,18 @@ exports.createApplication = async (req, res, next) => {
 
         // Map uploaded files
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/.*src\/uploads\//, '') : null;
+        const getFilePath = (fieldName) => {
+            return (files[fieldName] && files[fieldName][0]) 
+                ? normalizePath(files[fieldName][0].path) 
+                : null;
+        };
 
         const applicationData = {
             user_id: userId,
             full_name,
             aadhaar_number,
-            dob,
+            dob: formatDateToMySQL(dob),
             gender,
             mobile_number,
             email,
@@ -60,7 +66,7 @@ exports.createApplication = async (req, res, next) => {
             sub_caste,
             caste_cert_number,
             issuing_authority,
-            issue_date,
+            issue_date: formatDateToMySQL(issue_date),
             father_name,
             mother_name,
             parent_occupation,

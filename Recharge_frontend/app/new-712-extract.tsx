@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -21,6 +22,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -130,7 +132,8 @@ export default function NewSatbaraExtractScreen() {
                     [docType]: {
                         name: asset.name,
                         size: asset.size,
-                        uri: asset.uri
+                        uri: asset.uri,
+                        mimeType: asset.mimeType
                     }
                 }));
             }
@@ -191,6 +194,75 @@ export default function NewSatbaraExtractScreen() {
             } else {
                 setCurrentStep(3);
             }
+        } else if (currentStep === 3) {
+            if (!formData.finalConfirmation) {
+                Alert.alert("Required", "Please confirm that the details provided are accurate.");
+                return;
+            }
+            handleSubmit();
+        }
+    };
+
+    const handleSubmit = async () => {
+        setIsSubmitting(true);
+        try {
+            const formDataToSend = new FormData();
+
+            // Applicant Details
+            formDataToSend.append("full_name", formData.fullName);
+            formDataToSend.append("aadhaar_number", formData.aadhaarNumber);
+            formDataToSend.append("mobile_number", formData.mobileNumber);
+            formDataToSend.append("email", formData.email);
+
+            // Property Details
+            formDataToSend.append("district", formData.district);
+            formDataToSend.append("taluka", formData.taluka);
+            formDataToSend.append("village", formData.village);
+            formDataToSend.append("survey_number", formData.surveyNumber);
+            formDataToSend.append("sub_division_number", formData.subDivisionNumber);
+
+            // Application Details
+            formDataToSend.append("application_type", formData.applicationType);
+            formDataToSend.append("application_mode", formData.applicationMode);
+
+            // Documents
+            if (documents.applicationForm) {
+                formDataToSend.append("photo", {
+                    uri: documents.applicationForm.uri,
+                    name: documents.applicationForm.name,
+                    type: documents.applicationForm.mimeType || "application/octet-stream",
+                } as any);
+            }
+            if (documents.idProof) {
+                formDataToSend.append("aadhaar_card", {
+                    uri: documents.idProof.uri,
+                    name: documents.idProof.name,
+                    type: documents.idProof.mimeType || "application/octet-stream",
+                } as any);
+            }
+            if (documents.ownershipDoc) {
+                formDataToSend.append("land_document", {
+                    uri: documents.ownershipDoc.uri,
+                    name: documents.ownershipDoc.name,
+                    type: documents.ownershipDoc.mimeType || "application/octet-stream",
+                } as any);
+            }
+
+            const response = await api.post("/land/712/apply", formDataToSend, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.reference_id || response.data.data.applicationId);
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Something went wrong during submission");
+            }
+        } catch (error: any) {
+            console.error("7/12 submission error:", error);
+            Alert.alert("Error", error.response?.data?.message || "Failed to submit application. Please check your connection.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 

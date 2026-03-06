@@ -1,5 +1,6 @@
 const MarriageModel = require("../models/marriage.model");
 const path = require("path");
+const { formatDateToMySQL } = require("../utils/date.helper");
 
 /**
  * Submit a new Marriage Certificate application
@@ -46,25 +47,30 @@ exports.createApplication = async (req, res, next) => {
 
         // Map uploaded files
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/.*src\/uploads\//, '') : null;
+        const getFilePath = (fieldName) => {
+            return (files[fieldName] && files[fieldName][0]) 
+                ? normalizePath(files[fieldName][0].path) 
+                : null;
+        };
 
         const applicationData = {
             user_id: userId,
             groom_name,
             groom_aadhaar,
-            groom_dob,
+            groom_dob: formatDateToMySQL(groom_dob),
             groom_age,
             groom_occupation,
             groom_mobile,
             groom_email,
             bride_name,
             bride_aadhaar,
-            bride_dob,
+            bride_dob: formatDateToMySQL(bride_dob),
             bride_age,
             bride_occupation,
             bride_mobile,
             bride_email,
-            date_of_marriage,
+            date_of_marriage: formatDateToMySQL(date_of_marriage),
             place_of_marriage,
             marriage_address,
             type_of_marriage,

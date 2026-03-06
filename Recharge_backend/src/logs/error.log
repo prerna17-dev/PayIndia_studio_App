@@ -83,3 +83,37 @@ STACK: TypeError: Cannot destructure property 'remarks' of 'req.body' as it is u
     at param (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\index.js:610:14)
     at processParams (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\index.js:664:3)
 ----------------------------------
+
+[2026-03-06T06:05:38.719Z]
+METHOD: POST
+URL: /api/certificate/income/apply
+MESSAGE: Column 'gender' cannot be null
+STACK: Error: Column 'gender' cannot be null
+    at PromisePool.query (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (E:\WorknAI\PayIndiastudio_App\Recharge_backend\src\models\income.model.js:37:33)
+    at exports.createApplication (E:\WorknAI\PayIndiastudio_App\Recharge_backend\src\controllers\income.controller.js:74:49)
+    at Layer.handleRequest (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:530:35)
+----------------------------------
+
+[2026-03-06T06:05:38.746Z]
+METHOD: POST
+URL: /api/certificate/income/apply
+MESSAGE: Column 'gender' cannot be null
+STACK: Error: Column 'gender' cannot be null
+    at PromisePool.query (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (E:\WorknAI\PayIndiastudio_App\Recharge_backend\src\models\income.model.js:37:33)
+    at exports.createApplication (E:\WorknAI\PayIndiastudio_App\Recharge_backend\src\controllers\income.controller.js:74:49)
+    at Layer.handleRequest (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:530:35)
+----------------------------------

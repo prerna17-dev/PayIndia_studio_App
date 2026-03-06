@@ -41,6 +41,8 @@ const pmKisanRoutes = require("./routes/pm_kisan.routes");
 const seniorCitizenRoutes = require("./routes/senior_citizen.routes");
 const employmentRoutes = require("./routes/employment.routes");
 const ayushmanRoutes = require("./routes/ayushman.routes");
+const rationCardRoutes = require("./routes/ration_card.routes");
+
 
 
 
@@ -118,6 +120,8 @@ app.use("/api/social/pm-kisan", pmKisanRoutes);
 app.use("/api/social/senior-citizen", seniorCitizenRoutes);
 app.use("/api/social/employment", employmentRoutes);
 app.use("/api/social/ayushman", ayushmanRoutes);
+app.use("/api/social/ration-card", rationCardRoutes);
+
 
 
 /* -------------------- 404 HANDLER -------------------- */

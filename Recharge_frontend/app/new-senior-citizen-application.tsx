@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -21,6 +22,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -118,7 +120,13 @@ export default function NewSeniorCitizenApplicationScreen() {
                     Alert.alert("Too Large", "Max size is 5MB");
                     return;
                 }
-                setDocuments(prev => ({ ...prev, [docType]: file }));
+                setDocuments(prev => ({ 
+                    ...prev, 
+                    [docType]: {
+                        ...file,
+                        mimeType: file.mimeType
+                    } 
+                }));
             }
         } catch (err) { Alert.alert("Error", "Upload failed"); }
     };
@@ -166,13 +174,74 @@ export default function NewSeniorCitizenApplicationScreen() {
             }
             setCurrentStep(3);
         } else {
-            if (!formData.finalConfirmation) { Alert.alert("Wait", "Confirm declaration"); return; }
-            setIsSubmitting(true);
-            setTimeout(() => {
-                setApplicationId("SC-" + Math.random().toString(36).substr(2, 6).toUpperCase());
-                setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            const submitApplication = async () => {
+                setIsSubmitting(true);
+                try {
+                    const formDataObj = new FormData();
+
+                    // Personal Details
+                    formDataObj.append('full_name', formData.fullName);
+                    formDataObj.append('aadhaar_number', formData.aadhaarNumber);
+                    formDataObj.append('dob', formData.dob);
+                    formDataObj.append('gender', formData.gender);
+                    formDataObj.append('mobile_number', formData.mobileNumber);
+                    formDataObj.append('email', formData.email || "");
+
+                    // Address Details
+                    formDataObj.append('house_no', formData.houseNo);
+                    formDataObj.append('street', formData.street || "");
+                    formDataObj.append('village', formData.village);
+                    formDataObj.append('taluka', formData.taluka);
+                    formDataObj.append('district', formData.district || "");
+                    formDataObj.append('pincode', formData.pincode);
+
+                    // Documents
+                    if (documents.aadhaarCard) {
+                        formDataObj.append('aadhaar_card', {
+                            uri: documents.aadhaarCard.uri,
+                            name: documents.aadhaarCard.name,
+                            type: documents.aadhaarCard.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.ageProof) {
+                        formDataObj.append('age_proof', {
+                            uri: documents.ageProof.uri,
+                            name: documents.ageProof.name,
+                            type: documents.ageProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.addressProof) {
+                        formDataObj.append('address_proof', {
+                            uri: documents.addressProof.uri,
+                            name: documents.addressProof.name,
+                            type: documents.addressProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.photo) {
+                        formDataObj.append('photo', {
+                            uri: documents.photo.uri,
+                            name: documents.photo.name,
+                            type: documents.photo.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+
+                    const response = await api.post('/social/senior-citizen/apply', formDataObj);
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id);
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Submission failed");
+                    }
+                } catch (error: any) {
+                    console.error("Senior Citizen application error:", error);
+                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            submitApplication();
         }
     };
 

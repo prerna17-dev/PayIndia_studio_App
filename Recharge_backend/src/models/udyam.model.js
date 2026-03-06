@@ -97,3 +97,46 @@ exports.updateStatus = async (id, status) => {
         [status, id]
     );
 };
+
+/* --- UDYAM CORRECTION METHODS --- */
+
+/**
+ * Create a new Udyam correction request
+ */
+exports.createCorrection = async (data) => {
+    const {
+        user_id,
+        udyam_number,
+        aadhaar_number,
+        update_type,
+        new_value,
+    } = data;
+
+    const [result] = await pool.query(
+        `INSERT INTO service_udyam_correction 
+        (user_id, udyam_number, aadhaar_number, update_type, new_value) 
+        VALUES (?, ?, ?, ?, ?)`,
+        [user_id, udyam_number, aadhaar_number, update_type, new_value]
+    );
+    return result.insertId;
+};
+
+/**
+ * Add a document to a Udyam correction
+ */
+exports.addCorrectionDocument = async (correctionId, documentType, filePath) => {
+    await pool.query(
+        `INSERT INTO service_udyam_correction_documents (correction_id, document_type, file_path) VALUES (?, ?, ?)`,
+        [correctionId, documentType, filePath]
+    );
+};
+
+/**
+ * Get all Udyam corrections
+ */
+exports.getAllCorrections = async () => {
+    const [rows] = await pool.query(
+        `SELECT uc.*, u.name as user_name FROM service_udyam_correction uc JOIN users u ON uc.user_id = u.user_id ORDER BY uc.created_at DESC`
+    );
+    return rows;
+};

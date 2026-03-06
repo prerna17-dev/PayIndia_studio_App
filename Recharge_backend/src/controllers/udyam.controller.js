@@ -35,7 +35,7 @@ exports.createApplication = async (req, res, next) => {
 
         const reference_id = "UDY" + Math.random().toString(36).substr(2, 9).toUpperCase();
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
         const applicationData = {
             user_id: userId,
@@ -60,10 +60,10 @@ exports.createApplication = async (req, res, next) => {
             turnover,
             registration_date,
             reference_id,
-            aadhaar_card_url: getFilePath('aadhaar_card'),
-            pan_card_url: getFilePath('pan_card'),
-            bank_passbook_url: getFilePath('bank_passbook'),
-            photo_url: getFilePath('photo')
+            aadhaar_card_url: normalizePath(files.aadhaar_card?.[0]?.path),
+            pan_card_url: normalizePath(files.pan_card?.[0]?.path),
+            bank_passbook_url: normalizePath(files.bank_passbook?.[0]?.path),
+            photo_url: normalizePath(files.photo?.[0]?.path)
         };
 
         const applicationId = await UdyamModel.create(applicationData);
@@ -135,6 +135,70 @@ exports.updateStatus = async (req, res, next) => {
         await UdyamModel.updateStatus(id, status);
 
         res.json({ success: true, message: `Application status updated to ${status}` });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * Submit Udyam Correction Request
+ */
+exports.submitCorrection = async (req, res, next) => {
+    try {
+        const userId = req.user.userId;
+        const {
+            udyam_number,
+            aadhaar_number,
+            update_type,
+            new_value
+        } = req.body;
+
+        if (!udyam_number || !aadhaar_number || !update_type) {
+            return res.status(400).json({ success: false, message: "Missing required details" });
+        }
+
+        const correctionId = await UdyamModel.createCorrection({
+            user_id: userId,
+            udyam_number,
+            aadhaar_number,
+            update_type,
+            new_value
+        });
+
+        // Handle File Uploads
+        const files = req.files || {};
+        const uploadTasks = [];
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
+
+        Object.keys(files).forEach(fieldName => {
+            const file = files[fieldName][0];
+            uploadTasks.push(UdyamModel.addCorrectionDocument(correctionId, fieldName, normalizePath(file.path)));
+        });
+
+        await Promise.all(uploadTasks);
+
+        res.status(201).json({
+            success: true,
+            message: "Udyam correction request submitted successfully",
+            data: { correctionId },
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * Get all Udyam corrections
+ */
+exports.getCorrections = async (req, res, next) => {
+    try {
+        const { role } = req.user;
+        if (role !== "ADMIN" && role !== "AGENT") {
+            return res.status(403).json({ success: false, message: "Forbidden: Access denied" });
+        }
+
+        const corrections = await UdyamModel.getAllCorrections();
+        res.json({ success: true, data: corrections });
     } catch (err) {
         next(err);
     }

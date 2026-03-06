@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -220,14 +221,79 @@ export default function NewAadhaarScreen() {
             }
             setCurrentStep(3);
         } else {
-            setIsSubmitting(true);
-            // Simulate API call
-            setTimeout(() => {
-                const enrollmentId = "UID" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                setApplicationId(enrollmentId);
-                setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            const submitData = async () => {
+                setIsSubmitting(true);
+                try {
+                    const formDataObj = new FormData();
+
+                    // Basic details
+                    formDataObj.append('full_name', formData.fullName);
+                    formDataObj.append('date_of_birth', useYearOnly ? formData.yob : formData.dob);
+                    formDataObj.append('gender', formData.gender);
+                    formDataObj.append('mobile_number', formData.mobile);
+
+                    // Address details
+                    formDataObj.append('house_no_street', formData.houseNo);
+                    formDataObj.append('area_village_locality', formData.area || "");
+                    formDataObj.append('city_taluka', formData.city);
+                    formDataObj.append('district', formData.district);
+                    formDataObj.append('state', formData.state);
+                    formDataObj.append('pincode', formData.pincode);
+
+                    // Minor details if applicable
+                    if (isMinor) {
+                        formDataObj.append('parent_name', formData.parentName);
+                        formDataObj.append('parent_aadhaar_no', formData.parentAadhaar);
+                        formDataObj.append('relationship', formData.relationship);
+                    }
+
+                    // Documents
+                    if (documents.birthCertificate) {
+                        formDataObj.append('birth_certificate', {
+                            uri: documents.birthCertificate.uri,
+                            name: documents.birthCertificate.name,
+                            type: documents.birthCertificate.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.schoolCertificate) {
+                        formDataObj.append('school_certificate', {
+                            uri: documents.schoolCertificate.uri,
+                            name: documents.schoolCertificate.name,
+                            type: documents.schoolCertificate.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.addressProof) {
+                        formDataObj.append('address_proof', {
+                            uri: documents.addressProof.uri,
+                            name: documents.addressProof.name,
+                            type: documents.addressProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (isMinor && documents.parentAadhaar) {
+                        formDataObj.append('parent_aadhaar', {
+                            uri: documents.parentAadhaar.uri,
+                            name: documents.parentAadhaar.name,
+                            type: documents.parentAadhaar.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+
+                    const response = await api.post('/certificate/aadhaar/apply', formDataObj);
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.enrollmentId.toString());
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Submission failed");
+                    }
+                } catch (error: any) {
+                    console.error("Enrollment error:", error);
+                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            submitData();
         }
     };
 

@@ -27,7 +27,7 @@ exports.createApplication = async (req, res, next) => {
 
         const reference_id = "PMJAY" + Math.random().toString(36).substr(2, 9).toUpperCase();
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
         const applicationData = {
             user_id: userId,
@@ -43,11 +43,11 @@ exports.createApplication = async (req, res, next) => {
             eligibility_type,
             is_eligible: is_eligible === 'true' || is_eligible === true,
             reference_id,
-            aadhaar_head_url: getFilePath('aadhaar_head'),
-            ration_card_url: getFilePath('ration_card'),
-            address_proof_url: getFilePath('address_proof'),
-            photo_url: getFilePath('photo'),
-            secc_proof_url: getFilePath('secc_proof')
+            aadhaar_head_url: normalizePath(files.aadhaar_head?.[0]?.path),
+            ration_card_url: normalizePath(files.ration_card?.[0]?.path),
+            address_proof_url: normalizePath(files.address_proof?.[0]?.path),
+            photo_url: normalizePath(files.photo?.[0]?.path),
+            secc_proof_url: normalizePath(files.secc_proof?.[0]?.path)
         };
 
         let members = [];

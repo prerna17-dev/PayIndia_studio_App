@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -21,6 +22,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -36,7 +38,10 @@ interface FormDataType {
     fatherName: string;
     fatherAadhaar: string;
     fatherOccupation: string;
+    fatherCaste: string;
+    motherName: string;
     existingCertificateNo: string;
+    domicileStatus: string;
 
     // Caste Information
     category: string;
@@ -63,6 +68,8 @@ interface DocumentsState {
     fatherCasteProof: DocumentType | null;
     schoolLeavingCert: DocumentType | null;
     affidavit: DocumentType | null;
+    casteProof: DocumentType | null;
+    photo: DocumentType | null;
     [key: string]: DocumentType | null;
 }
 
@@ -81,6 +88,8 @@ export default function NewCasteCertificateScreen() {
         fatherCasteProof: null,
         schoolLeavingCert: null,
         affidavit: null,
+        casteProof: null,
+        photo: null,
     });
 
     const [formData, setFormData] = useState<FormDataType>({
@@ -93,6 +102,8 @@ export default function NewCasteCertificateScreen() {
         fatherName: "",
         fatherAadhaar: "",
         fatherOccupation: "",
+        fatherCaste: "",
+        motherName: "",
         existingCertificateNo: "",
         category: "",
         subCaste: "",
@@ -105,6 +116,7 @@ export default function NewCasteCertificateScreen() {
         state: "",
         pincode: "",
         durationOfResidence: "",
+        domicileStatus: "Yes",
         declaration: false,
         finalDeclaration: false,
     });
@@ -150,6 +162,7 @@ export default function NewCasteCertificateScreen() {
                         name: file.name,
                         size: file.size,
                         uri: file.uri,
+                        mimeType: file.mimeType,
                     },
                 }));
             }
@@ -202,7 +215,7 @@ export default function NewCasteCertificateScreen() {
             setCurrentStep(2);
         } else if (currentStep === 2) {
             // Step 2 Validation - All specified documents are mandatory
-            if (!documents.aadhaarCard || !documents.addressProof || !documents.fatherCasteProof || !documents.schoolLeavingCert || !documents.affidavit) {
+            if (!documents.aadhaarCard || !documents.addressProof || !documents.fatherCasteProof || !documents.schoolLeavingCert || !documents.affidavit || !documents.casteProof || !documents.photo) {
                 Alert.alert("Documents Required", "Please upload all mandatory documents");
                 return;
             }
@@ -214,13 +227,105 @@ export default function NewCasteCertificateScreen() {
                 return;
             }
 
-            setIsSubmitting(true);
-            setTimeout(() => {
-                const refId = "CASTE" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                setApplicationId(refId);
-                setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            const submitData = async () => {
+                setIsSubmitting(true);
+                try {
+                    const formDataObj = new FormData();
+
+                    // Applicant Details
+                    formDataObj.append('full_name', formData.fullName);
+                    formDataObj.append('aadhaar_number', formData.aadhaarNumber);
+                    formDataObj.append('dob', formData.dob);
+                    formDataObj.append('gender', formData.gender);
+                    formDataObj.append('mobile_number', formData.mobileNumber);
+                    formDataObj.append('email', formData.email || "");
+
+                    // Caste Info
+                    formDataObj.append('category', formData.category);
+                    formDataObj.append('sub_caste', formData.subCaste);
+                    formDataObj.append('religion', formData.religion);
+
+                    // Family Details
+                    formDataObj.append('father_name', formData.fatherName);
+                    formDataObj.append('father_caste', formData.fatherCaste || formData.category);
+                    formDataObj.append('mother_name', formData.motherName);
+
+                    // Domicile & Address
+                    formDataObj.append('domicile_status', formData.domicileStatus);
+                    formDataObj.append('house_no', formData.houseNo);
+                    formDataObj.append('street', formData.street || "");
+                    formDataObj.append('village', formData.village);
+                    formDataObj.append('district', formData.district);
+                    formDataObj.append('pincode', formData.pincode);
+
+                    // Documents
+                    if (documents.aadhaarCard) {
+                        formDataObj.append('aadhaar_card', {
+                            uri: documents.aadhaarCard.uri,
+                            name: documents.aadhaarCard.name,
+                            type: documents.aadhaarCard.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.addressProof) {
+                        formDataObj.append('ration_card', {
+                            uri: documents.addressProof.uri,
+                            name: documents.addressProof.name,
+                            type: documents.addressProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.schoolLeavingCert) {
+                        formDataObj.append('school_leaving', {
+                            uri: documents.schoolLeavingCert.uri,
+                            name: documents.schoolLeavingCert.name,
+                            type: documents.schoolLeavingCert.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.fatherCasteProof) {
+                        formDataObj.append('father_caste_cert', {
+                            uri: documents.fatherCasteProof.uri,
+                            name: documents.fatherCasteProof.name,
+                            type: documents.fatherCasteProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.affidavit) {
+                        formDataObj.append('self_declaration', {
+                            uri: documents.affidavit.uri,
+                            name: documents.affidavit.name,
+                            type: documents.affidavit.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.casteProof) {
+                        formDataObj.append('caste_proof', {
+                            uri: documents.casteProof.uri,
+                            name: documents.casteProof.name,
+                            type: documents.casteProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.photo) {
+                        formDataObj.append('photo', {
+                            uri: documents.photo.uri,
+                            name: documents.photo.name,
+                            type: documents.photo.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+
+                    const response = await api.post('/certificate/caste/apply', formDataObj);
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id);
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Submission failed");
+                    }
+                } catch (error: any) {
+                    console.error("Caste application error:", error);
+                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            submitData();
         }
     };
 
@@ -360,10 +465,16 @@ export default function NewCasteCertificateScreen() {
                                         <Input value={formData.fatherOccupation} onChangeText={(v: string) => setFormData({ ...formData, fatherOccupation: v })} placeholder="Occupation" icon="briefcase-outline" />
                                     </View>
                                     <View style={{ flex: 1 }}>
-                                        <Label text="Existing Cert No." />
-                                        <Input value={formData.existingCertificateNo} onChangeText={(v: string) => setFormData({ ...formData, existingCertificateNo: v })} placeholder="If available" icon="document-text-outline" />
+                                        <Label text="Father's Caste" />
+                                        <Input value={formData.fatherCaste} onChangeText={(v: string) => setFormData({ ...formData, fatherCaste: v })} placeholder="As per certificate" icon="shield-outline" />
                                     </View>
                                 </View>
+
+                                <Label text="Mother's Name *" />
+                                <Input value={formData.motherName} onChangeText={(v: string) => setFormData({ ...formData, motherName: v })} placeholder="Enter mother name" icon="person-outline" />
+
+                                <Label text="Existing Cert No." />
+                                <Input value={formData.existingCertificateNo} onChangeText={(v: string) => setFormData({ ...formData, existingCertificateNo: v })} placeholder="If available" icon="document-text-outline" />
                             </View>
 
                             <SectionTitle title="Caste Information" icon="shield-checkmark" color="#1A237E" />
@@ -426,6 +537,15 @@ export default function NewCasteCertificateScreen() {
                                 </View>
                                 <Label text="Duration of Residence" />
                                 <Input value={formData.durationOfResidence} onChangeText={(v: string) => setFormData({ ...formData, durationOfResidence: v })} placeholder="Years/Months" icon="time-outline" />
+
+                                <Label text="Are you a resident of Maharashtra state? *" />
+                                <View style={styles.radioGroup}>
+                                    {["Yes", "No"].map(p => (
+                                        <TouchableOpacity key={p} style={[styles.radioBtn, formData.domicileStatus === p && styles.radioBtnActive]} onPress={() => setFormData({ ...formData, domicileStatus: p })}>
+                                            <Text style={[styles.radioText, formData.domicileStatus === p && styles.radioTextActive]}>{p}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
                             </View>
 
                             <TouchableOpacity style={styles.declarationBox} onPress={() => setFormData({ ...formData, declaration: !formData.declaration })}>
@@ -445,8 +565,10 @@ export default function NewCasteCertificateScreen() {
                                     <Text style={styles.docItem}>• Aadhaar Card (आधार कार्ड)</Text>
                                     <Text style={styles.docItem}>• Address Proof (पत्त्याचा पुरावा)</Text>
                                     <Text style={styles.docItem}>• Caste Proof of Father / Relative (वडिलांचे / नातेवाईकांचे जात प्रमाणपत्र)</Text>
+                                    <Text style={styles.docItem}>• Caste Proof (स्वतःचे जात प्रमाणपत्र असल्यास)</Text>
                                     <Text style={styles.docItem}>• School Leaving Certificate (शाळा सोडल्याचा दाखला)</Text>
                                     <Text style={styles.docItem}>• Affidavit (शपथपत्र)</Text>
+                                    <Text style={styles.docItem}>• Photo (फोटो)</Text>
                                 </View>
                             </View>
 
@@ -454,6 +576,8 @@ export default function NewCasteCertificateScreen() {
                             <View style={styles.uploadGrid}>
                                 <DocUploadItem title="Aadhaar Card" hindi="आधार कार्ड" isUploaded={!!documents.aadhaarCard} filename={documents.aadhaarCard?.name} onUpload={() => pickDocument('aadhaarCard')} onRemove={() => removeDocument('aadhaarCard')} required />
                                 <DocUploadItem title="Address Proof" hindi="पत्त्याचा पुरावा" isUploaded={!!documents.addressProof} filename={documents.addressProof?.name} onUpload={() => pickDocument('addressProof')} onRemove={() => removeDocument('addressProof')} required />
+                                <DocUploadItem title="Photo" hindi="फोटो" isUploaded={!!documents.photo} filename={documents.photo?.name} onUpload={() => pickDocument('photo')} onRemove={() => removeDocument('photo')} required />
+                                <DocUploadItem title="Caste Proof" hindi="स्वतःचे जात प्रमाणपत्र" isUploaded={!!documents.casteProof} filename={documents.casteProof?.name} onUpload={() => pickDocument('casteProof')} onRemove={() => removeDocument('casteProof')} required />
                                 <DocUploadItem title="Caste Proof of Father/Relative" hindi="वडिलांचे/नातेवाईकांचे जात प्रमाणपत्र" isUploaded={!!documents.fatherCasteProof} filename={documents.fatherCasteProof?.name} onUpload={() => pickDocument('fatherCasteProof')} onRemove={() => removeDocument('fatherCasteProof')} required />
                                 <DocUploadItem title="School Leaving Certificate" hindi="शाळा सोडल्याचा दाखला" isUploaded={!!documents.schoolLeavingCert} filename={documents.schoolLeavingCert?.name} onUpload={() => pickDocument('schoolLeavingCert')} onRemove={() => removeDocument('schoolLeavingCert')} required />
                                 <DocUploadItem title="Affidavit" hindi="शपथपत्र" isUploaded={!!documents.affidavit} filename={documents.affidavit?.name} onUpload={() => pickDocument('affidavit')} onRemove={() => removeDocument('affidavit')} required />

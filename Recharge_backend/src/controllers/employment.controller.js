@@ -1,4 +1,5 @@
 const EmploymentModel = require("../models/employment.model");
+const { formatDateToMySQL } = require("../utils/date.helper");
 
 /**
  * Submit a new Employment Registration application
@@ -34,13 +35,13 @@ exports.createApplication = async (req, res, next) => {
 
         const reference_id = "EMP" + Math.random().toString(36).substr(2, 9).toUpperCase();
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
         const applicationData = {
             user_id: userId,
             full_name,
             aadhaar_number,
-            dob,
+            dob: formatDateToMySQL(dob),
             gender,
             category,
             mobile_number,
@@ -58,11 +59,11 @@ exports.createApplication = async (req, res, next) => {
             languages,
             pref_sector,
             reference_id,
-            aadhaar_card_url: getFilePath('aadhaar_card'),
-            education_cert_url: getFilePath('education_cert'),
-            photo_url: getFilePath('photo'),
-            experience_cert_url: getFilePath('experience_cert'),
-            caste_cert_url: getFilePath('caste_cert')
+            aadhaar_card_url: normalizePath(files.aadhaar_card?.[0]?.path),
+            education_cert_url: normalizePath(files.education_cert?.[0]?.path),
+            photo_url: normalizePath(files.photo?.[0]?.path),
+            experience_cert_url: normalizePath(files.experience_cert?.[0]?.path),
+            caste_cert_url: normalizePath(files.caste_cert?.[0]?.path)
         };
 
         const applicationId = await EmploymentModel.create(applicationData);

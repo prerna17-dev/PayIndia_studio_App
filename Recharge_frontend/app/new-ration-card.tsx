@@ -3,6 +3,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import api from "../services/api";
 import React, { useEffect, useState } from "react";
 import {
     Alert,
@@ -30,6 +31,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -137,7 +139,13 @@ export default function NewRationCardScreen() {
                     Alert.alert("File Too Large", "Please upload a file smaller than 5MB");
                     return;
                 }
-                setDocuments((prev) => ({ ...prev, [docType]: file }));
+                setDocuments((prev) => ({ 
+                    ...prev, 
+                    [docType]: {
+                        ...file,
+                        mimeType: file.mimeType
+                    } 
+                }));
             }
         } catch (e) {
             Alert.alert("Error", "Upload failed");
@@ -186,13 +194,81 @@ export default function NewRationCardScreen() {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            setApplicationId("RAT-" + Math.random().toString(36).substr(2, 6).toUpperCase());
+        try {
+            const formDataToSend = new FormData();
+
+            // Head of Family Details
+            formDataToSend.append("full_name", formData.fullName);
+            formDataToSend.append("aadhaar_number", formData.aadhaarNumber);
+            formDataToSend.append("mobile_number", formData.mobileNumber);
+            formDataToSend.append("dob", formData.dob);
+            formDataToSend.append("gender", formData.gender);
+
+            // Address Details
+            formDataToSend.append("house_no", formData.houseNo);
+            formDataToSend.append("street", formData.street);
+            formDataToSend.append("village", formData.village);
+            formDataToSend.append("district", formData.district);
+            formDataToSend.append("state", formData.state);
+            formDataToSend.append("pincode", formData.pincode);
+            formDataToSend.append("duration_of_stay", formData.durationOfStay);
+
+            // Income Details
+            formDataToSend.append("total_income", formData.totalIncome);
+            formDataToSend.append("income_category", formData.incomeCategory);
+            formDataToSend.append("occupation", formData.occupation);
+
+            // Gas Details
+            formDataToSend.append("gas_consumer_no", formData.gasConsumerNo);
+            formDataToSend.append("gas_agency_name", formData.gasAgencyName);
+            formDataToSend.append("gas_status", formData.gasStatus);
+
+            // Family Members (JSON serialized)
+            formDataToSend.append("members", JSON.stringify(members));
+
+            // Documents
+            if (documents.addressProof) {
+                formDataToSend.append("address_proof", {
+                    uri: documents.addressProof.uri,
+                    name: documents.addressProof.name,
+                    type: documents.addressProof.mimeType || "application/octet-stream",
+                } as any);
+            }
+            if (documents.incomeCert) {
+                formDataToSend.append("income_cert", {
+                    uri: documents.incomeCert.uri,
+                    name: documents.incomeCert.name,
+                    type: documents.incomeCert.mimeType || "application/octet-stream",
+                } as any);
+            }
+            if (documents.headId) {
+                formDataToSend.append("head_id", {
+                    uri: documents.headId.uri,
+                    name: documents.headId.name,
+                    type: documents.headId.mimeType || "application/octet-stream",
+                } as any);
+            }
+
+            const response = await api.post("/social/ration-card/apply", formDataToSend, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.applicationId?.toString() || "RAT" + Date.now());
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
+            console.error("Ration Card submission error:", error);
+            Alert.alert("Error", error.response?.data?.message || "Failed to submit. Please try again.");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
     };
 
     const renderStepIndicator = () => (

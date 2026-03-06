@@ -26,7 +26,7 @@ exports.createApplication = async (req, res, next) => {
 
         const reference_id = "TAX" + Math.random().toString(36).substr(2, 9).toUpperCase();
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
         const applicationData = {
             user_id: userId,
@@ -42,8 +42,8 @@ exports.createApplication = async (req, res, next) => {
             amount,
             payment_method,
             reference_id,
-            aadhaar_card_url: getFilePath('aadhaar_card'),
-            tax_bill_url: getFilePath('tax_bill')
+            aadhaar_card_url: normalizePath(files.aadhaar_card?.[0]?.path),
+            tax_bill_url: normalizePath(files.tax_bill?.[0]?.path)
         };
 
         const applicationId = await PropertyTaxModel.create(applicationData);

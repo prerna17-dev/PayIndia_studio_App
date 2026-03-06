@@ -1,4 +1,5 @@
 const PanModel = require("../models/pan.model");
+const { formatDateToMySQL } = require("../utils/date.helper");
 const path = require("path");
 const fs = require("fs");
 const SmsService = require("../services/sms.service");
@@ -49,18 +50,19 @@ exports.createApplication = async (req, res, next) => {
         const documentFiles = req.files;
         if (documentFiles) {
             const uploadTasks = [];
+            const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/.*src\/uploads\//, '') : null;
 
             if (documentFiles.aadhar_card) {
-                uploadTasks.push(PanModel.addDocument(applicationId, 'Aadhaar', documentFiles.aadhar_card[0].path));
+                uploadTasks.push(PanModel.addDocument(applicationId, 'Aadhaar', normalizePath(documentFiles.aadhar_card[0].path)));
             }
             if (documentFiles.address_proof) {
-                uploadTasks.push(PanModel.addDocument(applicationId, 'Address_Proof', documentFiles.address_proof[0].path));
+                uploadTasks.push(PanModel.addDocument(applicationId, 'Address_Proof', normalizePath(documentFiles.address_proof[0].path)));
             }
             if (documentFiles.dob_proof) {
-                uploadTasks.push(PanModel.addDocument(applicationId, 'DOB_Proof', documentFiles.dob_proof[0].path));
+                uploadTasks.push(PanModel.addDocument(applicationId, 'DOB_Proof', normalizePath(documentFiles.dob_proof[0].path)));
             }
             if (documentFiles.passport_photo) {
-                uploadTasks.push(PanModel.addDocument(applicationId, 'Passport_Photo', documentFiles.passport_photo[0].path));
+                uploadTasks.push(PanModel.addDocument(applicationId, 'Passport_Photo', normalizePath(documentFiles.passport_photo[0].path)));
             }
 
             await Promise.all(uploadTasks);
@@ -256,7 +258,7 @@ exports.submitCorrection = async (req, res, next) => {
             pan_number,
             mobile_number,
             corrected_name,
-            corrected_dob,
+            corrected_dob: corrected_dob ? formatDateToMySQL(corrected_dob) : null,
             correction_type,
         });
 
@@ -264,18 +266,19 @@ exports.submitCorrection = async (req, res, next) => {
         const documentFiles = req.files;
         if (documentFiles) {
             const uploadTasks = [];
+            const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
             if (documentFiles.proof_of_name) {
-                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Proof_of_Name', documentFiles.proof_of_name[0].path));
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Proof_of_Name', normalizePath(documentFiles.proof_of_name[0].path)));
             }
             if (documentFiles.identity_proof) {
-                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Identity_Proof', documentFiles.identity_proof[0].path));
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Identity_Proof', normalizePath(documentFiles.identity_proof[0].path)));
             }
             if (documentFiles.proof_of_dob) {
-                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Proof_of_DOB', documentFiles.proof_of_dob[0].path));
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Proof_of_DOB', normalizePath(documentFiles.proof_of_dob[0].path)));
             }
             if (documentFiles.photo_sign) {
-                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Photo_Sign', documentFiles.photo_sign[0].path));
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Photo_Sign', normalizePath(documentFiles.photo_sign[0].path)));
             }
 
             await Promise.all(uploadTasks);

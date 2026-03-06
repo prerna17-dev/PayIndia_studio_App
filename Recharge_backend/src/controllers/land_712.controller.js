@@ -22,7 +22,12 @@ exports.createApplication = async (req, res, next) => {
 
         const reference_id = "712" + Math.random().toString(36).substr(2, 9).toUpperCase();
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/.*src\/uploads\//, '') : null;
+        const getFilePath = (fieldName) => {
+            return (files[fieldName] && files[fieldName][0]) 
+                ? normalizePath(files[fieldName][0].path) 
+                : null;
+        };
 
         const applicationData = {
             user_id: userId,

@@ -1,5 +1,6 @@
 const BirthModel = require("../models/birth.model");
 const path = require("path");
+const { formatDateToMySQL } = require("../utils/date.helper");
 
 /**
  * Submit a new Birth Certificate application
@@ -43,17 +44,22 @@ exports.createApplication = async (req, res, next) => {
 
         // Map uploaded files
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/.*src\/uploads\//, '') : null;
+        const getFilePath = (fieldName) => {
+            return (files[fieldName] && files[fieldName][0]) 
+                ? normalizePath(files[fieldName][0].path) 
+                : null;
+        };
 
         const applicationData = {
             user_id: userId,
             child_name,
             gender,
-            dob,
+            dob: formatDateToMySQL(dob),
             time_of_birth,
             place_of_birth,
             hospital_name,
-            registration_date,
+            registration_date: formatDateToMySQL(registration_date),
             father_name,
             father_aadhaar,
             father_mobile,

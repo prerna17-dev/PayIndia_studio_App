@@ -23,7 +23,7 @@ exports.createApplication = async (req, res, next) => {
 
         const reference_id = "FER" + Math.random().toString(36).substr(2, 9).toUpperCase();
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
         const applicationData = {
             user_id: userId,
@@ -36,10 +36,10 @@ exports.createApplication = async (req, res, next) => {
             survey_number,
             mutation_type,
             reference_id,
-            aadhaar_card_url: getFilePath('aadhaar_card'),
-            index_2_url: getFilePath('index_2'),
-            death_cert_url: getFilePath('death_cert'),
-            ferfar_cert_url: getFilePath('ferfar_cert')
+            aadhaar_card_url: normalizePath(files.aadhaar_card?.[0]?.path),
+            index_2_url: normalizePath(files.index_2?.[0]?.path),
+            death_cert_url: normalizePath(files.death_cert?.[0]?.path),
+            ferfar_cert_url: normalizePath(files.ferfar_cert?.[0]?.path)
         };
 
         const applicationId = await FerfarModel.create(applicationData);

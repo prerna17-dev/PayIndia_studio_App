@@ -1,5 +1,6 @@
 const EWSModel = require("../models/ews.model");
 const path = require("path");
+const { formatDateToMySQL } = require("../utils/date.helper");
 
 /**
  * Submit a new EWS Certificate application
@@ -42,17 +43,22 @@ exports.createApplication = async (req, res, next) => {
 
         // Map uploaded files
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/.*src\/uploads\//, '') : null;
+        const getFilePath = (fieldName) => {
+            return (files[fieldName] && files[fieldName][0]) 
+                ? normalizePath(files[fieldName][0].path) 
+                : null;
+        };
 
         // Multi-file fields
-        const proofOfIncomeUrls = files['proof_of_income'] ? JSON.stringify(files['proof_of_income'].map(f => f.path)) : null;
-        const propertyDocsUrls = files['property_docs'] ? JSON.stringify(files['property_docs'].map(f => f.path)) : null;
+        const proofOfIncomeUrls = files['proof_of_income'] ? JSON.stringify(files['proof_of_income'].map(f => normalizePath(f.path))) : null;
+        const propertyDocsUrls = files['property_docs'] ? JSON.stringify(files['property_docs'].map(f => normalizePath(f.path))) : null;
 
         const applicationData = {
             user_id: userId,
             full_name,
             aadhaar_number,
-            dob,
+            dob: formatDateToMySQL(dob),
             gender,
             mobile_number,
             email,

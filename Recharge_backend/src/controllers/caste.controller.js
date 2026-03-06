@@ -1,5 +1,6 @@
 const CasteModel = require("../models/caste.model");
 const path = require("path");
+const { formatDateToMySQL } = require("../utils/date.helper");
 
 /**
  * Submit a new Caste Certificate application
@@ -38,7 +39,12 @@ exports.createApplication = async (req, res, next) => {
 
         // Map uploaded files
         const files = req.files || {};
-        const getFilePath = (fieldName) => files[fieldName] ? files[fieldName][0].path : null;
+        const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/.*src\/uploads\//, '') : null;
+        const getFilePath = (fieldName) => {
+            return (files[fieldName] && files[fieldName][0]) 
+                ? normalizePath(files[fieldName][0].path) 
+                : null;
+        };
 
         const applicationData = {
             user_id: userId,
@@ -46,7 +52,7 @@ exports.createApplication = async (req, res, next) => {
             aadhaar_number,
             mobile_number,
             email,
-            dob,
+            dob: formatDateToMySQL(dob),
             gender,
             category,
             sub_caste,
