@@ -75,25 +75,34 @@ export default function HistoryScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
-      
-      if (res.ok && data.success) {
+
+      if (res.ok && data.success && Array.isArray(data.data)) {
         const mapped: Transaction[] = data.data.map((t: any) => {
-          const meta = typeToIcon(t.transaction_type);
+          const meta = typeToIcon(t.transaction_type || "");
+          let displayDate = "N/A";
+          try {
+             if (t.created_at) {
+               displayDate = new Date(t.created_at).toLocaleString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+             }
+          } catch (dateErr) {
+            console.warn("Date parsing error:", dateErr);
+          }
+
           return {
             transaction_id: t.transaction_id,
-            id: String(t.transaction_id),
-            type: t.description || t.transaction_type,
-            transaction_type: t.transaction_type,
-            description: t.description,
-            amount: parseFloat(t.amount),
-            created_at: t.created_at,
-            date: new Date(t.created_at).toLocaleString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
+            id: String(t.transaction_id || Math.random()),
+            type: t.description || t.transaction_type || "Transaction",
+            transaction_type: t.transaction_type || "Unknown",
+            description: t.description || "",
+            amount: parseFloat(t.amount) || 0,
+            created_at: t.created_at || "",
+            date: displayDate,
             status: (t.status?.toLowerCase() || "pending") as Transaction["status"],
             category: meta.category,
             icon: meta.icon,
@@ -373,7 +382,7 @@ export default function HistoryScreen() {
 
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push("/(tabs)/wallet")}
+            onPress={() => router.push("/wallet")}
           >
             <Ionicons name="card-outline" size={24} color="#999" />
             <Text style={styles.navText}>Wallet</Text>

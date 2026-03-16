@@ -37,19 +37,11 @@ exports.updateProfile = async (userId, data) => {
        profile_image = COALESCE(?, profile_image)
      WHERE user_id = ?`,
     [
-
-      name ?? null,
-      gender ?? null,
-      user_email ?? null,
-      date_of_birth ?? null,
-      profile_image ?? null,
-
       name || null,
       gender || null,
       user_email || null,
       date_of_birth || null,
       profile_image || null,
-
       userId,
     ]
   );

@@ -15,10 +15,7 @@ exports.getProfile = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   const userId = req.user.userId;
 
-  const { name, gender, user_email, date_of_birth, profile_image } = req.body;
-
-  const { name, gender, user_email, date_of_birth } = req.body;
-  let profile_image = req.body.profile_image;
+  let { name, gender, user_email, date_of_birth, profile_image } = req.body;
 
   if (req.file) {
     profile_image = `/uploads/${req.file.filename}`;
