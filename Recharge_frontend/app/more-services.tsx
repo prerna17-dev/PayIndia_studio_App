@@ -287,21 +287,29 @@ export default function MoreServicesScreen() {
                 <Text style={styles.serviceText}>Municipal{'\n'}services</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity
+                style={styles.serviceCard}
+                onPress={() => router.push('/municipal-taxes')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="home-city-outline" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>Municipal{'\n'}taxes</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity style={styles.serviceCard}
+                onPress={() => router.push('/housing-apartment-services')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="home-outline" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>Housing /{'\n'}apartment</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity
+                style={styles.serviceCard}
+                onPress={() => router.push('/clubs-associations')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="account-group-outline" size={30} color="#0D47A1" />
                 </View>
@@ -315,28 +323,36 @@ export default function MoreServicesScreen() {
             <Text style={styles.sectionTitle}>More services</Text>
 
             <View style={styles.servicesGrid}>
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity style={styles.serviceCard}
+                onPress={() => router.push('/education-fees')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="school-outline" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>Education{'\n'}fees</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity style={styles.serviceCard}
+                onPress={() => router.push('/charitable-donation')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="hand-heart-outline" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>Charitable{'\n'}donation</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity style={styles.serviceCard}
+                onPress={() => router.push('/ott-subscriptions')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="television-play" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>OTT &{'\n'}subscriptions</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.serviceCard}>
+              <TouchableOpacity style={styles.serviceCard}
+                onPress={() => router.push('/hospital-pathology')}
+              >
                 <View style={styles.iconCircle}>
                   <MaterialCommunityIcons name="hospital-building" size={30} color="#0D47A1" />
                 </View>

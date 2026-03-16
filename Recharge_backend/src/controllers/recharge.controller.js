@@ -58,9 +58,9 @@ exports.mobileRecharge = async (req, res) => {
     // Create transaction record
     const [txn] = await conn.query(
       `INSERT INTO transactions 
-      (user_id, transaction_type, amount, status)
-      VALUES (?, 'Recharge', ?, 'Pending')`,
-      [userId, amount]
+      (user_id, transaction_type, amount, description, status)
+      VALUES (?, 'Recharge', ?, ?, 'Pending')`,
+      [userId, amount, `Mobile Recharge for ${number}`]
     );
 
     // ✅ ADD PAYMENT METHOD ENTRY (MISSING PART)

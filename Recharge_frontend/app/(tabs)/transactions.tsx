@@ -13,16 +13,67 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../../constants/api";
 
 const { width } = Dimensions.get("window");
 
+
 interface Transaction {
-  id: string;
-  type: string;
+  transaction_id: number;
+  user_id: number;
+  transaction_type: string;
   amount: number;
+
+  description: string;
+  status: string;
+  transaction_reference: string;
+  created_at: string;
+}
+
+import { API_BASE_URL } from "../../constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+export default function HistoryScreen() {
+  const router = useRouter();
+
+  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [filter, setFilter] = React.useState("All");
+
+  const fetchTransactions = async () => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setTransactions(data);
+      }
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchTransactions();
+  };
+
   date: string;
   status: "success" | "pending" | "failed";
   category: string;
@@ -57,6 +108,7 @@ export default function HistoryScreen() {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [activeFilter, setActiveFilter] = React.useState("All");
+
 
   React.useEffect(() => {
     fetchTransactions();
@@ -186,6 +238,76 @@ export default function HistoryScreen() {
     </View>
   );
 
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "success":
+        return "#4CAF50";
+      case "pending":
+        return "#FF9800";
+      case "failed":
+        return "#F44336";
+      default:
+        return "#999";
+    }
+  };
+
+  const getTransactionUI = (type: string) => {
+    switch (type) {
+      case "Wallet_Credit":
+        return {
+          icon: "wallet",
+          color: "#4CAF50",
+          label: "Money Added",
+          isCredit: true,
+        };
+      case "Wallet_Debit":
+        return {
+          icon: "bank-transfer-out",
+          color: "#F44336",
+          label: "Money Withdrawn",
+          isCredit: false,
+        };
+      case "Recharge":
+        return {
+          icon: "phone-portrait",
+          color: "#2196F3",
+          label: "Mobile Recharge",
+          isCredit: false,
+        };
+      default:
+        return {
+          icon: "receipt",
+          color: "#9C27B0",
+          label: type,
+          isCredit: false,
+        };
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }) + " • " + date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const renderTransactionItem = (transaction: Transaction, index: number) => {
+    const ui = getTransactionUI(transaction.transaction_type);
+    return (
+      <TouchableOpacity
+        key={transaction.transaction_id || `txn-${index}`}
+        style={styles.transactionCard}
+      >
+        <View style={styles.transactionLeft}>
+          <View
+
   const renderTransactionItem = (transaction: Transaction) => (
     <TouchableOpacity key={transaction.id} style={styles.transactionCard}>
       <View style={styles.transactionLeft}>
@@ -224,17 +346,59 @@ export default function HistoryScreen() {
           ]}
         >
           <Text
+
             style={[
-              styles.statusText,
-              { color: getStatusColor(transaction.status) },
+              styles.transactionIcon,
+              { backgroundColor: `${ui.color}15` },
             ]}
           >
-            {getStatusText(transaction.status)}
-          </Text>
+            {ui.icon.includes("bank") ? (
+              <MaterialCommunityIcons
+                name={ui.icon as any}
+                size={24}
+                color={ui.color}
+              />
+            ) : (
+              <Ionicons
+                name={ui.icon as any}
+                size={22}
+                color={ui.color}
+              />
+            )}
+          </View>
+          <View style={styles.transactionDetails}>
+            <Text style={styles.transactionType}>{ui.label}</Text>
+            <Text style={styles.transactionDate}>{formatDate(transaction.created_at)}</Text>
+            <Text style={styles.transactionDesc} numberOfLines={1}>{transaction.description}</Text>
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  );
+
+        <View style={styles.transactionRight}>
+          <Text style={[
+            styles.transactionAmount,
+            { color: ui.isCredit ? "#4CAF50" : "#1A1A1A" }
+          ]}>
+            {ui.isCredit ? "+" : "-"}₹{transaction.amount}
+          </Text>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: `${getStatusColor(transaction.status)}15` },
+            ]}
+          >
+            <Text
+              style={[
+                styles.statusText,
+                { color: getStatusColor(transaction.status) },
+              ]}
+            >
+              {transaction.status}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderTransactionsList = () => (
     <View style={styles.transactionsContainer}>
@@ -244,6 +408,15 @@ export default function HistoryScreen() {
         style={styles.filterContainer}
         contentContainerStyle={styles.filterContent}
       >
+
+        {["All", "Success", "Pending", "Failed"].map((f) => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterTab, filter === f && styles.filterTabActive]}
+            onPress={() => setFilter(f)}
+          >
+            <Text style={filter === f ? styles.filterTabTextActive : styles.filterTabText}>{f}</Text>
+
         {["All", "Success", "Pending", "Failed"].map((filter) => (
           <TouchableOpacity
             key={filter}
@@ -255,12 +428,18 @@ export default function HistoryScreen() {
             >
               {filter}
             </Text>
+
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       <View style={styles.transactionsList}>
         <Text style={styles.transactionsSectionTitle}>Recent Transactions</Text>
+
+        {transactions
+          .filter(t => filter === "All" || t.status.toLowerCase() === filter.toLowerCase())
+          .map((transaction, index) => renderTransactionItem(transaction, index))}
+
         {filteredTransactions.length > 0 ? (
           filteredTransactions.map((transaction) => renderTransactionItem(transaction))
         ) : (
@@ -268,6 +447,7 @@ export default function HistoryScreen() {
             No transactions found for "{activeFilter}" filter.
           </Text>
         )}
+
       </View>
     </View>
   );
@@ -298,7 +478,18 @@ export default function HistoryScreen() {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
         >
+
+          {loading ? (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 }}>
+              <ActivityIndicator size="large" color="#0D47A1" />
+            </View>
+          ) : (
+            transactions.length > 0 ? renderTransactionsList() : renderEmptyState()
+
           {isLoading ? (
             <View style={{ alignItems: "center", justifyContent: "center", paddingTop: 80 }}>
               <ActivityIndicator size="large" color="#2196F3" />
@@ -308,6 +499,7 @@ export default function HistoryScreen() {
             renderTransactionsList()
           ) : (
             renderEmptyState()
+
           )}
         </ScrollView>
 
@@ -547,8 +739,27 @@ const styles = StyleSheet.create({
     color: "#1A1A1A",
     marginBottom: 4,
   },
+
+
+  transactionDate: {
+    fontSize: 11,
+    color: "#64748B",
+    marginBottom: 2,
+  },
+
+  transactionDesc: {
+    fontSize: 12,
+    color: "#94A3B8",
+  },
+
+  transactionRight: {
+    alignItems: "flex-end",
+  },
+
+
   transactionDate: { fontSize: 12, color: "#999" },
   transactionRight: { alignItems: "flex-end" },
+
   transactionAmount: {
     fontSize: 16,
     fontWeight: "bold",

@@ -8,6 +8,9 @@ import {
   ActivityIndicator,
   Alert,
   BackHandler,
+
+  Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -15,6 +18,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+
+  FlatList,
+
   Platform,
   Image,
 } from "react-native";
@@ -29,14 +35,19 @@ export default function PersonalDetailsScreen() {
   const [fullName, setFullName] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [gender, setGender] = useState("");
-  const [aadhaarNumber, setAadhaarNumber] = useState("");
-  const [isAadhaarVerified, setIsAadhaarVerified] = useState(false);
+  const [email, setEmail] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
 
   // Profile completion status
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+
+  // Date Picker States
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [viewDate, setViewDate] = useState(new Date()); // Date currently being viewed in calendar
+  const [selectedDate, setSelectedDate] = useState(new Date()); // Date actually selected
+  const [pickerView, setPickerView] = useState<"calendar" | "year">("calendar");
 
   // Fetch initial profile data
   useEffect(() => {
@@ -57,7 +68,13 @@ export default function PersonalDetailsScreen() {
       if (response.ok) {
         setFullName(data.name || "");
         setMobileNumber(data.mobile_number || "");
+        setEmail(data.user_email || "");
         setGender(data.gender || "");
+
+        // Truncate DOB to 10 characters (YYYY-MM-DD) to pass validation
+        const rawDOB = data.date_of_birth || "";
+        setDateOfBirth(rawDOB.length > 10 ? rawDOB.substring(0, 10) : rawDOB);
+        setProfileImage(data.profile_image || null);
         if (data.date_of_birth) {
           try {
             const dobString = data.date_of_birth.split("T")[0]; // "YYYY-MM-DD"
@@ -79,6 +96,7 @@ export default function PersonalDetailsScreen() {
         } else {
           setProfileImage(null);
         }
+
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -184,23 +202,9 @@ export default function PersonalDetailsScreen() {
     ]);
   };
 
-  // Format Aadhaar number with spaces (XXXX XXXX XXXX)
-  const formatAadhaar = (text: string) => {
-    // Remove all non-digits
-    const cleaned = text.replace(/\D/g, "");
-
-    // Limit to 12 digits
-    const limited = cleaned.substring(0, 12);
-
-    // Add spaces after every 4 digits
-    const formatted = limited.replace(/(\d{4})(?=\d)/g, "$1 ");
-
-    return formatted;
-  };
-
-  const handleAadhaarChange = (text: string) => {
-    const formatted = formatAadhaar(text);
-    setAadhaarNumber(formatted);
+  // Email change handler
+  const handleEmailChange = (text: string) => {
+    setEmail(text.trim());
   };
 
   // Format DOB with auto slashes (DD/MM/YYYY)
@@ -211,18 +215,18 @@ export default function PersonalDetailsScreen() {
     // Limit to 8 digits
     const limited = cleaned.substring(0, 8);
 
-    // Add slashes after DD and MM
+    // Add hyphens after YYYY and MM
     let formatted = limited;
-    if (limited.length >= 2) {
-      formatted = limited.substring(0, 2) + "/" + limited.substring(2);
-    }
     if (limited.length >= 4) {
+      formatted = limited.substring(0, 4) + "-" + limited.substring(4);
+    }
+    if (limited.length >= 6) {
       formatted =
-        limited.substring(0, 2) +
-        "/" +
-        limited.substring(2, 4) +
-        "/" +
-        limited.substring(4);
+        limited.substring(0, 4) +
+        "-" +
+        limited.substring(4, 6) +
+        "-" +
+        limited.substring(6);
     }
 
     return formatted;
@@ -231,6 +235,71 @@ export default function PersonalDetailsScreen() {
   const handleDOBChange = (text: string) => {
     const formatted = formatDOB(text);
     setDateOfBirth(formatted);
+  };
+
+  // Date Picker Logic
+  const openDatePicker = () => {
+    let initialDate = new Date();
+    if (dateOfBirth && dateOfBirth.length === 10) {
+      const parts = dateOfBirth.split("-");
+      initialDate = new Date(
+        parseInt(parts[0]),
+        parseInt(parts[1]) - 1,
+        parseInt(parts[2])
+      );
+    }
+    setSelectedDate(initialDate);
+    setViewDate(new Date(initialDate.getFullYear(), initialDate.getMonth(), 1));
+    setPickerView("calendar");
+    setIsDatePickerVisible(true);
+  };
+
+  const confirmDate = () => {
+    const year = selectedDate.getFullYear();
+    const month = (selectedDate.getMonth() + 1).toString().padStart(2, "0");
+    const day = selectedDate.getDate().toString().padStart(2, "0");
+    setDateOfBirth(`${year}-${month}-${day}`);
+    setIsDatePickerVisible(false);
+  };
+
+  const changeMonth = (offset: number) => {
+    const newDate = new Date(viewDate.getFullYear(), viewDate.getMonth() + offset, 1);
+    setViewDate(newDate);
+  };
+
+  const years = Array.from(
+    { length: new Date().getFullYear() - 1950 + 1 },
+    (_, i) => 1950 + i
+  ).reverse();
+
+  const months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const daysOfWeek = ["M", "T", "W", "T", "F", "S", "S"];
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const getCalendarDays = () => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1).getDay(); // 0 is Sunday
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Adjust firstDay to start from Monday (0: Mon, 6: Sun)
+    const adjustedFirstDay = firstDay === 0 ? 6 : firstDay - 1;
+
+    const days = [];
+    // Padding for start of month
+    for (let i = 0; i < adjustedFirstDay; i++) {
+      days.push(null);
+    }
+    // Days of month
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+    return days;
   };
 
   // Format mobile number
@@ -242,52 +311,28 @@ export default function PersonalDetailsScreen() {
     setMobileNumber(limited);
   };
 
-  // Verify Aadhaar (placeholder - will connect to API later)
-  const verifyAadhaar = () => {
-    const cleaned = aadhaarNumber.replace(/\s/g, "");
-
-    if (cleaned.length !== 12) {
-      Alert.alert("Invalid Aadhaar", "Aadhaar number must be 12 digits");
-      return;
-    }
-
-    // Placeholder verification - will be replaced with actual API call
-    Alert.alert(
-      "Verify Aadhaar",
-      "Do you want to verify this Aadhaar number?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Verify",
-          onPress: () => {
-            // Simulated verification - replace with actual API call
-            setTimeout(() => {
-              setIsAadhaarVerified(true);
-              Alert.alert("Success", "Aadhaar verified successfully");
-            }, 1500);
-          },
-        },
-      ],
-    );
+  // Email validation helper
+  const validateEmail = (email: string) => {
+    return /\S+@\S+\.\S+/.test(email);
   };
 
   // Validate DOB
   const validateDOB = (dob: string) => {
     if (dob.length !== 10) return false;
 
-    const parts = dob.split("/");
-    const day = parseInt(parts[0]);
+    const parts = dob.split("-");
+    const year = parseInt(parts[0]);
     const month = parseInt(parts[1]);
-    const year = parseInt(parts[2]);
+    const day = parseInt(parts[2]);
 
     // Check valid ranges
     if (
-      day < 1 ||
-      day > 31 ||
+      year < 1900 ||
+      year > new Date().getFullYear() ||
       month < 1 ||
       month > 12 ||
-      year < 1900 ||
-      year > new Date().getFullYear()
+      day < 1 ||
+      day > 31
     ) {
       return false;
     }
@@ -319,6 +364,11 @@ export default function PersonalDetailsScreen() {
       return false;
     }
 
+
+    if (!email.trim() || !validateEmail(email)) {
+      Alert.alert("Validation Error", "Please enter a valid email address");
+      return false;
+    }
     const cleanedAadhaar = aadhaarNumber.replace(/\s/g, "");
     if (aadhaarNumber && cleanedAadhaar.length > 0 && cleanedAadhaar.length !== 12) {
       Alert.alert("Validation Error", "Aadhaar number must be 12 digits");
@@ -330,10 +380,11 @@ export default function PersonalDetailsScreen() {
     //   return false;
     // }
 
+
     if (!validateDOB(dateOfBirth)) {
       Alert.alert(
         "Validation Error",
-        "Please enter a valid date of birth (DD/MM/YYYY)",
+        "Please enter a valid date of birth (YYYY-MM-DD)",
       );
       return false;
     }
@@ -369,6 +420,42 @@ export default function PersonalDetailsScreen() {
       if (profileImage && !profileImage.startsWith('http')) {
         if (Platform.OS === 'web') {
           try {
+
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify({
+                name: fullName,
+                user_email: email,
+                gender: gender,
+                date_of_birth: dateOfBirth,
+                profile_image: profileImage,
+              }),
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+              setIsProfileComplete(true);
+              Alert.alert("Success", "Profile saved successfully!", [
+                {
+                  text: "OK",
+                  onPress: () => router.replace("/account"),
+                },
+              ]);
+            } else {
+              Alert.alert("Error", data.message || "Failed to update profile.");
+            }
+          } catch (error) {
+            console.error("Error saving profile:", error);
+            Alert.alert("Error", "Server error. Please check your connection.");
+          } finally {
+            setIsLoading(false);
+
             const res = await fetch(profileImage);
             const blob = await res.blob();
             formData.append("profile_image", blob, "profile.jpg");
@@ -609,48 +696,26 @@ export default function PersonalDetailsScreen() {
               </View>
             </View>
 
-            {/* Aadhaar Card */}
+            {/* Email Section */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>
-                Aadhaar Number <Text style={styles.required}>*</Text>
+                Email Address <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputContainer}>
-                <MaterialCommunityIcons
-                  name="card-account-details"
-                  size={20}
-                  color="#999"
-                />
+                <Ionicons name="mail-outline" size={20} color="#999" />
                 <TextInput
                   style={styles.input}
-                  placeholder="XXXX XXXX XXXX"
+                  placeholder="Enter your email address"
                   placeholderTextColor="#999"
-                  keyboardType="number-pad"
-                  maxLength={14} // 12 digits + 2 spaces
-                  value={aadhaarNumber}
-                  onChangeText={handleAadhaarChange}
-                  editable={!isAadhaarVerified}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={email}
+                  onChangeText={handleEmailChange}
                 />
-                {isAadhaarVerified && (
-                  <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                )}
               </View>
-
-              {aadhaarNumber.replace(/\s/g, "").length === 12 &&
-                !isAadhaarVerified && (
-                  <TouchableOpacity
-                    style={styles.verifyButton}
-                    onPress={verifyAadhaar}
-                  >
-                    <Text style={styles.verifyButtonText}>Verify Aadhaar</Text>
-                  </TouchableOpacity>
-                )}
-
-              {isAadhaarVerified && (
-                <View style={styles.verifiedBadge}>
-                  <Ionicons name="shield-checkmark" size={16} color="#4CAF50" />
-                  <Text style={styles.verifiedText}>Verified</Text>
-                </View>
-              )}
+              <Text style={styles.hintText}>
+                Used for sending important notifications
+              </Text>
             </View>
 
             {/* Date of Birth */}
@@ -659,10 +724,12 @@ export default function PersonalDetailsScreen() {
                 Date of Birth <Text style={styles.required}>*</Text>
               </Text>
               <View style={styles.inputContainer}>
-                <Ionicons name="calendar-outline" size={20} color="#999" />
+                <TouchableOpacity onPress={openDatePicker}>
+                  <Ionicons name="calendar-outline" size={20} color="#2196F3" />
+                </TouchableOpacity>
                 <TextInput
                   style={styles.input}
-                  placeholder="DD/MM/YYYY"
+                  placeholder="YYYY-MM-DD"
                   placeholderTextColor="#999"
                   keyboardType="number-pad"
                   maxLength={10}
@@ -671,7 +738,7 @@ export default function PersonalDetailsScreen() {
                 />
               </View>
               <Text style={styles.hintText}>
-                Enter your date of birth (e.g., 15/08/1995)
+                Enter your date of birth (e.g., 1995-08-15)
               </Text>
             </View>
           </View>
@@ -694,6 +761,148 @@ export default function PersonalDetailsScreen() {
           {/* Bottom Spacing */}
           <View style={{ height: 30 }} />
         </ScrollView>
+
+        {/* Date Picker Modal */}
+        <Modal
+          visible={isDatePickerVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsDatePickerVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity
+              style={styles.modalDismiss}
+              activeOpacity={1}
+              onPress={() => setIsDatePickerVisible(false)}
+            />
+            <View style={styles.pickerCard}>
+              {/* Material Header */}
+              <View style={styles.pickerHeader}>
+                <TouchableOpacity onPress={() => setPickerView("year")}>
+                  <Text style={styles.pickerYearText}>{selectedDate.getFullYear()}</Text>
+                </TouchableOpacity>
+                <Text style={styles.pickerFullDateText}>
+                  {dayNames[selectedDate.getDay()]}, {selectedDate.getDate()} {shortMonths[selectedDate.getMonth()]}
+                </Text>
+              </View>
+
+              {pickerView === "calendar" ? (
+                <>
+                  {/* Month Navigation */}
+                  <View style={styles.monthNav}>
+                    <TouchableOpacity onPress={() => changeMonth(-1)} style={styles.navArrow}>
+                      <Ionicons name="chevron-back" size={20} color="#555" />
+                    </TouchableOpacity>
+                    <Text style={styles.monthYearDisplay}>
+                      {months[viewDate.getMonth()]} {viewDate.getFullYear()}
+                    </Text>
+                    <TouchableOpacity onPress={() => changeMonth(1)} style={styles.navArrow}>
+                      <Ionicons name="chevron-forward" size={20} color="#555" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Calendar Grid */}
+                  <View style={styles.calendarContainer}>
+                    <View style={styles.weekHeaders}>
+                      {daysOfWeek.map((day, i) => (
+                        <Text key={i} style={styles.weekHeaderText}>{day}</Text>
+                      ))}
+                    </View>
+                    <View style={styles.daysGrid}>
+                      {getCalendarDays().map((day, index) => (
+                        <TouchableOpacity
+                          key={index}
+                          style={[
+                            styles.dayCell,
+                            day === selectedDate.getDate() &&
+                            viewDate.getMonth() === selectedDate.getMonth() &&
+                            viewDate.getFullYear() === selectedDate.getFullYear() &&
+                            styles.selectedDayCell
+                          ]}
+                          disabled={day === null}
+                          onPress={() => {
+                            if (day) {
+                              setSelectedDate(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
+                            }
+                          }}
+                        >
+                          <Text style={[
+                            styles.dayText,
+                            day === selectedDate.getDate() &&
+                            viewDate.getMonth() === selectedDate.getMonth() &&
+                            viewDate.getFullYear() === selectedDate.getFullYear() &&
+                            styles.selectedDayText
+                          ]}>
+                            {day || ""}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </>
+              ) : (
+                /* Year List View */
+                <View style={[styles.pickerContent, { height: 320 }]}>
+                  <FlatList
+                    data={years}
+                    keyExtractor={(item: number) => item.toString()}
+                    renderItem={({ item }: { item: number }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.yearListItem,
+                          selectedDate.getFullYear() === item && styles.yearListItemActive,
+                        ]}
+                        onPress={() => {
+                          const newSelected = new Date(selectedDate);
+                          newSelected.setFullYear(item);
+                          setSelectedDate(newSelected);
+                          setViewDate(new Date(item, newSelected.getMonth(), 1));
+                          setPickerView("calendar");
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.yearListText,
+                            selectedDate.getFullYear() === item && styles.yearListTextActive,
+                          ]}
+                        >
+                          {item}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    numColumns={3}
+                    showsVerticalScrollIndicator={false}
+                  />
+                </View>
+              )}
+
+              <View style={styles.pickerFooter}>
+                <TouchableOpacity
+                  style={styles.footerBtn}
+                  onPress={() => {
+                    setDateOfBirth("");
+                    setIsDatePickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.footerBtnText}>CLEAR</Text>
+                </TouchableOpacity>
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity
+                  style={styles.footerBtn}
+                  onPress={() => setIsDatePickerVisible(false)}
+                >
+                  <Text style={styles.footerBtnText}>CANCEL</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.footerBtn}
+                  onPress={confirmDate}
+                >
+                  <Text style={styles.footerBtnText}>SET</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </SafeAreaView>
     </View>
   );
@@ -931,6 +1140,138 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#0D47A1",
+    color: "#FFFFFF",
+  },
+
+  // Date Picker Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    padding: 20,
+  },
+  modalDismiss: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  pickerCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    overflow: "hidden",
+    maxHeight: "80%",
+  },
+  pickerHeader: {
+    backgroundColor: "#1976D2",
+    padding: 20,
+    paddingTop: 25,
+  },
+  pickerYearText: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  pickerFullDateText: {
+    color: "#FFFFFF",
+    fontSize: 32,
+    fontWeight: "bold",
+    marginTop: 5,
+  },
+  monthNav: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+  },
+  navArrow: {
+    padding: 10,
+  },
+  monthYearDisplay: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  calendarContainer: {
+    paddingHorizontal: 15,
+    paddingBottom: 15,
+    height: 300,
+  },
+  weekHeaders: {
+    flexDirection: "row",
+    marginBottom: 10,
+  },
+  weekHeaderText: {
+    flex: 1,
+    textAlign: "center",
+    color: "#999",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+  daysGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  dayCell: {
+    width: "14.28%",
+    aspectRatio: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
+  },
+  selectedDayCell: {
+    backgroundColor: "#1976D2",
+  },
+  dayText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  selectedDayText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+  },
+  yearListItem: {
+    flex: 1,
+    paddingVertical: 15,
+    alignItems: "center",
+    margin: 5,
+    borderRadius: 10,
+    backgroundColor: "#F5F5F5",
+  },
+  yearListItemActive: {
+    backgroundColor: "#E3F2FD",
+    borderWidth: 1,
+    borderColor: "#1976D2",
+  },
+  yearListText: {
+    fontSize: 16,
+    color: "#666",
+  },
+  yearListTextActive: {
+    color: "#1976D2",
+    fontWeight: "bold",
+  },
+  pickerContent: {
+    padding: 15,
+  },
+  pickerFooter: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    padding: 10,
+    paddingBottom: 15,
+    paddingRight: 20,
+    borderTopWidth: 1,
+    borderTopColor: "#EEE",
+  },
+  footerBtn: {
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+  },
+  footerBtnText: {
+    color: "#1976D2",
+    fontWeight: "bold",
+    fontSize: 14,
   },
 });

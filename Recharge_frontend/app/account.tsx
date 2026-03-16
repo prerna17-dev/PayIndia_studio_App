@@ -1,10 +1,12 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+﻿import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   BackHandler,
+  Image,
   Modal,
   SafeAreaView,
   ScrollView,
@@ -15,12 +17,39 @@ import {
   Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+import { API_ENDPOINTS } from "../constants/api";
+
 import { API_ENDPOINTS, API_BASE_URL } from "../constants/api";
+
 
 export default function AccountScreen() {
   const router = useRouter();
-  const [showLogoutModal, setShowLogoutModal] = React.useState(false);
-  const [showLogoutSuccess, setShowLogoutSuccess] = React.useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchProfile = async () => {
+    setIsLoading(true);
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setUserData(data);
+      }
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const [userName, setUserName] = React.useState("User");
   const [userPhone, setUserPhone] = React.useState("+91 XXXXXXXXXX");
@@ -74,6 +103,8 @@ export default function AccountScreen() {
   // Handle hardware back button - go to home screen
   useFocusEffect(
     React.useCallback(() => {
+      fetchProfile();
+
       const backAction = () => {
         // Go to home/explore screen
         router.replace("/(tabs)/explore");
@@ -110,6 +141,37 @@ export default function AccountScreen() {
         <ScrollView showsVerticalScrollIndicator={false}>
           {/* Profile Section - Reduced Width */}
           <View style={styles.profileSection}>
+
+            {isLoading && !userData ? (
+              <ActivityIndicator size="large" color="#2196F3" style={{ marginVertical: 20 }} />
+            ) : (
+              <>
+                <TouchableOpacity
+                  style={styles.profileIconContainer}
+                  onPress={() => router.push("/personal-details")}
+                >
+                  {userData?.profile_image ? (
+                    <Image
+                      source={{ uri: userData.profile_image }}
+                      style={styles.profileImage}
+                    />
+                  ) : (
+                    <Ionicons name="person-circle" size={80} color="#2196F3" />
+                  )}
+                  <View style={styles.editPencilContainer}>
+                    <Ionicons name="pencil" size={12} color="#FFFFFF" />
+                  </View>
+                </TouchableOpacity>
+                <Text style={styles.profileName}>{userData?.name || "User"}</Text>
+                <Text style={styles.profilePhone}>
+                  +91 {userData?.mobile_number || "XXXXXXXXXX"}
+                </Text>
+                {userData?.user_email && (
+                  <Text style={styles.profileEmail}>{userData.user_email}</Text>
+                )}
+              </>
+            )}
+
             <TouchableOpacity
               style={styles.profileIconContainer}
               onPress={() => router.push("/personal-details")}
@@ -128,6 +190,7 @@ export default function AccountScreen() {
             </TouchableOpacity>
             <Text style={styles.profileName}>{userName}</Text>
             <Text style={styles.profilePhone}>{userPhone}</Text>
+
           </View>
 
           {/* Refer & Earn Banner */}
@@ -391,7 +454,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 30,
+    paddingTop: 50,
     paddingBottom: 15,
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
@@ -413,17 +476,24 @@ const styles = StyleSheet.create({
   profileSection: {
     backgroundColor: "#FFFFFF",
     alignItems: "center",
-    paddingVertical: 5,
+    paddingVertical: 15,
     marginBottom: 0,
   },
   profileIconContainer: {
     marginBottom: 6,
     position: "relative",
   },
+  profileImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: "#BBDEFB",
+  },
   editPencilContainer: {
     position: "absolute",
-    top: 5,
-    right: 5,
+    top: 0,
+    right: 0,
     backgroundColor: "#4CAF50",
     width: 22,
     height: 22,
@@ -721,5 +791,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1A1A1A',
     marginTop: 15,
+  },
+  profileEmail: {
+    fontSize: 14,
+    color: '#2196F3',
+    marginTop: 2,
   },
 });

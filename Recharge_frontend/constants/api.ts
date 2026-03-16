@@ -1,10 +1,17 @@
 import { Platform } from 'react-native';
 
+
+// Replace this IP address with your computer's current IP address (IPv4)
+// Run 'ipconfig' in terminal to find your IPv4 address
+export const API_BASE_URL = "http://192.168.1.9:5000";
+
+
 // For Web, connect to the exact same host/port as the window.
 // For Native, fall back to the exact IP of the metro bundler or hardcoded backend.
 export const API_BASE_URL = Platform.OS === 'web' && typeof window !== 'undefined'
   ? `http://${window.location.hostname}:5000` 
   : "http://192.168.1.7:5000"; // Fallback for native devices
+
 
 export const API_ENDPOINTS = {
     // Auth

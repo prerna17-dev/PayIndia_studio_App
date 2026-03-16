@@ -1,4 +1,8 @@
+
+﻿  create database payindia_studio;
+
 create database payindia_studio;
+
 use payindia_studio;
 
 CREATE TABLE users (
@@ -6,7 +10,11 @@ CREATE TABLE users (
   mobile_number VARCHAR(15) UNIQUE NOT NULL,
   name VARCHAR(100),
   gender ENUM('Male','Female','Other'),
+
+  user_email VARCHAR(100),
+
   user_email VARCHAR(12) UNIQUE,
+
   date_of_birth DATE,
   profile_image VARCHAR(255),
   wallet_balance DECIMAL(10,2) DEFAULT 0.00,
