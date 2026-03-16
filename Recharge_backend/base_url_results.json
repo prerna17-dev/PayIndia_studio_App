@@ -1,0 +1,133 @@
+[
+  {
+    "name": "RECHARGE_ENV",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/recharge/getoperator",
+    "status": 200,
+    "data": {
+      "responsecode": 1,
+      "status": true,
+      "data": [
+        {
+          "id": "11",
+          "name": "Airtel",
+          "category": "Prepaid"
+        },
+        {
+          "id": "12",
+          "name": "Airtel Digital TV",
+          "category": "DTH"
+        },
+        {
+          "id": "13",
+          "name": "BSNL",
+          "category": "Prepaid"
+        },
+        {
+          "id": "14",
+          "name": "Dish TV",
+          "category": "DTH"
+        },
+        {
+          "id": "4",
+          "name": "Idea",
+          "category": "Prepaid"
+        },
+        {
+          "id": "18",
+          "name": "Jio",
+          "category": "Prepaid"
+        },
+        {
+          "id": "35",
+          "name": "MTNL",
+          "category": "Prepaid"
+        },
+        {
+          "id": "33",
+          "name": "MTNL Delhi",
+          "category": "Prepaid"
+        },
+        {
+          "id": "34",
+          "name": "MTNL Mumbai",
+          "category": "Prepaid"
+        },
+        {
+          "id": "27",
+          "name": "Sun Direct",
+          "category": "DTH"
+        },
+        {
+          "id": "8",
+          "name": "Tata Sky",
+          "category": "DTH"
+        },
+        {
+          "id": "10",
+          "name": "Videocon D2H",
+          "category": "DTH"
+        },
+        {
+          "id": "22",
+          "name": "Vodafone",
+          "category": "Prepaid"
+        }
+      ],
+      "message": "Operator List Fetched"
+    },
+    "error": null
+  },
+  {
+    "name": "RECHARGE_SHORT",
+    "url": "https://sit.paysprint.in/service-api/recharge/recharge/getoperator",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  },
+  {
+    "name": "BUS_ENV",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/bus/ticket/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  },
+  {
+    "name": "BUS_SHORT",
+    "url": "https://sit.paysprint.in/service-api/bus/ticket/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  },
+  {
+    "name": "BUS_TRAVEL_ENV",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/bus/ticket/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  },
+  {
+    "name": "BUS_TRAVEL_SHORT",
+    "url": "https://sit.paysprint.in/service-api/travel/bus/ticket/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  },
+  {
+    "name": "AIR_MERCHANT_ENV",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/air/merchant/status_check",
+    "status": 200,
+    "data": {
+      "status": false,
+      "response_code": 9,
+      "message": "The merchantcode field is required.\n"
+    },
+    "error": null
+  },
+  {
+    "name": "AIR_MERCHANT_SHORT",
+    "url": "https://sit.paysprint.in/service-api/travel/air/merchant/status_check",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  }
+]

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   BackHandler,
+
   Image,
   Modal,
   SafeAreaView,
@@ -17,10 +18,14 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+
   FlatList,
+
+  Platform,
+  Image,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_ENDPOINTS } from "../../constants/api";
+import { API_ENDPOINTS, API_BASE_URL } from "../../constants/api";
 
 export default function PersonalDetailsScreen() {
   const router = useRouter();
@@ -65,10 +70,33 @@ export default function PersonalDetailsScreen() {
         setMobileNumber(data.mobile_number || "");
         setEmail(data.user_email || "");
         setGender(data.gender || "");
+
         // Truncate DOB to 10 characters (YYYY-MM-DD) to pass validation
         const rawDOB = data.date_of_birth || "";
         setDateOfBirth(rawDOB.length > 10 ? rawDOB.substring(0, 10) : rawDOB);
         setProfileImage(data.profile_image || null);
+        if (data.date_of_birth) {
+          try {
+            const dobString = data.date_of_birth.split("T")[0]; // "YYYY-MM-DD"
+            const [year, month, day] = dobString.split("-");
+            if (year && month && day) {
+              setDateOfBirth(`${day}/${month}/${year}`);
+            } else {
+              setDateOfBirth(data.date_of_birth);
+            }
+          } catch (err) {
+            setDateOfBirth(data.date_of_birth);
+          }
+        } else {
+          setDateOfBirth("");
+        }
+
+        if (data.profile_image) {
+          setProfileImage(data.profile_image.startsWith('/') ? `${API_BASE_URL}${data.profile_image}` : data.profile_image);
+        } else {
+          setProfileImage(null);
+        }
+
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -96,58 +124,68 @@ export default function PersonalDetailsScreen() {
   );
 
   // Request camera and gallery permissions
-  const requestPermissions = async () => {
-    const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
-    const galleryPermission =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    return (
-      cameraPermission.status === "granted" &&
-      galleryPermission.status === "granted"
-    );
-  };
+  // Permissions split internally per function to avoid blocking each other
 
   // Pick image from gallery
   const pickImageFromGallery = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) {
-      Alert.alert("Permission Required", "Please allow access to your photos");
-      return;
-    }
+    try {
+      if (Platform.OS !== "web") {
+        const galleryPermission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (galleryPermission.status !== "granted") {
+          Alert.alert("Permission Required", "Please allow access to your photos in device settings.");
+          return;
+        }
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (e) {
+      console.log(e);
+      Alert.alert("Error", "Could not open gallery");
     }
   };
 
   // Take photo from camera
   const takePhoto = async () => {
-    const hasPermission = await requestPermissions();
-    if (!hasPermission) {
-      Alert.alert("Permission Required", "Please allow camera access");
-      return;
-    }
+    try {
+      if (Platform.OS !== "web") {
+        const cameraPermission = await ImagePicker.requestCameraPermissionsAsync();
+        if (cameraPermission.status !== "granted") {
+          Alert.alert("Permission Required", "Please allow camera access in device settings.");
+          return;
+        }
+      }
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
 
-    if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      if (!result.canceled) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (e) {
+      console.log(e);
+      Alert.alert("Error", "Could not open camera");
     }
   };
 
   // Show image picker options
   const showImageOptions = () => {
+    if (Platform.OS === "web") {
+      pickImageFromGallery();
+      return;
+    }
+    
     Alert.alert("Select Photo", "Choose an option", [
       {
         text: "Take Photo",
@@ -326,10 +364,22 @@ export default function PersonalDetailsScreen() {
       return false;
     }
 
+
     if (!email.trim() || !validateEmail(email)) {
       Alert.alert("Validation Error", "Please enter a valid email address");
       return false;
     }
+    const cleanedAadhaar = aadhaarNumber.replace(/\s/g, "");
+    if (aadhaarNumber && cleanedAadhaar.length > 0 && cleanedAadhaar.length !== 12) {
+      Alert.alert("Validation Error", "Aadhaar number must be 12 digits");
+      return false;
+    }
+
+    // if (!isAadhaarVerified && cleanedAadhaar.length === 12) {
+    //   Alert.alert("Verification Required", "Please verify your Aadhaar number");
+    //   return false;
+    // }
+
 
     if (!validateDOB(dateOfBirth)) {
       Alert.alert(
@@ -348,13 +398,29 @@ export default function PersonalDetailsScreen() {
       return;
     }
 
-    Alert.alert("Save Profile", "Do you want to save your profile details?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Save",
-        onPress: async () => {
-          setIsLoading(true);
+    setIsLoading(true);
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+
+      // Convert DD/MM/YYYY to YYYY-MM-DD
+      let isoDateOfBirth = dateOfBirth;
+      if (dateOfBirth && dateOfBirth.length === 10) {
+        const [day, month, year] = dateOfBirth.split("/");
+        if (day && month && year) {
+          isoDateOfBirth = `${year}-${month}-${day}`;
+        }
+      }
+
+      const formData = new FormData();
+      formData.append("name", fullName);
+      formData.append("gender", gender);
+      formData.append("date_of_birth", isoDateOfBirth);
+
+      // Handle image upload across Web and Native
+      if (profileImage && !profileImage.startsWith('http')) {
+        if (Platform.OS === 'web') {
           try {
+
             const token = await AsyncStorage.getItem("userToken");
             const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
               method: "PUT",
@@ -389,10 +455,65 @@ export default function PersonalDetailsScreen() {
             Alert.alert("Error", "Server error. Please check your connection.");
           } finally {
             setIsLoading(false);
+
+            const res = await fetch(profileImage);
+            const blob = await res.blob();
+            formData.append("profile_image", blob, "profile.jpg");
+          } catch (e) {
+            console.log("Web blob extraction error", e);
           }
+        } else {
+          const filename = profileImage.split('/').pop() || 'profile.jpg';
+          const match = /\.(\w+)$/.exec(filename);
+          const type = match ? `image/${match[1]}` : `image`;
+          formData.append("profile_image", {
+            uri: profileImage,
+            name: filename,
+            type,
+          } as any);
+        }
+      }
+
+      const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-      },
-    ]);
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsProfileComplete(true);
+        if (Platform.OS === "web") {
+          window.alert("Profile saved successfully!");
+          router.replace("/account");
+        } else {
+          Alert.alert("Success", "Profile saved successfully!", [
+            {
+              text: "OK",
+              onPress: () => router.replace("/account"),
+            },
+          ]);
+        }
+      } else {
+        if (Platform.OS === "web") {
+          window.alert(data.message || "Failed to update profile.");
+        } else {
+          Alert.alert("Error", data.message || "Failed to update profile.");
+        }
+      }
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      if (Platform.OS === "web") {
+        window.alert("Server error. Please check your connection.");
+      } else {
+        Alert.alert("Error", "Server error. Please check your connection.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleBackPress = () => {

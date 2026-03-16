@@ -1,0 +1,511 @@
+{
+    "Income_Certificate": {
+        "url": "{{baseUrl}}/api/certificate/income/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Rajesh Kumar",
+            "aadhaar_number": "123456789012",
+            "mobile_number": "9876543210",
+            "email": "rajesh@example.com",
+            "pan_number": "ABCDE1234F",
+            "dob": "1990-05-15",
+            "gender": "Male",
+            "occupation": "Software Engineer",
+            "annual_income": 800000,
+            "income_source": "Salary",
+            "purpose": "Bank Loan",
+            "house_no": "A-123",
+            "street": "MG Road",
+            "village": "Hinjewadi",
+            "taluka": "Mulshi",
+            "district": "Pune",
+            "state": "Maharashtra",
+            "pincode": "411057"
+        },
+        "files": [
+            "aadhaar_card",
+            "ration_card",
+            "tax_receipt",
+            "income_proof",
+            "self_declaration",
+            "photo"
+        ]
+    },
+    "Caste_Certificate": {
+        "url": "{{baseUrl}}/api/certificate/caste/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Suresh Patil",
+            "aadhaar_number": "987654321098",
+            "mobile_number": "9988776655",
+            "email": "suresh@example.com",
+            "dob": "1995-10-20",
+            "gender": "Male",
+            "category": "OBC",
+            "sub_caste": "Kunbi",
+            "religion": "Hindu",
+            "father_name": "Vitthal Patil",
+            "father_caste": "Kunbi",
+            "mother_name": "Sunita Patil",
+            "domicile_status": "Resident of Maharashtra",
+            "house_no": "12",
+            "street": "Station Road",
+            "village": "Ambegaon",
+            "district": "Pune",
+            "pincode": "411046"
+        },
+        "files": [
+            "aadhaar_card",
+            "ration_card",
+            "school_leaving",
+            "caste_proof",
+            "father_caste_cert",
+            "self_declaration",
+            "photo"
+        ]
+    },
+    "Domicile_Certificate": {
+        "url": "{{baseUrl}}/api/certificate/domicile/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Amit Shah",
+            "aadhaar_number": "112233445566",
+            "mobile_number": "8877665544",
+            "email": "amit@example.com",
+            "dob": "1988-02-12",
+            "gender": "Male",
+            "years_in_state": 25,
+            "occupation": "Business",
+            "reason": "Education",
+            "house_no": "Flat 401",
+            "street": "Ghole Road",
+            "village": "Shivajinagar",
+            "district": "Pune",
+            "state": "Maharashtra",
+            "pincode": "411005"
+        },
+        "files": [
+            "aadhaar_card",
+            "ration_card",
+            "birth_cert",
+            "school_leaving",
+            "residence_proof",
+            "self_declaration",
+            "photo"
+        ]
+    },
+    "Birth_Certificate": {
+        "url": "{{baseUrl}}/api/certificate/birth/apply",
+        "method": "POST",
+        "payload": {
+            "child_name": "Aryan Gupta",
+            "gender": "Male",
+            "dob": "2023-01-01",
+            "time_of_birth": "08:30:00",
+            "place_of_birth": "Hospital",
+            "hospital_name": "Ruby Hall Clinic",
+            "registration_date": "2023-01-05",
+            "father_name": "Vikram Gupta",
+            "father_aadhaar": "445566778899",
+            "father_mobile": "7766554433",
+            "father_occupation": "Manager",
+            "mother_name": "Anjali Gupta",
+            "mother_aadhaar": "998877665544",
+            "mother_mobile": "6655443322",
+            "mother_occupation": "Teacher",
+            "house_no": "B-502",
+            "street": "Kharadi Road",
+            "village": "Kharadi",
+            "district": "Pune",
+            "state": "Maharashtra",
+            "pincode": "411014",
+            "registration_type": "Normal"
+        },
+        "files": [
+            "hospital_report",
+            "parents_aadhaar",
+            "address_proof",
+            "marriage_certificate"
+        ]
+    },
+    "Death_Certificate": {
+        "url": "{{baseUrl}}/api/certificate/death/apply",
+        "method": "POST",
+        "payload": {
+            "deceased_name": "Ramakant Shinde",
+            "deceased_aadhaar": "334455667788",
+            "gender": "Male",
+            "dob": "1945-05-10",
+            "date_of_death": "2024-02-15",
+            "time_of_death": "21:45:00",
+            "place_of_death": "Hospital",
+            "hospital_name": "Sassoon Hospital",
+            "cause_of_death": "Natural",
+            "applicant_name": "Manoj Shinde",
+            "applicant_aadhaar": "112233445566",
+            "relationship": "Son",
+            "mobile_number": "9988776655",
+            "email": "manoj@example.com",
+            "house_no": "Plot 56",
+            "street": "Satara Road",
+            "village": "Bibwewadi",
+            "taluka": "Pune City",
+            "district": "Pune",
+            "state": "Maharashtra",
+            "pincode": "411037",
+            "registration_type": "Normal"
+        },
+        "files": [
+            "death_report",
+            "deceased_aadhaar",
+            "applicant_aadhaar",
+            "address_proof"
+        ]
+    },
+    "Marriage_Certificate": {
+        "url": "{{baseUrl}}/api/certificate/marriage/apply",
+        "method": "POST",
+        "payload": {
+            "groom_name": "Rahul Deshmukh",
+            "groom_aadhaar": "778899001122",
+            "groom_dob": "1992-08-14",
+            "groom_age": 32,
+            "groom_occupation": "Engineer",
+            "groom_mobile": "8899001122",
+            "groom_email": "rahul@example.com",
+            "bride_name": "Seema Jadhav",
+            "bride_aadhaar": "223344556677",
+            "bride_dob": "1994-12-25",
+            "bride_age": 29,
+            "bride_occupation": "Accountant",
+            "bride_mobile": "7766554433",
+            "bride_email": "seema@example.com",
+            "date_of_marriage": "2023-05-20",
+            "place_of_marriage": "Pune",
+            "marriage_address": "Laxmi Lawns, Magarpatta",
+            "type_of_marriage": "Religious",
+            "w1_name": "Mahesh More",
+            "w1_aadhaar": "112233445566",
+            "w1_address": "Pune",
+            "w1_mobile": "9988776655",
+            "w2_name": "Geeta Kale",
+            "w2_aadhaar": "223344556677",
+            "w2_address": "Pune",
+            "w2_mobile": "8877665544"
+        },
+        "files": [
+            "groom_aadhaar",
+            "bride_aadhaar",
+            "invitation_card",
+            "venue_proof",
+            "marriage_photos",
+            "w1_aadhaar",
+            "w2_aadhaar",
+            "w1_photo",
+            "w2_photo"
+        ]
+    },
+    "EWS_Certificate": {
+        "url": "{{baseUrl}}/api/certificate/ews/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Nitin Deshpande",
+            "aadhaar_number": "556677889900",
+            "dob": "1998-04-10",
+            "gender": "Male",
+            "mobile_number": "9988776655",
+            "email": "nitin@example.com",
+            "category": "General / Open",
+            "father_name": "Prakash Deshpande",
+            "mother_name": "Lata Deshpande",
+            "spouse_name": "",
+            "family_members_count": 4,
+            "family_occupation": "Service",
+            "income_salary": 400000,
+            "income_agri": 50000,
+            "income_business": 0,
+            "income_other": 10000,
+            "total_annual_income": 460000,
+            "flat_size": 850,
+            "plot_size": 0,
+            "location_type": "Municipal",
+            "agri_land_details": "2 Acres, Village",
+            "ownership_status": "Owned"
+        },
+        "files": [
+            "income_cert",
+            "proof_of_income",
+            "property_docs",
+            "id_proof",
+            "residence_proof",
+            "self_declaration",
+            "photo",
+            "caste_cert"
+        ]
+    },
+    "NCL_Certificate": {
+        "url": "{{baseUrl}}/api/certificate/ncl/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Sameer Kulkarni",
+            "aadhaar_number": "121234345656",
+            "dob": "1996-07-22",
+            "gender": "Male",
+            "mobile_number": "9898767654",
+            "email": "sameer@example.com",
+            "category": "OBC",
+            "sub_caste": "Mali",
+            "caste_cert_number": "C/123/2020",
+            "issuing_authority": "Tahsildar",
+            "issue_date": "2020-05-10",
+            "father_name": "Ganpat Kulkarni",
+            "mother_name": "Parvati Kulkarni",
+            "parent_occupation": "Farming",
+            "income_year1": 300000,
+            "income_year2": 280000,
+            "income_year3": 250000,
+            "income_source": "Farming",
+            "marital_status": "Unmarried",
+            "is_migrant": "No"
+        },
+        "files": [
+            "id_proof",
+            "address_proof",
+            "caste_cert",
+            "income_proof_year1",
+            "income_proof_year2",
+            "income_proof_year3",
+            "photo",
+            "school_leaving",
+            "caste_affidavit"
+        ]
+    },
+    "Land_712_Extract": {
+        "url": "{{baseUrl}}/api/land/712/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Vijay Deshmukh",
+            "aadhaar_number": "123412341234",
+            "mobile_number": "9876543210",
+            "district": "Pune",
+            "taluka": "Haveli",
+            "village": "Wagholi",
+            "survey_number": "123/A"
+        },
+        "files": [
+            "aadhaar_card",
+            "land_document",
+            "photo"
+        ]
+    },
+    "Land_8A_Extract": {
+        "url": "{{baseUrl}}/api/land/8a/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Sanjay Pawar",
+            "aadhaar_number": "987698769876",
+            "mobile_number": "9988776655",
+            "district": "Pune",
+            "taluka": "Mulshi",
+            "village": "Hinjewadi",
+            "account_number": "ACC8899"
+        },
+        "files": [
+            "aadhaar_card",
+            "holding_document",
+            "photo"
+        ]
+    },
+    "Property_Tax": {
+        "url": "{{baseUrl}}/api/land/property-tax/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Mahesh Kale",
+            "aadhaar_number": "112233445566",
+            "mobile_number": "8877665544",
+            "mobile_no_payment": "8877665544",
+            "property_id": "PROP-456",
+            "district": "Pune",
+            "taluka": "Pune City",
+            "village": "Kothrud",
+            "tax_type": "Residential",
+            "amount": 5400.50,
+            "payment_method": "Online"
+        },
+        "files": [
+            "aadhaar_card",
+            "tax_bill"
+        ]
+    },
+    "Ferfar_Application": {
+        "url": "{{baseUrl}}/api/land/ferfar/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Anil Kadam",
+            "aadhaar_number": "556677889900",
+            "mobile_number": "7766554433",
+            "district": "Satara",
+            "taluka": "Karad",
+            "village": "Umbraj",
+            "survey_number": "45/2",
+            "mutation_type": "Inheritance (Warasa)"
+        },
+        "files": [
+            "aadhaar_card",
+            "index_2",
+            "death_cert",
+            "ferfar_cert"
+        ]
+    },
+    "Udyam_Registration": {
+        "url": "{{baseUrl}}/api/business/udyam/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Gajanan Enterprises",
+            "aadhaar_number": "121234345656",
+            "pan_number": "ABCDE1234F",
+            "mobile_number": "9898767654",
+            "email": "info@gajanan.com",
+            "organization_type": "Proprietary",
+            "gender": "Male",
+            "category": "General",
+            "disability": "No",
+            "unit_name": "Gajanan Food Products",
+            "location": "Pune",
+            "office_address": "Sector 12, Pimpri",
+            "bank_name": "SBI",
+            "ifsc": "SBIN0001234",
+            "account_number": "123456789012",
+            "business_activity": "Manufacturing",
+            "employees_count": 10,
+            "investment": 500000,
+            "turnover": 1200000,
+            "registration_date": "2024-01-10"
+        },
+        "files": [
+            "aadhaar_card",
+            "pan_card",
+            "bank_passbook",
+            "photo"
+        ]
+    },
+    "PM_Kisan": {
+        "url": "{{baseUrl}}/api/social/pm-kisan/apply",
+        "method": "POST",
+        "payload": {
+            "farmer_name": "Dnyaneshwar Patil",
+            "aadhaar_number": "445566778899",
+            "mobile_number": "9900887766",
+            "gender": "Male",
+            "category": "General",
+            "state": "Maharashtra",
+            "district": "Nashik",
+            "taluka": "Niphad",
+            "village": "Lasalgaon",
+            "survey_number": "78/B",
+            "land_area": "2.5 Acres",
+            "ownership_type": "Single",
+            "bank_name": "Bank of Maharashtra",
+            "account_number": "60223344556",
+            "ifsc_code": "MAHB0000123"
+        },
+        "files": [
+            "land_712",
+            "bank_passbook"
+        ]
+    },
+    "Senior_Citizen": {
+        "url": "{{baseUrl}}/api/social/senior-citizen/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Eknath Shinde",
+            "aadhaar_number": "334455667788",
+            "dob": "1960-03-01",
+            "gender": "Male",
+            "mobile_number": "8877665544",
+            "email": "eknath@example.com",
+            "house_no": "10-B",
+            "street": "Main Road",
+            "village": "Sangli",
+            "taluka": "Miraj",
+            "district": "Sangli",
+            "pincode": "416416"
+        },
+        "files": [
+            "aadhaar_card",
+            "age_proof",
+            "address_proof",
+            "photo"
+        ]
+    },
+    "Employment_Registration": {
+        "url": "{{baseUrl}}/api/social/employment/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Priyanka More",
+            "aadhaar_number": "112233445566",
+            "dob": "2000-08-15",
+            "gender": "Female",
+            "category": "Open",
+            "mobile_number": "7766554433",
+            "email": "priyanka@example.com",
+            "house_no": "Flat 202",
+            "area": "Warje",
+            "village": "Pune",
+            "taluka": "Pune",
+            "district": "Pune",
+            "pincode": "411058",
+            "employment_status": "Unemployed",
+            "experience_years": 0,
+            "qualification": "B.E. Computer",
+            "computer_skills": "Java, Python, SQL",
+            "languages": "Marathi, Hindi, English",
+            "pref_sector": "IT / Software"
+        },
+        "files": [
+            "aadhaar_card",
+            "education_cert",
+            "photo",
+            "experience_cert",
+            "caste_cert"
+        ]
+    },
+    "Ayushman_Bharat": {
+        "url": "{{baseUrl}}/api/social/ayushman/apply",
+        "method": "POST",
+        "payload": {
+            "full_name": "Keshav Mane",
+            "aadhaar_number": "998877665544",
+            "mobile_number": "9876543210",
+            "gender": "Male",
+            "dob": "1985-05-20",
+            "state": "Maharashtra",
+            "district": "Kolhapur",
+            "village": "Gandhinagar",
+            "ration_card_number": "RAT-778899",
+            "eligibility_type": "SECC 2011",
+            "is_eligible": "true",
+            "family_members": [
+                {
+                    "name": "Savitri Mane",
+                    "aadhaar": "111122223333",
+                    "age": 35,
+                    "relationship": "Wife"
+                },
+                {
+                    "name": "Rahul Mane",
+                    "aadhaar": "444455556666",
+                    "age": 12,
+                    "relationship": "Son"
+                }
+            ]
+        },
+        "files": [
+            "aadhaar_head",
+            "ration_card",
+            "address_proof",
+            "photo",
+            "secc_proof"
+        ]
+    }
+}

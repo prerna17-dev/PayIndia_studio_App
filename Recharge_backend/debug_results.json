@@ -1,0 +1,35 @@
+[
+  {
+    "name": "Bus Source City (Standard)",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/bus/ticket/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n    <title>404 Page Not Founds</title>\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"asset/css/_default/login.css\">\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css\">\r\n    <link href='https://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>\r\n</head>\r\n<body>\r\n<div class=\"welcome_screen\" style=\"padding:0 0 0 30%;width:100%;background:#151922;background-size:cover;height:100%\">\r\n    <div class=\"content_blk\">\r\n        <img src=\"asset/images/_default/404.png\">\r\n    </div>    \r\n</div>\r\n<!--<div class=\"login_screen\">\r\n    <div class=\"form_blk\">\r\n        <div class=\"support_blk\">\r\n            <h1>404 Page Not Found</h1>\r\n\t\t<p>The page you requested was not found.</p>        </div>\r\n\t\t<a href=\""
+  },
+  {
+    "name": "Bus Source City (With Travel)",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/bus/ticket/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n    <title>404 Page Not Founds</title>\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"asset/css/_default/login.css\">\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css\">\r\n    <link href='https://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>\r\n</head>\r\n<body>\r\n<div class=\"welcome_screen\" style=\"padding:0 0 0 30%;width:100%;background:#151922;background-size:cover;height:100%\">\r\n    <div class=\"content_blk\">\r\n        <img src=\"asset/images/_default/404.png\">\r\n    </div>    \r\n</div>\r\n<!--<div class=\"login_screen\">\r\n    <div class=\"form_blk\">\r\n        <div class=\"support_blk\">\r\n            <h1>404 Page Not Found</h1>\r\n\t\t<p>The page you requested was not found.</p>        </div>\r\n\t\t<a href=\""
+  },
+  {
+    "name": "Merchant Status Check (Air)",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/air/merchant/status_check",
+    "status": 200,
+    "data": {
+      "status": true,
+      "response_code": 1,
+      "message": "Merchant status fetched successfully.",
+      "merchant_status": "UNREGISTERED"
+    },
+    "error": null
+  },
+  {
+    "name": "Merchant Status Check (Bus)",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/bus/merchant/status_check",
+    "status": 500,
+    "data": null,
+    "error": "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n    <title>404 Page Not Founds</title>\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"asset/css/_default/login.css\">\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css\">\r\n    <link href='https://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>\r\n</head>\r\n<body>\r\n<div class=\"welcome_screen\" style=\"padding:0 0 0 30%;width:100%;background:#151922;background-size:cover;height:100%\">\r\n    <div class=\"content_blk\">\r\n        <img src=\"asset/images/_default/404.png\">\r\n    </div>    \r\n</div>\r\n<!--<div class=\"login_screen\">\r\n    <div class=\"form_blk\">\r\n        <div class=\"support_blk\">\r\n            <h1>404 Page Not Found</h1>\r\n\t\t<p>The page you requested was not found.</p>        </div>\r\n\t\t<a href=\""
+  }
+]

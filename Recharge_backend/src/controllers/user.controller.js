@@ -1,3 +1,4 @@
+const pool = require("../config/db");
 const userModel = require("../models/user.model");
 
 exports.getProfile = async (req, res) => {
@@ -13,7 +14,16 @@ exports.getProfile = async (req, res) => {
 
 exports.updateProfile = async (req, res) => {
   const userId = req.user.userId;
+
   const { name, gender, user_email, date_of_birth, profile_image } = req.body;
+
+  const { name, gender, user_email, date_of_birth } = req.body;
+  let profile_image = req.body.profile_image;
+
+  if (req.file) {
+    profile_image = `/uploads/${req.file.filename}`;
+  }
+
 
   await userModel.updateProfile(userId, {
     name,
@@ -24,4 +34,24 @@ exports.updateProfile = async (req, res) => {
   });
 
   res.json({ message: "Profile updated successfully" });
+};
+
+exports.getTransactions = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const [rows] = await pool.query(
+      `SELECT transaction_id, transaction_type, amount, description, status, transaction_reference, created_at
+       FROM transactions
+       WHERE user_id = ?
+       ORDER BY created_at DESC
+       LIMIT 50`,
+      [userId]
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error("Get Transactions Error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch transactions" });
+  }
 };

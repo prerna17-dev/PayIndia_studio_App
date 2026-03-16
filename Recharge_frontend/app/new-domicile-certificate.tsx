@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -23,6 +24,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -61,8 +63,10 @@ interface DocumentsState {
     aadhaarCard: DocumentType | null;
     addressProof: DocumentType | null;
     rationCard: DocumentType | null;
+    birthCert: DocumentType | null;
     selfDeclaration: DocumentType | null;
     schoolBonafide: DocumentType | null;
+    photo: DocumentType | null;
     [key: string]: DocumentType | null;
 }
 
@@ -88,8 +92,10 @@ export default function NewDomicileCertificateScreen() {
         aadhaarCard: null,
         addressProof: null,
         rationCard: null,
+        birthCert: null,
         selfDeclaration: null,
         schoolBonafide: null,
+        photo: null,
     });
 
     const [formData, setFormData] = useState<FormDataType>({
@@ -157,6 +163,7 @@ export default function NewDomicileCertificateScreen() {
                         name: file.name,
                         size: file.size,
                         uri: file.uri,
+                        mimeType: file.mimeType,
                     },
                 }));
             }
@@ -213,7 +220,7 @@ export default function NewDomicileCertificateScreen() {
             setCurrentStep(2);
         } else if (currentStep === 2) {
             // Step 2 Validation - Mandatory documents
-            if (!documents.aadhaarCard || !documents.addressProof || !documents.rationCard || !documents.selfDeclaration) {
+            if (!documents.aadhaarCard || !documents.addressProof || !documents.rationCard || !documents.selfDeclaration || !documents.photo || !documents.birthCert) {
                 Alert.alert("Documents Required", "Please upload all mandatory documents");
                 return;
             }
@@ -230,13 +237,101 @@ export default function NewDomicileCertificateScreen() {
                 return;
             }
 
-            setIsSubmitting(true);
-            setTimeout(() => {
-                const refId = "DOM" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                setApplicationId(refId);
-                setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            const submitApplication = async () => {
+                setIsSubmitting(true);
+                try {
+                    const formDataObj = new FormData();
+
+                    // Applicant Details
+                    formDataObj.append('full_name', formData.fullName);
+                    formDataObj.append('aadhaar_number', formData.aadhaarNumber);
+                    formDataObj.append('dob', formData.dob);
+                    formDataObj.append('gender', formData.gender);
+                    formDataObj.append('mobile_number', formData.mobileNumber);
+                    formDataObj.append('email', formData.email || "");
+
+                    // Residence Details
+                    formDataObj.append('house_no', formData.houseNo);
+                    formDataObj.append('street', formData.street || "");
+                    formDataObj.append('village', formData.village);
+                    formDataObj.append('taluka', formData.taluka);
+                    formDataObj.append('district', formData.district);
+                    formDataObj.append('state', formData.state || "Maharashtra");
+                    formDataObj.append('pincode', formData.pincode);
+                    formDataObj.append('years_in_state', formData.durationOfStay);
+
+                    // Occupation & Purpose
+                    formDataObj.append('occupation', formData.occupation);
+                    formDataObj.append('reason', formData.purpose);
+
+                    // Documents
+                    if (documents.aadhaarCard) {
+                        formDataObj.append('aadhaar_card', {
+                            uri: documents.aadhaarCard.uri,
+                            name: documents.aadhaarCard.name,
+                            type: documents.aadhaarCard.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.rationCard) {
+                        formDataObj.append('ration_card', {
+                            uri: documents.rationCard.uri,
+                            name: documents.rationCard.name,
+                            type: documents.rationCard.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.addressProof) {
+                        formDataObj.append('residence_proof', {
+                            uri: documents.addressProof.uri,
+                            name: documents.addressProof.name,
+                            type: documents.addressProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.birthCert) {
+                        formDataObj.append('birth_cert', {
+                            uri: documents.birthCert.uri,
+                            name: documents.birthCert.name,
+                            type: documents.birthCert.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.schoolBonafide) {
+                        formDataObj.append('school_leaving', {
+                            uri: documents.schoolBonafide.uri,
+                            name: documents.schoolBonafide.name,
+                            type: documents.schoolBonafide.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.selfDeclaration) {
+                        formDataObj.append('self_declaration', {
+                            uri: documents.selfDeclaration.uri,
+                            name: documents.selfDeclaration.name,
+                            type: documents.selfDeclaration.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.photo) {
+                        formDataObj.append('photo', {
+                            uri: documents.photo.uri,
+                            name: documents.photo.name,
+                            type: documents.photo.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+
+                    const response = await api.post('/certificate/domicile/apply', formDataObj);
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id);
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Submission failed");
+                    }
+                } catch (error: any) {
+                    console.error("Domicile application error:", error);
+                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            submitApplication();
         }
     };
 
@@ -462,7 +557,9 @@ export default function NewDomicileCertificateScreen() {
                                 <DocUploadItem title="Aadhaar Card" hindi="आधार कार्ड" isUploaded={!!documents.aadhaarCard} filename={documents.aadhaarCard?.name} onUpload={() => pickDocument('aadhaarCard')} onRemove={() => removeDocument('aadhaarCard')} required />
                                 <DocUploadItem title="Address Proof" hindi="पत्त्याचा पुरावा" isUploaded={!!documents.addressProof} filename={documents.addressProof?.name} onUpload={() => pickDocument('addressProof')} onRemove={() => removeDocument('addressProof')} required />
                                 <DocUploadItem title="Ration Card" hindi="रेशन कार्ड" isUploaded={!!documents.rationCard} filename={documents.rationCard?.name} onUpload={() => pickDocument('rationCard')} onRemove={() => removeDocument('rationCard')} required />
+                                <DocUploadItem title="Birth Certificate" hindi="जन्म दाखला" isUploaded={!!documents.birthCert} filename={documents.birthCert?.name} onUpload={() => pickDocument('birthCert')} onRemove={() => removeDocument('birthCert')} required />
                                 <DocUploadItem title="Self Declaration" hindi="स्वघोषणा पत्र" isUploaded={!!documents.selfDeclaration} filename={documents.selfDeclaration?.name} onUpload={() => pickDocument('selfDeclaration')} onRemove={() => removeDocument('selfDeclaration')} required />
+                                <DocUploadItem title="Passport Size Photo" hindi="फोटो" isUploaded={!!documents.photo} filename={documents.photo?.name} onUpload={() => pickDocument('photo')} onRemove={() => removeDocument('photo')} required />
                                 {formData.isStudent === "Yes" && (
                                     <DocUploadItem title="School Bonafide" hindi="विद्यार्थी असल्यास" isUploaded={!!documents.schoolBonafide} filename={documents.schoolBonafide?.name} onUpload={() => pickDocument('schoolBonafide')} onRemove={() => removeDocument('schoolBonafide')} required />
                                 )}

@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     ActivityIndicator,
     Alert,
@@ -24,6 +25,7 @@ interface UploadedDoc {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 export default function NewPANScreen() {
@@ -85,6 +87,7 @@ export default function NewPANScreen() {
                     name: result.assets[0].name,
                     size: result.assets[0].size,
                     uri: result.assets[0].uri,
+                    mimeType: result.assets[0].mimeType,
                 };
 
                 if (type === "aadhaar") setAadhaarDoc(doc);
@@ -115,6 +118,7 @@ export default function NewPANScreen() {
             setPhoto({
                 name: "photo.jpg",
                 uri: result.assets[0].uri,
+                mimeType: result.assets[0].mimeType || 'image/jpeg',
             });
         }
     };
@@ -154,14 +158,71 @@ export default function NewPANScreen() {
 
     const canProceedStep2 = !!(aadhaarDoc && addressProof && dobProof && photo);
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const refId = "PAN" + Math.random().toString(36).substr(2, 9).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const formDataObj = new FormData();
+
+            // Personal Details
+            formDataObj.append('full_name', fullName);
+            formDataObj.append('father_name', fatherName);
+            formDataObj.append('mother_name', motherName);
+            formDataObj.append('date_of_birth', dob);
+            formDataObj.append('mobile_number', mobile);
+            formDataObj.append('email_address', email);
+
+            // Address & Aadhaar
+            formDataObj.append('aadhar_number', aadhaarNumber.replace(/\s/g, ""));
+            formDataObj.append('full_address', address);
+            formDataObj.append('city', city);
+            formDataObj.append('district', district);
+            formDataObj.append('state', state);
+            formDataObj.append('pincode', pincode);
+
+            // Documents
+            if (aadhaarDoc) {
+                formDataObj.append('aadhar_card', {
+                    uri: aadhaarDoc.uri,
+                    name: aadhaarDoc.name,
+                    type: aadhaarDoc.mimeType || 'application/octet-stream',
+                } as any);
+            }
+            if (addressProof) {
+                formDataObj.append('address_proof', {
+                    uri: addressProof.uri,
+                    name: addressProof.name,
+                    type: addressProof.mimeType || 'application/octet-stream',
+                } as any);
+            }
+            if (dobProof) {
+                formDataObj.append('dob_proof', {
+                    uri: dobProof.uri,
+                    name: dobProof.name,
+                    type: dobProof.mimeType || 'application/octet-stream',
+                } as any);
+            }
+            if (photo) {
+                formDataObj.append('passport_photo', {
+                    uri: photo.uri,
+                    name: photo.name,
+                    type: photo.mimeType || 'image/jpeg',
+                } as any);
+            }
+
+            const response = await api.post('/pan/apply', formDataObj);
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.applicationId.toString());
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
+            console.error("PAN application error:", error);
+            Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
     };
 
     const handleBack = () => {

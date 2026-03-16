@@ -22,7 +22,31 @@ const paysprint = require("./routes/paysprintTest.routes");
 const bill = require("./routes/bill.routes");
 const operatorRoutes = require("./routes/operator.routes");
 const aadharRoutes = require("./routes/aadhar.routes");
-const esevaRoutes = require("./routes/eseva.routes");
+const panRoutes = require("./routes/pan.routes");
+const voterRoutes = require("./routes/voter.routes");
+const incomeRoutes = require("./routes/income.routes");
+const casteRoutes = require("./routes/caste.routes");
+const domicileRoutes = require("./routes/domicile.routes");
+const birthRoutes = require("./routes/birth.routes");
+const deathRoutes = require("./routes/death.routes");
+const marriageRoutes = require("./routes/marriage.routes");
+const ewsRoutes = require("./routes/ews.routes");
+const nclRoutes = require("./routes/ncl.routes");
+const land712Routes = require("./routes/land_712.routes");
+const land8aRoutes = require("./routes/land_8a.routes");
+const propertyTaxRoutes = require("./routes/property_tax.routes");
+const ferfarRoutes = require("./routes/ferfar.routes");
+const udyamRoutes = require("./routes/udyam.routes");
+const pmKisanRoutes = require("./routes/pm_kisan.routes");
+const seniorCitizenRoutes = require("./routes/senior_citizen.routes");
+const employmentRoutes = require("./routes/employment.routes");
+const ayushmanRoutes = require("./routes/ayushman.routes");
+const rationCardRoutes = require("./routes/ration_card.routes");
+const notificationRoutes = require("./routes/notification.routes");
+const paymentRoutes = require("./routes/payment.routes");
+const kycRoutes = require("./routes/kyc.routes");
+
+
 
 const app = express();
 
@@ -35,7 +59,7 @@ app.use(helmet());
 app.use(
   cors({
     origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
@@ -54,7 +78,7 @@ if (process.env.NODE_ENV !== "production") {
 
 /* -------------------- STATIC FILES -------------------- */
 // profile images & documents
-app.use("/uploads", express.static("src/uploads"));
+app.use("/uploads", cors(), express.static("src/uploads"));
 
 /* -------------------- ROUTES -------------------- */
 
@@ -69,6 +93,8 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/wallet", walletRoutes);
+app.use("/api/payment", paymentRoutes);
+app.use("/api/kyc", kycRoutes);
 app.use("/api/recharge", rechargeRoutes);
 app.use("/api/banking", bankingRoutes);
 app.use("/api/agent", agentRoutes);
@@ -79,7 +105,30 @@ app.use("/api/system", paysprint);
 app.use("/api/bill", bill);
 app.use("/api/operators", operatorRoutes);
 app.use("/api/aadhar", aadharRoutes);
-app.use("/api/eseva", esevaRoutes);
+app.use("/api/pan", panRoutes);
+app.use("/api/voter", voterRoutes);
+app.use("/api/certificate/income", incomeRoutes);
+app.use("/api/certificate/caste", casteRoutes);
+app.use("/api/certificate/domicile", domicileRoutes);
+app.use("/api/certificate/birth", birthRoutes);
+app.use("/api/certificate/death", deathRoutes);
+app.use("/api/certificate/marriage", marriageRoutes);
+app.use("/api/certificate/ews", ewsRoutes);
+app.use("/api/certificate/ncl", nclRoutes);
+app.use("/api/land/712", land712Routes);
+app.use("/api/land/8a", land8aRoutes);
+app.use("/api/land/property-tax", propertyTaxRoutes);
+app.use("/api/land/ferfar", ferfarRoutes);
+app.use("/api/business/udyam", udyamRoutes);
+app.use("/api/social/pm-kisan", pmKisanRoutes);
+app.use("/api/social/senior-citizen", seniorCitizenRoutes);
+app.use("/api/social/employment", employmentRoutes);
+app.use("/api/social/ayushman", ayushmanRoutes);
+app.use("/api/social/ration-card", rationCardRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+
+
 /* -------------------- 404 HANDLER -------------------- */
 app.use((req, res) => {
   res.status(404).json({

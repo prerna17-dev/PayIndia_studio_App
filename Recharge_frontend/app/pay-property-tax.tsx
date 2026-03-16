@@ -1,3 +1,4 @@
+import api from "../services/api";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import { LinearGradient } from "expo-linear-gradient";
@@ -32,6 +33,9 @@ interface FormDataType {
     ownerName: string;
     mobileNumber: string;
     municipalCorporation: string;
+    taluka: string;
+    village: string;
+    aadhaarNumber: string;
     previousReceiptNo: string;
 
     // Step 2: Verification (Fetched Data)
@@ -106,6 +110,9 @@ export default function PayPropertyTaxScreen() {
         ownerName: "",
         mobileNumber: "",
         municipalCorporation: "",
+        taluka: "",
+        village: "",
+        aadhaarNumber: "",
         previousReceiptNo: "",
         address: "123, Heritage Residency, Model Colony, Pune - 411016",
         propertyType: "Residential",
@@ -227,17 +234,49 @@ export default function PayPropertyTaxScreen() {
         setCurrentStep(3);
     };
 
-    const handlePayment = (method: string) => {
+    const handlePayment = async (method: string) => {
         setIsSubmitting(true);
-        // Simulate payment gateway
-        setTimeout(() => {
-            const tId = "TXN" + Math.floor(Math.random() * 90000000 + 10000000);
-            const rId = "RCP" + Math.floor(Math.random() * 900000 + 100000);
-            setTransactionId(tId);
-            setReceiptNumber(rId);
+        try {
+            const formDataToSend = new FormData();
+
+            // Required backend fields: full_name, aadhaar_number, mobile_number, property_id, district, taluka, village
+            formDataToSend.append("full_name", formData.ownerName);
+            formDataToSend.append("aadhaar_number", formData.aadhaarNumber);
+            formDataToSend.append("mobile_number", formData.mobileNumber);
+            formDataToSend.append("property_id", formData.propertyId);
+            formDataToSend.append("district", formData.municipalCorporation);
+            formDataToSend.append("taluka", formData.taluka);
+            formDataToSend.append("village", formData.village);
+            formDataToSend.append("tax_type", formData.propertyType);
+            formDataToSend.append("amount", formData.totalAmount.toString());
+            formDataToSend.append("payment_method", method);
+
+            // Documents
+            if (documents.previousReceipt) {
+                formDataToSend.append("tax_bill", {
+                    uri: documents.previousReceipt.uri,
+                    name: documents.previousReceipt.name,
+                    type: "application/octet-stream",
+                } as any);
+            }
+
+            const response = await api.post("/certificate/land/property-tax/apply", formDataToSend, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            if (response.data.success) {
+                setTransactionId(response.data.data.reference_id || "TXN" + Date.now());
+                setReceiptNumber("RCP" + Math.floor(Math.random() * 900000 + 100000));
+                setPaymentSuccess(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Payment submission failed");
+            }
+        } catch (error: any) {
+            console.error("Property Tax payment error:", error);
+            Alert.alert("Error", error.response?.data?.message || "Failed to process payment. Please try again.");
+        } finally {
             setIsSubmitting(false);
-            setPaymentSuccess(true);
-        }, 2500);
+        }
     };
 
     const renderStepIndicator = () => (
@@ -405,6 +444,15 @@ export default function PayPropertyTaxScreen() {
 
                                 <Label text="Owner Name *" />
                                 <Input value={formData.ownerName} onChangeText={(v: string) => setFormData({ ...formData, ownerName: v })} placeholder="Enter owner name" icon="person-outline" />
+
+                                <Label text="Aadhaar Number *" />
+                                <Input value={formData.aadhaarNumber} onChangeText={(v: string) => setFormData({ ...formData, aadhaarNumber: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} />
+
+                                <Label text="Taluka *" />
+                                <Input value={formData.taluka} onChangeText={(v: string) => setFormData({ ...formData, taluka: v })} placeholder="Enter Taluka" icon="navigate-outline" />
+
+                                <Label text="Village *" />
+                                <Input value={formData.village} onChangeText={(v: string) => setFormData({ ...formData, village: v })} placeholder="Enter Village" icon="business-outline" />
 
                                 <Label text="Registered Mobile Number *" />
                                 <View style={styles.otpInputContainer}>

@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -21,6 +22,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -154,7 +156,12 @@ export default function NewMarriageCertificateScreen() {
                 }
                 setDocuments((prev) => ({
                     ...prev,
-                    [docType]: { name: file.name, size: file.size, uri: file.uri }
+                    [docType]: { 
+                        name: file.name, 
+                        size: file.size, 
+                        uri: file.uri,
+                        mimeType: file.mimeType
+                    }
                 }));
             }
         } catch (error) {
@@ -221,18 +228,136 @@ export default function NewMarriageCertificateScreen() {
                 return;
             }
             setCurrentStep(3);
-        } else {
-            if (!formData.finalConfirmation) {
-                Alert.alert("Confirmation", "Please confirm that all details are accurate");
-                return;
-            }
-            setIsSubmitting(true);
-            setTimeout(() => {
-                const refId = "MARR" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                setApplicationId(refId);
-                setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            const submitApplication = async () => {
+                setIsSubmitting(true);
+                try {
+                    const formDataObj = new FormData();
+
+                    // Groom Details
+                    formDataObj.append('groom_name', formData.groomName);
+                    formDataObj.append('groom_aadhaar', formData.groomAadhaar);
+                    formDataObj.append('groom_dob', formData.groomDob);
+                    formDataObj.append('groom_age', formData.groomAge);
+                    formDataObj.append('groom_occupation', formData.groomOccupation);
+                    formDataObj.append('groom_mobile', formData.groomMobile);
+                    formDataObj.append('groom_email', formData.groomEmail || "");
+
+                    // Bride Details
+                    formDataObj.append('bride_name', formData.brideName);
+                    formDataObj.append('bride_aadhaar', formData.brideAadhaar);
+                    formDataObj.append('bride_dob', formData.brideDob);
+                    formDataObj.append('bride_age', formData.brideAge);
+                    formDataObj.append('bride_occupation', formData.brideOccupation);
+                    formDataObj.append('bride_mobile', formData.brideMobile);
+                    formDataObj.append('bride_email', formData.brideEmail || "");
+
+                    // Marriage Details
+                    formDataObj.append('date_of_marriage', formData.dateOfMarriage);
+                    formDataObj.append('place_of_marriage', formData.placeOfMarriage);
+                    formDataObj.append('marriage_address', formData.marriageAddress);
+                    formDataObj.append('type_of_marriage', formData.typeOfMarriage);
+
+                    // Witness 1
+                    formDataObj.append('w1_name', formData.w1Name);
+                    formDataObj.append('w1_aadhaar', formData.w1Aadhaar);
+                    formDataObj.append('w1_address', formData.w1Address);
+                    formDataObj.append('w1_mobile', formData.w1Mobile);
+
+                    // Witness 2
+                    formDataObj.append('w2_name', formData.w2Name);
+                    formDataObj.append('w2_aadhaar', formData.w2Aadhaar);
+                    formDataObj.append('w2_address', formData.w2Address);
+                    formDataObj.append('w2_mobile', formData.w2Mobile);
+
+                    // Documents
+                    if (documents.groomAadhaarDoc) {
+                        formDataObj.append('groom_aadhaar', {
+                            uri: documents.groomAadhaarDoc.uri,
+                            name: documents.groomAadhaarDoc.name,
+                            type: documents.groomAadhaarDoc.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.brideAadhaarDoc) {
+                        formDataObj.append('bride_aadhaar', {
+                            uri: documents.brideAadhaarDoc.uri,
+                            name: documents.brideAadhaarDoc.name,
+                            type: documents.brideAadhaarDoc.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.invitationCard) {
+                        formDataObj.append('invitation_card', {
+                            uri: documents.invitationCard.uri,
+                            name: documents.invitationCard.name,
+                            type: documents.invitationCard.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.venueProof) {
+                        formDataObj.append('venue_proof', {
+                            uri: documents.venueProof.uri,
+                            name: documents.venueProof.name,
+                            type: documents.venueProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.marriagePhotos) {
+                        formDataObj.append('marriage_photos', {
+                            uri: documents.marriagePhotos.uri,
+                            name: documents.marriagePhotos.name,
+                            type: documents.marriagePhotos.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.w1AadhaarDoc) {
+                        formDataObj.append('w1_aadhaar', {
+                            uri: documents.w1AadhaarDoc.uri,
+                            name: documents.w1AadhaarDoc.name,
+                            type: documents.w1AadhaarDoc.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.w2AadhaarDoc) {
+                        formDataObj.append('w2_aadhaar', {
+                            uri: documents.w2AadhaarDoc.uri,
+                            name: documents.w2AadhaarDoc.name,
+                            type: documents.w2AadhaarDoc.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.w1Photo) {
+                        formDataObj.append('w1_photo', {
+                            uri: documents.w1Photo.uri,
+                            name: documents.w1Photo.name,
+                            type: documents.w1Photo.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.w2Photo) {
+                        formDataObj.append('w2_photo', {
+                            uri: documents.w2Photo.uri,
+                            name: documents.w2Photo.name,
+                            type: documents.w2Photo.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.addressProof) {
+                        formDataObj.append('address_proof', {
+                            uri: documents.addressProof.uri,
+                            name: documents.addressProof.name,
+                            type: documents.addressProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+
+                    const response = await api.post('/certificate/marriage/apply', formDataObj);
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id);
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Submission failed");
+                    }
+                } catch (error: any) {
+                    console.error("Marriage application error:", error);
+                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            submitApplication();
         }
     };
 

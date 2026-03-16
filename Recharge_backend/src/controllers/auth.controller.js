@@ -1,5 +1,6 @@
 const pool = require("../config/db");
 const jwt = require("jsonwebtoken");
+const notificationService = require("../services/notification.service");
 
 const generateOTP = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
@@ -18,16 +19,34 @@ exports.sendOTP = async (req, res) => {
       [mobile, otp]
     );
 
-    console.log("OTP (dev):", otp); // integrate SMS later
+    // DLT Template: Your password has been successfully reset. Please log in with your new password: {#var#} - WRKNAI, Namastey
+    const message = `Your password has been successfully reset. Please log in with your new password: ${otp} - WRKNAI, Namastey`;
+
+    // Send SMS via Dreamz Technology API
+    const smsResult = await notificationService.sendSMS(mobile, message);
+
+    if (typeof smsResult === 'string' && smsResult.startsWith('error')) {
+      console.error("❌ SMS API ERROR:", smsResult);
+      return res.status(500).json({
+        message: "SMS provider error",
+        error: smsResult
+      });
+    }
+
+    console.log("OTP (dev):", otp);
 
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
+    console.error("❌ SEND OTP ERROR:", err);
     res.status(500).json({ message: "OTP send failed" });
   }
 };
 
 exports.verifyOTP = async (req, res) => {
   try {
+    if (!req.body) {
+      return res.status(400).json({ message: "Request body is missing. Ensure Content-Type is application/json" });
+    }
     const { mobile, otp } = req.body;
 
     // 1️⃣ get latest OTP (do NOT block by expiry here)
@@ -90,8 +109,11 @@ exports.verifyOTP = async (req, res) => {
       token,
     });
   } catch (err) {
-    console.error("❌ VERIFY OTP ERROR:", err.message);
-    return res.status(500).json({ message: "Login failed" });
+    console.error("❌ VERIFY OTP ERROR:", err);
+    return res.status(500).json({
+      message: "Login failed",
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 

@@ -9,3 +9,9 @@ exports.addMinutes = (minutes) => {
 exports.formatDateTime = (date = new Date()) => {
   return date.toISOString().slice(0, 19).replace("T", " ");
 };
+
+exports.formatDateToMySQL = (dateStr) => {
+  if (!dateStr || !dateStr.includes("/")) return dateStr;
+  const [day, month, year] = dateStr.split("/");
+  return `${year}-${month}-${day}`;
+};
