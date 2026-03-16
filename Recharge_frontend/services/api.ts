@@ -1,13 +1,11 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { API_BASE_URL } from '../constants/api';
 
-// Use your computer's IP address instead of localhost for physical device testing
-// Replace '192.168.1.XX' with your actual local IP
-const BASE_URL = Platform.OS === 'android' ? 'http://192.168.1.22:5000/api' : 'http://localhost:5000/api';
-
+// Uses the shared, environment-aware API_BASE_URL from constants/api.ts
+// This dynamically resolves to the correct host on both web and native.
 const api = axios.create({
-    baseURL: BASE_URL,
+    baseURL: `${API_BASE_URL}/api`,
 });
 
 // Add a request interceptor to include the auth token

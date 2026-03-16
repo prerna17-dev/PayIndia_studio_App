@@ -42,7 +42,9 @@ const seniorCitizenRoutes = require("./routes/senior_citizen.routes");
 const employmentRoutes = require("./routes/employment.routes");
 const ayushmanRoutes = require("./routes/ayushman.routes");
 const rationCardRoutes = require("./routes/ration_card.routes");
-
+const notificationRoutes = require("./routes/notification.routes");
+const paymentRoutes = require("./routes/payment.routes");
+const kycRoutes = require("./routes/kyc.routes");
 
 
 
@@ -76,7 +78,7 @@ if (process.env.NODE_ENV !== "production") {
 
 /* -------------------- STATIC FILES -------------------- */
 // profile images & documents
-app.use("/uploads", express.static("src/uploads"));
+app.use("/uploads", cors(), express.static("src/uploads"));
 
 /* -------------------- ROUTES -------------------- */
 
@@ -91,6 +93,8 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/wallet", walletRoutes);
+app.use("/api/payment", paymentRoutes);
+app.use("/api/kyc", kycRoutes);
 app.use("/api/recharge", rechargeRoutes);
 app.use("/api/banking", bankingRoutes);
 app.use("/api/agent", agentRoutes);
@@ -121,6 +125,7 @@ app.use("/api/social/senior-citizen", seniorCitizenRoutes);
 app.use("/api/social/employment", employmentRoutes);
 app.use("/api/social/ayushman", ayushmanRoutes);
 app.use("/api/social/ration-card", rationCardRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 
 

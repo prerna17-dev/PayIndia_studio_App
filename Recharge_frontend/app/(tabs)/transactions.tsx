@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as React from "react";
 import {
+  ActivityIndicator,
   BackHandler,
   Dimensions,
   SafeAreaView,
@@ -13,10 +14,11 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "../../constants/api";
 
 const { width } = Dimensions.get("window");
 
-// Mock transaction data - you can replace this with actual data from your backend
 interface Transaction {
   id: string;
   type: string;
@@ -25,93 +27,119 @@ interface Transaction {
   status: "success" | "pending" | "failed";
   category: string;
   icon: string;
+  iconType: "ionicons" | "materialcommunity";
   iconColor: string;
 }
 
+const typeToIcon = (
+  type: string
+): { icon: string; iconType: "ionicons" | "materialcommunity"; iconColor: string; category: string } => {
+  switch (type) {
+    case "Recharge":
+      return { icon: "phone-portrait", iconType: "ionicons", iconColor: "#4CAF50", category: "Recharge" };
+    case "Wallet_Credit":
+      return { icon: "wallet", iconType: "ionicons", iconColor: "#2196F3", category: "Wallet" };
+    case "Wallet_Debit":
+      return { icon: "wallet-outline", iconType: "ionicons", iconColor: "#FF5722", category: "Wallet" };
+    case "Loan":
+      return { icon: "cash", iconType: "ionicons", iconColor: "#9C27B0", category: "Loan" };
+    case "Insurance":
+      return { icon: "shield-checkmark", iconType: "ionicons", iconColor: "#009688", category: "Insurance" };
+    case "Bill_Payment":
+      return { icon: "receipt", iconType: "ionicons", iconColor: "#FF9800", category: "Bill" };
+    default:
+      return { icon: "swap-horizontal", iconType: "ionicons", iconColor: "#607D8B", category: type };
+  }
+};
+
 export default function HistoryScreen() {
   const router = useRouter();
-
-  // Set this to true when user has transactions, false for empty state
-  const [hasTransactions, setHasTransactions] = React.useState(false);
-
-  // Sample transactions data
-  const transactions: Transaction[] = [
-    {
-      id: "1",
-      type: "Mobile Recharge",
-      amount: 299,
-      date: "Feb 09, 2026 • 11:30 AM",
-      status: "success",
-      category: "Recharge",
-      icon: "phone-portrait",
-      iconColor: "#4CAF50",
-    },
-    {
-      id: "2",
-      type: "Electricity Bill",
-      amount: 1850,
-      date: "Feb 08, 2026 • 03:45 PM",
-      status: "success",
-      category: "Bill Payment",
-      icon: "bulb",
-      iconColor: "#2196F3",
-    },
-    {
-      id: "3",
-      type: "DTH Recharge",
-      amount: 450,
-      date: "Feb 07, 2026 • 09:20 AM",
-      status: "pending",
-      category: "Recharge",
-      icon: "satellite-variant",
-      iconColor: "#FF9800",
-    },
-    {
-      id: "4",
-      type: "Water Bill",
-      amount: 680,
-      date: "Feb 05, 2026 • 02:15 PM",
-      status: "success",
-      category: "Bill Payment",
-      icon: "water",
-      iconColor: "#2196F3",
-    },
-    {
-      id: "5",
-      type: "Mobile Recharge",
-      amount: 599,
-      date: "Feb 03, 2026 • 06:30 PM",
-      status: "failed",
-      category: "Recharge",
-      icon: "phone-portrait",
-      iconColor: "#F44336",
-    },
-  ];
+  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [activeFilter, setActiveFilter] = React.useState("All");
 
   React.useEffect(() => {
+    fetchTransactions();
+
     const onBackPress = () => {
       router.push("/(tabs)/explore");
       return true;
     };
-
-    const subscription = BackHandler.addEventListener(
-      "hardwareBackPress",
-      onBackPress,
-    );
-
+    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
     return () => subscription.remove();
   }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      if (!token) return;
+
+      const res = await fetch(`${API_BASE_URL}/api/user/transactions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        const mapped: Transaction[] = data.data.map((t: any) => {
+          const meta = typeToIcon(t.transaction_type);
+          return {
+            id: String(t.transaction_id),
+            type: t.description || t.transaction_type,
+            amount: parseFloat(t.amount),
+            date: new Date(t.created_at).toLocaleString("en-IN", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+            status: (t.status?.toLowerCase() || "pending") as Transaction["status"],
+            category: meta.category,
+            icon: meta.icon,
+            iconType: meta.iconType,
+            iconColor: meta.iconColor,
+          };
+        });
+        setTransactions(mapped);
+      }
+    } catch (e) {
+      console.error("Failed to fetch transactions", e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const hasTransactions = transactions.length > 0;
+  const filteredTransactions =
+    activeFilter === "All"
+      ? transactions
+      : transactions.filter((t) => t.status === activeFilter.toLowerCase());
 
   const handleBackPress = () => {
     router.push("/(tabs)/explore");
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "success": return "#4CAF50";
+      case "pending": return "#FF9800";
+      case "failed": return "#F44336";
+      default: return "#999";
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case "success": return "Success";
+      case "pending": return "Pending";
+      case "failed": return "Failed";
+      default: return "Unknown";
+    }
+  };
+
   const renderEmptyState = () => (
     <View style={styles.emptyStateContainer}>
-      {/* Illustration */}
       <View style={styles.illustrationContainer}>
         <View style={styles.illustrationCircle}>
-          {/* Clipboard */}
           <View style={styles.clipboard}>
             <View style={styles.clipboardClip} />
             <View style={styles.clipboardContent}>
@@ -125,50 +153,23 @@ export default function HistoryScreen() {
               </View>
             </View>
           </View>
-
-          {/* Coins Stack - Left */}
           <View style={styles.coinsStackLeft}>
             <View style={[styles.coin, { bottom: 0, left: 0 }]} />
             <View style={[styles.coin, { bottom: 8, left: 2 }]} />
             <View style={[styles.coin, { bottom: 16, left: 4 }]} />
           </View>
-
-          {/* Coins Stack - Right Bottom */}
           <View style={styles.coinsStackRight}>
             <View style={[styles.coin, { bottom: 0, right: 0 }]} />
             <View style={[styles.coin, { bottom: 6, right: 3 }]} />
           </View>
-
-          {/* Magnifying Glass */}
-          <View style={styles.magnifyingGlass}>
-            <View style={styles.magnifyingLens} />
-            <View style={styles.magnifyingHandle} />
-          </View>
-
-          {/* Hourglass */}
-          <View style={styles.hourglass}>
-            <View style={styles.hourglassTop} />
-            <View style={styles.hourglassMiddle} />
-            <View style={styles.hourglassBottom} />
-          </View>
-
-          {/* Sparkles */}
           <View style={[styles.sparkle, { top: 20, left: 30 }]}>
             <Ionicons name="sparkles" size={20} color="#FFD700" />
           </View>
           <View style={[styles.sparkle, { top: 40, right: 40 }]}>
             <Ionicons name="sparkles" size={16} color="#FFD700" />
           </View>
-          <View style={[styles.sparkle, { bottom: 60, left: 50 }]}>
-            <Ionicons name="sparkles" size={14} color="#FFD700" />
-          </View>
-          <View style={[styles.sparkle, { bottom: 40, right: 30 }]}>
-            <Ionicons name="sparkles" size={18} color="#FFD700" />
-          </View>
         </View>
       </View>
-
-      {/* Text Content */}
       <View style={styles.emptyTextContainer}>
         <Text style={styles.emptyTitle}>No Transactions Yet</Text>
         <Text style={styles.emptyDescription}>
@@ -176,8 +177,6 @@ export default function HistoryScreen() {
           once you start recharging & paying bills.
         </Text>
       </View>
-
-      {/* CTA Button */}
       <TouchableOpacity
         style={styles.ctaButton}
         onPress={() => router.push("/(tabs)/explore")}
@@ -186,32 +185,6 @@ export default function HistoryScreen() {
       </TouchableOpacity>
     </View>
   );
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "success":
-        return "#4CAF50";
-      case "pending":
-        return "#FF9800";
-      case "failed":
-        return "#F44336";
-      default:
-        return "#999";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "success":
-        return "Success";
-      case "pending":
-        return "Pending";
-      case "failed":
-        return "Failed";
-      default:
-        return "Unknown";
-    }
-  };
 
   const renderTransactionItem = (transaction: Transaction) => (
     <TouchableOpacity key={transaction.id} style={styles.transactionCard}>
@@ -222,7 +195,7 @@ export default function HistoryScreen() {
             { backgroundColor: `${transaction.iconColor}15` },
           ]}
         >
-          {transaction.icon === "satellite-variant" ? (
+          {transaction.iconType === "materialcommunity" ? (
             <MaterialCommunityIcons
               name={transaction.icon as any}
               size={24}
@@ -243,7 +216,7 @@ export default function HistoryScreen() {
       </View>
 
       <View style={styles.transactionRight}>
-        <Text style={styles.transactionAmount}>₹{transaction.amount}</Text>
+        <Text style={styles.transactionAmount}>₹{transaction.amount.toFixed(2)}</Text>
         <View
           style={[
             styles.statusBadge,
@@ -265,31 +238,36 @@ export default function HistoryScreen() {
 
   const renderTransactionsList = () => (
     <View style={styles.transactionsContainer}>
-      {/* Filter Tabs */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filterContainer}
         contentContainerStyle={styles.filterContent}
       >
-        <TouchableOpacity style={[styles.filterTab, styles.filterTabActive]}>
-          <Text style={styles.filterTabTextActive}>All</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterTab}>
-          <Text style={styles.filterTabText}>Success</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterTab}>
-          <Text style={styles.filterTabText}>Pending</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.filterTab}>
-          <Text style={styles.filterTabText}>Failed</Text>
-        </TouchableOpacity>
+        {["All", "Success", "Pending", "Failed"].map((filter) => (
+          <TouchableOpacity
+            key={filter}
+            style={[styles.filterTab, activeFilter === filter && styles.filterTabActive]}
+            onPress={() => setActiveFilter(filter)}
+          >
+            <Text
+              style={activeFilter === filter ? styles.filterTabTextActive : styles.filterTabText}
+            >
+              {filter}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </ScrollView>
 
-      {/* Transactions List */}
       <View style={styles.transactionsList}>
         <Text style={styles.transactionsSectionTitle}>Recent Transactions</Text>
-        {transactions.map((transaction) => renderTransactionItem(transaction))}
+        {filteredTransactions.length > 0 ? (
+          filteredTransactions.map((transaction) => renderTransactionItem(transaction))
+        ) : (
+          <Text style={{ textAlign: "center", color: "#999", marginTop: 20 }}>
+            No transactions found for "{activeFilter}" filter.
+          </Text>
+        )}
       </View>
     </View>
   );
@@ -299,39 +277,40 @@ export default function HistoryScreen() {
       <StatusBar style="dark" />
 
       <SafeAreaView style={styles.safeArea}>
-        {/* Header */}
         <LinearGradient
           colors={["#E1F5FE", "#B3E5FC", "#81D4FA", "#4FC3F7"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 4, y: 4 }}
           style={styles.header}
         >
-          {/* Decorative Wave */}
           <View style={styles.decorativeWave} />
-
           <View style={styles.headerContent}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handleBackPress}
-            >
+            <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
               <Ionicons name="arrow-back" size={24} color="#0D47A1" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Transaction History</Text>
-            <TouchableOpacity style={styles.filterButton}>
-              <Ionicons name="filter-outline" size={24} color="#0D47A1" />
+            <TouchableOpacity style={styles.filterButton} onPress={fetchTransactions}>
+              <Ionicons name="refresh-outline" size={24} color="#0D47A1" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
 
-        {/* Content */}
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
-          {hasTransactions ? renderTransactionsList() : renderEmptyState()}
+          {isLoading ? (
+            <View style={{ alignItems: "center", justifyContent: "center", paddingTop: 80 }}>
+              <ActivityIndicator size="large" color="#2196F3" />
+              <Text style={{ color: "#999", marginTop: 12 }}>Loading transactions...</Text>
+            </View>
+          ) : hasTransactions ? (
+            renderTransactionsList()
+          ) : (
+            renderEmptyState()
+          )}
         </ScrollView>
 
-        {/* Bottom Navigation - Matching home screen */}
         <View style={styles.bottomNav}>
           <TouchableOpacity
             style={styles.navItem}
@@ -343,7 +322,7 @@ export default function HistoryScreen() {
 
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push("/mymoney")}
+            onPress={() => router.push("/(tabs)/mymoney")}
           >
             <Ionicons name="wallet-outline" size={24} color="#999" />
             <Text style={styles.navText}>My Money</Text>
@@ -351,17 +330,15 @@ export default function HistoryScreen() {
 
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push("/transactions")}
+            onPress={() => router.push("/(tabs)/transactions")}
           >
             <Ionicons name="time-outline" size={24} color="#2196F3" />
-            <Text style={[styles.navText, styles.navTextActive]}>
-              Transactions
-            </Text>
+            <Text style={[styles.navText, styles.navTextActive]}>Transactions</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push("/wallet")}
+            onPress={() => router.push("/(tabs)/wallet")}
           >
             <Ionicons name="card-outline" size={24} color="#999" />
             <Text style={styles.navText}>Wallet</Text>
@@ -373,15 +350,8 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8F8F8",
-  },
-
-  safeArea: {
-    flex: 1,
-  },
-
+  container: { flex: 1, backgroundColor: "#F8F8F8" },
+  safeArea: { flex: 1 },
   header: {
     paddingTop: 10,
     paddingBottom: 5,
@@ -392,7 +362,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     zIndex: 10,
   },
-
   decorativeWave: {
     position: "absolute",
     width: 250,
@@ -402,38 +371,26 @@ const styles = StyleSheet.create({
     top: -80,
     right: -80,
   },
-
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 60, // Increased padding
+    paddingTop: 60,
     paddingBottom: 15,
     zIndex: 1,
   },
-
-  backButton: {
-    padding: 5,
-  },
-
+  backButton: { padding: 5 },
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#0D47A1",
     letterSpacing: 0.3,
   },
+  filterButton: { padding: 5 },
+  scrollContent: { flexGrow: 1, paddingBottom: 20 },
 
-  filterButton: {
-    padding: 5,
-  },
-
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 20,
-  },
-
-  // Empty State Styles
+  // Empty State
   emptyStateContainer: {
     flex: 1,
     alignItems: "center",
@@ -441,13 +398,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingVertical: 40,
   },
-
-  illustrationContainer: {
-    marginBottom: 30,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
+  illustrationContainer: { marginBottom: 30, alignItems: "center", justifyContent: "center" },
   illustrationCircle: {
     width: 280,
     height: 280,
@@ -457,7 +408,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
   },
-
   clipboard: {
     width: 120,
     height: 150,
@@ -472,11 +422,10 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-
   clipboardClip: {
     position: "absolute",
     top: -8,
-    left: "50%",
+    left: "50%" as any,
     marginLeft: -20,
     width: 40,
     height: 16,
@@ -485,14 +434,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#90CAF9",
   },
-
-  clipboardContent: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 15,
-  },
-
+  clipboardContent: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 15 },
   rupeeCircle: {
     width: 50,
     height: 50,
@@ -502,36 +444,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 15,
   },
-
-  rupeeSymbol: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#0D47A1",
-  },
-
-  clipboardLines: {
-    gap: 8,
-  },
-
-  clipboardLine: {
-    width: 60,
-    height: 4,
-    backgroundColor: "#BBDEFB",
-    borderRadius: 2,
-  },
-
-  coinsStackLeft: {
-    position: "absolute",
-    bottom: 30,
-    left: 20,
-  },
-
-  coinsStackRight: {
-    position: "absolute",
-    bottom: 30,
-    right: 30,
-  },
-
+  rupeeSymbol: { fontSize: 24, fontWeight: "bold", color: "#0D47A1" },
+  clipboardLines: { gap: 8 },
+  clipboardLine: { width: 60, height: 4, backgroundColor: "#BBDEFB", borderRadius: 2 },
+  coinsStackLeft: { position: "absolute", bottom: 30, left: 20 },
+  coinsStackRight: { position: "absolute", bottom: 30, right: 30 },
   coin: {
     position: "absolute",
     width: 35,
@@ -543,76 +460,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
-  magnifyingGlass: {
-    position: "absolute",
-    right: 15,
-    top: 60,
-  },
-
-  magnifyingLens: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 4,
-    borderColor: "#2196F3",
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-  },
-
-  magnifyingHandle: {
-    position: "absolute",
-    bottom: -15,
-    right: -5,
-    width: 4,
-    height: 20,
-    backgroundColor: "#2196F3",
-    transform: [{ rotate: "45deg" }],
-    borderRadius: 2,
-  },
-
-  hourglass: {
-    position: "absolute",
-    right: 25,
-    bottom: 50,
-    alignItems: "center",
-  },
-
-  hourglassTop: {
-    width: 20,
-    height: 15,
-    backgroundColor: "#BBDEFB",
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
-    borderWidth: 2,
-    borderColor: "#2196F3",
-  },
-
-  hourglassMiddle: {
-    width: 8,
-    height: 6,
-    backgroundColor: "#2196F3",
-    marginVertical: -2,
-  },
-
-  hourglassBottom: {
-    width: 20,
-    height: 15,
-    backgroundColor: "#BBDEFB",
-    borderBottomLeftRadius: 3,
-    borderBottomRightRadius: 3,
-    borderWidth: 2,
-    borderColor: "#2196F3",
-  },
-
-  sparkle: {
-    position: "absolute",
-  },
-
-  emptyTextContainer: {
-    alignItems: "center",
-    marginBottom: 30,
-  },
-
+  sparkle: { position: "absolute" },
+  emptyTextContainer: { alignItems: "center", marginBottom: 30 },
   emptyTitle: {
     fontSize: 24,
     fontWeight: "bold",
@@ -620,7 +469,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     letterSpacing: 0.3,
   },
-
   emptyDescription: {
     fontSize: 14,
     color: "#666",
@@ -628,7 +476,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingHorizontal: 10,
   },
-
   ctaButton: {
     backgroundColor: "#2196F3",
     paddingVertical: 16,
@@ -640,7 +487,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-
   ctaButtonText: {
     fontSize: 16,
     fontWeight: "bold",
@@ -648,22 +494,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Transactions List Styles
-  transactionsContainer: {
-    flex: 1,
-    paddingTop: 10,
-  },
-
-  filterContainer: {
-    maxHeight: 50,
-    marginBottom: 15,
-  },
-
-  filterContent: {
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-
+  // Transactions List
+  transactionsContainer: { flex: 1, paddingTop: 10 },
+  filterContainer: { maxHeight: 50, marginBottom: 15 },
+  filterContent: { paddingHorizontal: 20, gap: 10 },
   filterTab: {
     paddingVertical: 8,
     paddingHorizontal: 20,
@@ -672,28 +506,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
-
-  filterTabActive: {
-    backgroundColor: "#2196F3",
-    borderColor: "#2196F3",
-  },
-
-  filterTabText: {
-    fontSize: 14,
-    color: "#666",
-    fontWeight: "500",
-  },
-
-  filterTabTextActive: {
-    fontSize: 14,
-    color: "#0D47A1",
-    fontWeight: "bold",
-  },
-
-  transactionsList: {
-    paddingHorizontal: 20,
-  },
-
+  filterTabActive: { backgroundColor: "#2196F3", borderColor: "#2196F3" },
+  filterTabText: { fontSize: 14, color: "#666", fontWeight: "500" },
+  filterTabTextActive: { fontSize: 14, color: "#FFFFFF", fontWeight: "bold" },
+  transactionsList: { paddingHorizontal: 20 },
   transactionsSectionTitle: {
     fontSize: 16,
     fontWeight: "bold",
@@ -701,7 +517,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     letterSpacing: 0.3,
   },
-
   transactionCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -716,13 +531,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-
-  transactionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-
+  transactionLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
   transactionIcon: {
     width: 48,
     height: 48,
@@ -731,46 +540,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-
-  transactionDetails: {
-    flex: 1,
-  },
-
+  transactionDetails: { flex: 1 },
   transactionType: {
     fontSize: 15,
     fontWeight: "600",
     color: "#1A1A1A",
     marginBottom: 4,
   },
-
-  transactionDate: {
-    fontSize: 12,
-    color: "#999",
-  },
-
-  transactionRight: {
-    alignItems: "flex-end",
-  },
-
+  transactionDate: { fontSize: 12, color: "#999" },
+  transactionRight: { alignItems: "flex-end" },
   transactionAmount: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#1A1A1A",
     marginBottom: 6,
   },
+  statusBadge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12 },
+  statusText: { fontSize: 11, fontWeight: "600" },
 
-  statusBadge: {
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-  },
-
-  statusText: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-
-  // Bottom Navigation - Matching home screen
+  // Bottom Nav
   bottomNav: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
@@ -783,22 +571,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-
-  navItem: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
-  },
-
-  navText: {
-    fontSize: 12,
-    color: "#999",
-    fontWeight: "500",
-  },
-
-  navTextActive: {
-    color: "#2196F3",
-    fontWeight: "600",
-  },
+  navItem: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
+  navText: { fontSize: 12, color: "#999", fontWeight: "500" },
+  navTextActive: { color: "#2196F3", fontWeight: "bold" },
 });

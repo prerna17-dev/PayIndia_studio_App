@@ -12,12 +12,53 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Image,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_ENDPOINTS, API_BASE_URL } from "../constants/api";
 
 export default function AccountScreen() {
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = React.useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = React.useState(false);
+
+  const [userName, setUserName] = React.useState("User");
+  const [userPhone, setUserPhone] = React.useState("+91 XXXXXXXXXX");
+  const [profileImage, setProfileImage] = React.useState<string | null>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchUserProfile();
+    }, [])
+  );
+
+  const fetchUserProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      if (!token) return;
+
+      const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUserName(data.name || "User");
+        setUserPhone(data.mobile_number ? `+91 ${data.mobile_number}` : "+91 XXXXXXXXXX");
+
+        if (data.profile_image) {
+          setProfileImage(data.profile_image.startsWith('/') ? `${API_BASE_URL}${data.profile_image}` : data.profile_image);
+        } else {
+          setProfileImage(null);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching account profile:", error);
+    }
+  };
 
   const handleLogout = () => {
     setShowLogoutModal(false);
@@ -73,13 +114,20 @@ export default function AccountScreen() {
               style={styles.profileIconContainer}
               onPress={() => router.push("/personal-details")}
             >
-              <Ionicons name="person-circle" size={80} color="#2196F3" />
+              {profileImage ? (
+                <Image
+                  source={{ uri: profileImage }}
+                  style={{ width: 80, height: 80, borderRadius: 40 }}
+                />
+              ) : (
+                <Ionicons name="person-circle" size={80} color="#2196F3" />
+              )}
               <View style={styles.editPencilContainer}>
                 <Ionicons name="pencil" size={12} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
-            <Text style={styles.profileName}>User</Text>
-            <Text style={styles.profilePhone}>+91 XXXXXXXXXX</Text>
+            <Text style={styles.profileName}>{userName}</Text>
+            <Text style={styles.profilePhone}>{userPhone}</Text>
           </View>
 
           {/* Refer & Earn Banner */}
