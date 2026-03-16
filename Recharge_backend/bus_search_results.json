@@ -1,0 +1,42 @@
+[
+  {
+    "name": "BUS_REDBUS",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/redbus/ticket/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  },
+  {
+    "name": "BUS_TRAVEL_REDBUS",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/redbus/ticket/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  },
+  {
+    "name": "BUS_RAW",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/bus/raw/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  },
+  {
+    "name": "BUS_NEW",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/bus/ticket/getsourcecity",
+    "status": 500,
+    "data": null,
+    "error": "HTML/String Response"
+  },
+  {
+    "name": "AIR_STATUS_WORKING",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/air/merchant/status_check",
+    "status": 200,
+    "data": {
+      "status": true,
+      "response_code": 1,
+      "message": "Merchant status fetched successfully.",
+      "merchant_status": "UNREGISTERED"
+    },
+    "error": null
+  }
+]

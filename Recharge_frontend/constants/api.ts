@@ -36,4 +36,7 @@ export const API_ENDPOINTS = {
     FETCH_BILL: `${API_BASE_URL}/api/bill/fetch`,
     PAY_BILL: `${API_BASE_URL}/api/bill/pay`,
     BILL_STATUS: `${API_BASE_URL}/api/bill/status`,
+    // Wallet / Payment
+    CREATE_PAYMENT_ORDER: `${API_BASE_URL}/api/wallet/create-order`,
+    VERIFY_PAYMENT: `${API_BASE_URL}/api/wallet/verify-payment`,
 };

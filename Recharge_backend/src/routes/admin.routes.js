@@ -11,4 +11,7 @@ router.get(
   adminController.getStats
 );
 
+router.get("/users", auth, role(["ADMIN"]), adminController.listUsers);
+router.put("/users/:userId/role", auth, role(["ADMIN"]), adminController.updateUserRole);
+
 module.exports = router;

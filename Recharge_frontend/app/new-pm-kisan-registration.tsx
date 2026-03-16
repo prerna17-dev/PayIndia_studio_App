@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     ActivityIndicator,
     Alert,
@@ -22,6 +23,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -46,8 +48,10 @@ interface FormDataType {
 }
 
 interface DocumentsState {
+    aadhaarCard: DocumentType | null;
     land712: DocumentType | null;
     bankPassbook: DocumentType | null;
+    photo: DocumentType | null;
 }
 
 export default function NewPMKisanRegistrationScreen() {
@@ -81,8 +85,10 @@ export default function NewPMKisanRegistrationScreen() {
     });
 
     const [documents, setDocuments] = useState<DocumentsState>({
+        aadhaarCard: null,
         land712: null,
         bankPassbook: null,
+        photo: null,
     });
 
     // Handle Hardware Back Button
@@ -123,7 +129,8 @@ export default function NewPMKisanRegistrationScreen() {
                     [docType]: {
                         name: asset.name,
                         size: asset.size,
-                        uri: asset.uri
+                        uri: asset.uri,
+                        mimeType: asset.mimeType
                     }
                 }));
             }
@@ -144,8 +151,8 @@ export default function NewPMKisanRegistrationScreen() {
                 Alert.alert("Required", "Please fill all land and bank details");
                 return;
             }
-            if (!documents.land712 || !documents.bankPassbook) {
-                Alert.alert("Required", "Please upload 7/12 Extract and Bank Passbook");
+            if (!documents.aadhaarCard || !documents.land712 || !documents.bankPassbook || !documents.photo) {
+                Alert.alert("Required", "Please upload Aadhaar Card, Photo, 7/12 Extract and Bank Passbook");
                 return;
             }
             setCurrentStep(3);
@@ -158,14 +165,76 @@ export default function NewPMKisanRegistrationScreen() {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const refId = "PMK-" + Math.random().toString(36).substr(2, 6).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const formDataObj = new FormData();
+
+            // Farmer Details
+            formDataObj.append('farmer_name', formData.farmerName);
+            formDataObj.append('aadhaar_number', formData.aadhaarNumber);
+            formDataObj.append('mobile_number', formData.mobileNumber);
+            formDataObj.append('gender', formData.gender);
+            formDataObj.append('category', formData.category);
+            formDataObj.append('state', formData.state);
+            formDataObj.append('district', formData.district);
+            formDataObj.append('taluka', formData.taluka);
+            formDataObj.append('village', formData.village);
+
+            // Land Details
+            formDataObj.append('survey_number', formData.surveyNumber);
+            formDataObj.append('land_area', formData.landArea);
+            formDataObj.append('ownership_type', formData.ownershipType);
+
+            // Bank Details
+            formDataObj.append('bank_name', formData.bankName);
+            formDataObj.append('account_number', formData.accountNumber);
+            formDataObj.append('ifsc_code', formData.ifscCode);
+
+            // Documents
+            if (documents.aadhaarCard) {
+                formDataObj.append('aadhaar_card', {
+                    uri: documents.aadhaarCard.uri,
+                    name: documents.aadhaarCard.name,
+                    type: documents.aadhaarCard.mimeType || 'application/octet-stream',
+                } as any);
+            }
+            if (documents.land712) {
+                formDataObj.append('land_712', {
+                    uri: documents.land712.uri,
+                    name: documents.land712.name,
+                    type: documents.land712.mimeType || 'application/octet-stream',
+                } as any);
+            }
+            if (documents.bankPassbook) {
+                formDataObj.append('bank_passbook', {
+                    uri: documents.bankPassbook.uri,
+                    name: documents.bankPassbook.name,
+                    type: documents.bankPassbook.mimeType || 'application/octet-stream',
+                } as any);
+            }
+            if (documents.photo) {
+                formDataObj.append('photo', {
+                    uri: documents.photo.uri,
+                    name: documents.photo.name,
+                    type: documents.photo.mimeType || 'application/octet-stream',
+                } as any);
+            }
+
+            const response = await api.post('/social/pm-kisan/apply', formDataObj);
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.reference_id);
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
+            console.error("PM Kisan registration error:", error);
+            Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
     };
 
     const renderStepIndicator = () => (
@@ -255,6 +324,7 @@ export default function NewPMKisanRegistrationScreen() {
                                 <Text style={styles.docsRequiredTitle}>📄 Documents Required:</Text>
                                 <View style={styles.docsList}>
                                     <Text style={styles.docItem}>• Aadhaar Card</Text>
+                                    <Text style={styles.docItem}>• Passport Size Photo</Text>
                                     <Text style={styles.docItem}>• Land Ownership (7/12 Extract)</Text>
                                     <Text style={styles.docItem}>• Bank Passbook Copy</Text>
                                     <Text style={styles.docItem}>• Mobile linked with Aadhaar</Text>
@@ -334,6 +404,20 @@ export default function NewPMKisanRegistrationScreen() {
                                     ))}
                                 </View>
 
+                                <TouchableOpacity style={[styles.uploadBox, documents.aadhaarCard && styles.uploadBoxActive]} onPress={() => pickDocument('aadhaarCard')}>
+                                    <Ionicons name={documents.aadhaarCard ? "checkmark-circle" : "cloud-upload"} size={28} color={documents.aadhaarCard ? "#2E7D32" : "#1565C0"} />
+                                    <Text style={[styles.uploadText, documents.aadhaarCard && styles.uploadTextActive]}>
+                                        {documents.aadhaarCard ? documents.aadhaarCard.name : "Upload Aadhaar Card *"}
+                                    </Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity style={[styles.uploadBox, documents.photo && styles.uploadBoxActive]} onPress={() => pickDocument('photo')}>
+                                    <Ionicons name={documents.photo ? "checkmark-circle" : "cloud-upload"} size={28} color={documents.photo ? "#2E7D32" : "#1565C0"} />
+                                    <Text style={[styles.uploadText, documents.photo && styles.uploadTextActive]}>
+                                        {documents.photo ? documents.photo.name : "Upload Photo *"}
+                                    </Text>
+                                </TouchableOpacity>
+
                                 <TouchableOpacity style={[styles.uploadBox, documents.land712 && styles.uploadBoxActive]} onPress={() => pickDocument('land712')}>
                                     <Ionicons name={documents.land712 ? "checkmark-circle" : "cloud-upload"} size={28} color={documents.land712 ? "#2E7D32" : "#1565C0"} />
                                     <Text style={[styles.uploadText, documents.land712 && styles.uploadTextActive]}>
@@ -389,6 +473,8 @@ export default function NewPMKisanRegistrationScreen() {
                                 <ReviewRow label="Account" value={formData.accountNumber} />
 
                                 <View style={styles.revDivider} />
+                                <ReviewRow label="Aadhaar Uploaded" value={documents.aadhaarCard ? "Yes" : "No"} />
+                                <ReviewRow label="Photo Uploaded" value={documents.photo ? "Yes" : "No"} />
                                 <ReviewRow label="7/12 Uploaded" value={documents.land712 ? "Yes" : "No"} />
                                 <ReviewRow label="Passbook Uploaded" value={documents.bankPassbook ? "Yes" : "No"} />
                             </View>

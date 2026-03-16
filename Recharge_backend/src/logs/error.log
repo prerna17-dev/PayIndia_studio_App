@@ -67,19 +67,53 @@ STACK: Error: Table 'payindia_studio.eseva_applications' doesn't exist
     at emitCloseNT (node:internal/streams/destroy:148:10)
 ----------------------------------
 
-[2026-02-18T10:22:06.069Z]
-METHOD: GET
-URL: /api/eseva/list
-MESSAGE: Table 'payindia_studio.eseva_applications' doesn't exist
-STACK: Error: Table 'payindia_studio.eseva_applications' doesn't exist
-    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
-    at exports.getByUserId (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\eseva.model.js:31:31)
-    at exports.getApplications (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\eseva.controller.js:74:45)
-    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
-    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
-    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
-    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
-    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
-    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
-    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+[2026-02-19T05:37:36.566Z]
+METHOD: PUT
+URL: /api/pan/process/1
+MESSAGE: Cannot destructure property 'remarks' of 'req.body' as it is undefined.
+STACK: TypeError: Cannot destructure property 'remarks' of 'req.body' as it is undefined.
+    at exports.processApplication (E:\WorknAI\PayIndiastudio_App\Recharge_backend\src\controllers\pan.controller.js:76:17)
+    at Layer.handleRequest (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at param (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\index.js:600:14)
+    at param (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\index.js:610:14)
+    at processParams (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\index.js:664:3)
+----------------------------------
+
+[2026-03-06T06:05:38.719Z]
+METHOD: POST
+URL: /api/certificate/income/apply
+MESSAGE: Column 'gender' cannot be null
+STACK: Error: Column 'gender' cannot be null
+    at PromisePool.query (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (E:\WorknAI\PayIndiastudio_App\Recharge_backend\src\models\income.model.js:37:33)
+    at exports.createApplication (E:\WorknAI\PayIndiastudio_App\Recharge_backend\src\controllers\income.controller.js:74:49)
+    at Layer.handleRequest (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:530:35)
+----------------------------------
+
+[2026-03-06T06:05:38.746Z]
+METHOD: POST
+URL: /api/certificate/income/apply
+MESSAGE: Column 'gender' cannot be null
+STACK: Error: Column 'gender' cannot be null
+    at PromisePool.query (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (E:\WorknAI\PayIndiastudio_App\Recharge_backend\src\models\income.model.js:37:33)
+    at exports.createApplication (E:\WorknAI\PayIndiastudio_App\Recharge_backend\src\controllers\income.controller.js:74:49)
+    at Layer.handleRequest (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (E:\WorknAI\PayIndiastudio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:530:35)
 ----------------------------------

@@ -1,0 +1,41 @@
+[
+  {
+    "name": "bus/bus/getsourcecity",
+    "status": 500,
+    "error": "HTML 404 Page"
+  },
+  {
+    "name": "bus/ticket/getsourcecity",
+    "status": 500,
+    "error": "HTML 404 Page"
+  },
+  {
+    "name": "travel/bus/getsourcecity",
+    "status": 500,
+    "error": "HTML 404 Page"
+  },
+  {
+    "name": "travel/bus/ticket/getsourcecity",
+    "status": 500,
+    "error": "HTML 404 Page"
+  },
+  {
+    "name": "travel/air/merchant/status_check",
+    "status": 200,
+    "data": {
+      "status": false,
+      "response_code": 9,
+      "message": "The merchantcode field is required.\n"
+    }
+  },
+  {
+    "name": "travel/bus/merchant/status_check",
+    "status": 500,
+    "error": "HTML 404 Page"
+  },
+  {
+    "name": "bus/merchant/status_check",
+    "status": 500,
+    "error": "HTML 404 Page"
+  }
+]

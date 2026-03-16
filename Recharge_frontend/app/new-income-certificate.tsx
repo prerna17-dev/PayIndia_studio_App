@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -21,6 +22,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -31,6 +33,7 @@ interface FormDataType {
     gender: string;
     mobileNumber: string;
     email: string;
+    panNumber: string;
 
     // B. Family Details
     fatherName: string;
@@ -66,6 +69,7 @@ interface DocumentsState {
     rationCard: DocumentType | null;
     incomeProof: DocumentType | null;
     selfDeclaration: DocumentType | null;
+    photo: DocumentType | null;
     [key: string]: DocumentType | null;
 }
 
@@ -84,6 +88,7 @@ export default function NewIncomeCertificateScreen() {
         rationCard: null,
         incomeProof: null,
         selfDeclaration: null,
+        photo: null,
     });
 
     useEffect(() => {
@@ -106,6 +111,7 @@ export default function NewIncomeCertificateScreen() {
         gender: "",
         mobileNumber: "",
         email: "",
+        panNumber: "",
         fatherName: "",
         motherName: "",
         spouseName: "",
@@ -153,6 +159,7 @@ export default function NewIncomeCertificateScreen() {
         { id: 'rationCard', name: 'Ration Card *', icon: 'book-open-variant', color: '#E65100', hint: 'Updated copy required' },
         { id: 'incomeProof', name: 'Income Proof *', icon: 'file-document-outline', color: '#7B1FA2', hint: 'Salary Slip / IT Return' },
         { id: 'selfDeclaration', name: 'Self Declaration *', icon: 'file-sign', color: '#C62828', hint: 'Signed declaration copy' },
+        { id: 'photo', name: 'Passport Size Photo *', icon: 'account-box-outline', color: '#3F51B5', hint: 'Current passport size photo' },
     ];
 
     const pickDocument = async (docType: keyof DocumentsState) => {
@@ -236,7 +243,7 @@ export default function NewIncomeCertificateScreen() {
             setCurrentStep(2);
         } else if (currentStep === 2) {
             // Validation for Step 2
-            if (!documents.aadhaarCard || !documents.addressProof || !documents.rationCard || !documents.incomeProof || !documents.selfDeclaration) {
+            if (!documents.aadhaarCard || !documents.addressProof || !documents.rationCard || !documents.incomeProof || !documents.selfDeclaration || !documents.photo) {
                 Alert.alert("Documents Required", "Please upload all mandatory documents to proceed");
                 return;
             }
@@ -261,13 +268,98 @@ export default function NewIncomeCertificateScreen() {
                     return;
                 }
 
-                // Simulate API call
-                setTimeout(() => {
-                    const refId = "INC" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                    setApplicationId(refId);
+                try {
+                    const formDataObj = new FormData();
+
+                    // A. Applicant Details
+                    formDataObj.append('full_name', formData.fullName);
+                    formDataObj.append('aadhaar_number', formData.aadhaarNumber);
+                    formDataObj.append('dob', formData.dob);
+                    formDataObj.append('gender', formData.gender);
+                    formDataObj.append('mobile_number', formData.mobileNumber);
+                    formDataObj.append('email', formData.email);
+                    formDataObj.append('pan_number', formData.panNumber);
+
+                    // B. Family Details
+                    formDataObj.append('father_name', formData.fatherName);
+                    formDataObj.append('mother_name', formData.motherName);
+                    // spouseName, familyMembersCount are not in backend model yet, but could be added to req.body if needed. 
+                    // For now, only mapping what's in the controller.
+                    formDataObj.append('occupation', formData.occupation);
+
+                    // C. Income Details
+                    formDataObj.append('annual_income', formData.annualIncome);
+                    formDataObj.append('income_source', formData.incomeSource);
+                    formDataObj.append('purpose', formData.requiredFor);
+
+                    // D. Address Details
+                    formDataObj.append('house_no', formData.houseNo);
+                    formDataObj.append('street', formData.street || "");
+                    formDataObj.append('village', formData.village);
+                    formDataObj.append('taluka', formData.taluka);
+                    formDataObj.append('district', formData.district);
+                    formDataObj.append('state', formData.state || "Maharashtra");
+                    formDataObj.append('pincode', formData.pincode);
+
+                    // Documents
+                    if (documents.aadhaarCard) {
+                        formDataObj.append('aadhaar_card', {
+                            uri: documents.aadhaarCard.uri,
+                            name: documents.aadhaarCard.name,
+                            type: documents.aadhaarCard.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.rationCard) {
+                        formDataObj.append('ration_card', {
+                            uri: documents.rationCard.uri,
+                            name: documents.rationCard.name,
+                            type: documents.rationCard.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.addressProof) {
+                        formDataObj.append('tax_receipt', {
+                            uri: documents.addressProof.uri,
+                            name: documents.addressProof.name,
+                            type: documents.addressProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.incomeProof) {
+                        formDataObj.append('income_proof', {
+                            uri: documents.incomeProof.uri,
+                            name: documents.incomeProof.name,
+                            type: documents.incomeProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.selfDeclaration) {
+                        formDataObj.append('self_declaration', {
+                            uri: documents.selfDeclaration.uri,
+                            name: documents.selfDeclaration.name,
+                            type: documents.selfDeclaration.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.photo) {
+                        formDataObj.append('photo', {
+                            uri: documents.photo.uri,
+                            name: documents.photo.name,
+                            type: documents.photo.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+
+                    // const response = await api.post('/certificate/income/apply', formDataObj);
+                    const response = await api.post('/certificate/income/apply', formDataObj);
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id);
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Submission failed");
+                    }
+                } catch (error: any) {
+                    console.error("Income application error:", error);
+                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+                } finally {
                     setIsSubmitting(false);
-                    setIsSubmitted(true);
-                }, 2000);
+                }
             };
 
             submitApplication();
@@ -428,6 +520,15 @@ export default function NewIncomeCertificateScreen() {
                                     keyboardType="phone-pad"
                                     maxLength={10}
                                     icon="phone-portrait-outline"
+                                />
+
+                                <Label text="PAN Number (optional)" />
+                                <Input
+                                    value={formData.panNumber}
+                                    onChangeText={(text: string) => setFormData({ ...formData, panNumber: text.toUpperCase() })}
+                                    placeholder="Enter PAN Number"
+                                    maxLength={10}
+                                    icon="card-outline"
                                 />
 
                                 <Label text="Email (optional)" />
@@ -689,6 +790,7 @@ export default function NewIncomeCertificateScreen() {
                                 { label: "Ration Card", value: documents.rationCard ? "Uploaded ✅" : "Missing ❌" },
                                 { label: "Income Proof", value: documents.incomeProof ? "Uploaded ✅" : "Missing ❌" },
                                 { label: "Declaration", value: documents.selfDeclaration ? "Uploaded ✅" : "Missing ❌" },
+                                { label: "Photo", value: documents.photo ? "Uploaded ✅" : "Missing ❌" },
                             ]} onEdit={() => setCurrentStep(2)} />
 
                             <TouchableOpacity

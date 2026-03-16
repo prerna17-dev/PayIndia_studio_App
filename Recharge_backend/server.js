@@ -8,7 +8,7 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 
 /* -------------------- START SERVER -------------------- */
-server.listen(PORT, async () => { 
+server.listen(PORT, async () => {
   try {
     // Test DB connection once on startup
     const conn = await pool.getConnection();
@@ -49,6 +49,10 @@ process.on("unhandledRejection", (reason) => {
 });
 
 process.on("uncaughtException", (err) => {
-  console.error("❌ Uncaught Exception:", err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Error: Port ${PORT} is already in use. Please close the other process using this port.`);
+  } else {
+    console.error("❌ Uncaught Exception:", err);
+  }
   process.exit(1);
 });

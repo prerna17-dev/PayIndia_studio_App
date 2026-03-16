@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -22,6 +23,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -149,7 +151,8 @@ export default function New8AExtractScreen() {
                     [docType]: {
                         name: asset.name,
                         size: asset.size,
-                        uri: asset.uri
+                        uri: asset.uri,
+                        mimeType: asset.mimeType
                     }
                 }));
             }
@@ -216,28 +219,62 @@ export default function New8AExtractScreen() {
                 return;
             }
 
-            setIsSubmitting(true);
+            handleSubmit();
+        }
+    };
 
-            const submitApplication = async () => {
-                const token = await AsyncStorage.getItem("userToken");
-                if (!token) {
-                    setIsSubmitting(false);
-                    Alert.alert("Session Expired", "Please login again to continue.", [
-                        { text: "OK", onPress: () => router.replace("/auth/login") }
-                    ]);
-                    return;
-                }
+    const handleSubmit = async () => {
+        setIsSubmitting(true);
+        try {
+            const formDataToSend = new FormData();
 
-                // Simulate API call
-                setTimeout(() => {
-                    const refId = "EXT" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                    setApplicationId(refId);
-                    setIsSubmitting(false);
-                    setIsSubmitted(true);
-                }, 2000);
-            };
+            // Applicant & Land Details
+            formDataToSend.append("full_name", formData.fullName);
+            formDataToSend.append("aadhaar_number", formData.aadhaarNumber);
+            formDataToSend.append("mobile_number", formData.mobileNumber);
+            formDataToSend.append("district", formData.district);
+            formDataToSend.append("taluka", formData.taluka);
+            formDataToSend.append("village", formData.village);
+            formDataToSend.append("account_number", formData.khataNumber);
 
-            submitApplication();
+            // Documents
+            if (documents.aadhaarCard) {
+                formDataToSend.append("aadhaar_card", {
+                    uri: documents.aadhaarCard.uri,
+                    name: documents.aadhaarCard.name,
+                    type: documents.aadhaarCard.mimeType || "application/octet-stream",
+                } as any);
+            }
+            if (documents.ownershipProof) {
+                formDataToSend.append("holding_document", {
+                    uri: documents.ownershipProof.uri,
+                    name: documents.ownershipProof.name,
+                    type: documents.ownershipProof.mimeType || "application/octet-stream",
+                } as any);
+            }
+            if (documents.propertyDetailsDoc) {
+                formDataToSend.append("photo", {
+                    uri: documents.propertyDetailsDoc.uri,
+                    name: documents.propertyDetailsDoc.name,
+                    type: documents.propertyDetailsDoc.mimeType || "application/octet-stream",
+                } as any);
+            }
+
+            const response = await api.post("/land/8a/apply", formDataToSend, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.reference_id || response.data.data.applicationId);
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
+            console.error("8A submission error:", error);
+            Alert.alert("Error", error.response?.data?.message || "Failed to submit. Please try again.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 

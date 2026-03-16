@@ -22,7 +22,7 @@ function generatePaySprintToken() {
  * Axios instance for PaySprint API calls
  */
 const instance = axios.create({
-  baseURL: PAYSPRINT.BASE_URL,
+  baseURL: PAYSPRINT.BASE_URL.endsWith("/") ? PAYSPRINT.BASE_URL : `${PAYSPRINT.BASE_URL}/`,
   timeout: 15000,
 });
 

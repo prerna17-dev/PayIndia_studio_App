@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     ActivityIndicator,
     Alert,
@@ -103,7 +104,6 @@ export default function PANCorrectionScreen() {
         setNewName(""); setNewDob(""); setNewFatherName(""); setNewContact(""); setNewAddress("");
     }, [selectedType]);
 
-
     const formatDob = (text: string) => {
         const cleaned = text.replace(/\D/g, "");
         let formatted = "";
@@ -113,16 +113,42 @@ export default function PANCorrectionScreen() {
         setNewDob(formatted);
     };
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async () => {
         if (panNumber.length !== 10 || mobileNumber.length !== 10) return Alert.alert("Error", "Enter valid PAN and Mobile number");
-        setIsOtpSent(true);
-        Alert.alert("OTP Sent", "Verification code sent to your mobile");
+        try {
+            const response = await api.post("/pan/correction/send-otp", {
+                mobile_number: mobileNumber,
+                pan_number: panNumber,
+            });
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("OTP Sent", "Verification code sent to your mobile");
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to send OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        }
     };
 
-    const handleVerifyOtp = () => {
+    const handleVerifyOtp = async () => {
         if (otp.length !== 6) return Alert.alert("Error", "Enter 6-digit OTP");
         setIsVerifying(true);
-        setTimeout(() => { setIsVerifying(false); setStep(2); }, 1200);
+        try {
+            const response = await api.post("/pan/correction/verify-otp", {
+                mobile_number: mobileNumber,
+                otp_code: otp,
+            });
+            if (response.data.success) {
+                setStep(2);
+            } else {
+                Alert.alert("Error", response.data.message || "Invalid OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "OTP verification failed");
+        } finally {
+            setIsVerifying(false);
+        }
     };
 
     const handleFileUpload = async (docId: string) => {
@@ -157,14 +183,63 @@ export default function PANCorrectionScreen() {
         setStep(3);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const refId = "PAN" + Math.random().toString(36).substr(2, 9).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const formData = new FormData();
+            formData.append("pan_number", panNumber);
+            formData.append("mobile_number", mobileNumber);
+            formData.append("corrected_name", newName);
+            formData.append("corrected_dob", newDob);
+            formData.append("correction_type", selectedType || "");
+
+            // Map files correctly
+            if (uploadedDocs.nameProof) {
+                formData.append("proof_of_name", {
+                    uri: uploadedDocs.nameProof.uri,
+                    name: uploadedDocs.nameProof.name,
+                    type: "application/octet-stream",
+                } as any);
+            }
+            if (uploadedDocs.nameId || uploadedDocs.addressId || uploadedDocs.photoId) {
+                const idDoc = uploadedDocs.nameId || uploadedDocs.addressId || uploadedDocs.photoId;
+                formData.append("identity_proof", {
+                    uri: idDoc.uri,
+                    name: idDoc.name,
+                    type: "application/octet-stream",
+                } as any);
+            }
+            if (uploadedDocs.dobProof) {
+                formData.append("proof_of_dob", {
+                    uri: uploadedDocs.dobProof.uri,
+                    name: uploadedDocs.dobProof.name,
+                    type: "application/octet-stream",
+                } as any);
+            }
+            if (uploadedDocs.photoPassport) {
+                formData.append("photo_sign", {
+                    uri: uploadedDocs.photoPassport.uri,
+                    name: uploadedDocs.photoPassport.name,
+                    type: "application/octet-stream",
+                } as any);
+            }
+
+            const response = await api.post("/pan/correction/submit", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.correctionId.toString());
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
+            console.error("PAN Correction submission error:", error);
+            Alert.alert("Error", error.response?.data?.message || "Failed to submit. Please try again.");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
     };
 
     const getNewValue = () => {

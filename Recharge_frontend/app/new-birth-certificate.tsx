@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -21,6 +22,7 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    mimeType?: string;
 }
 
 interface FormDataType {
@@ -154,6 +156,7 @@ export default function NewBirthCertificateScreen() {
                         name: file.name,
                         size: file.size,
                         uri: file.uri,
+                        mimeType: file.mimeType,
                     },
                 }));
             }
@@ -233,13 +236,98 @@ export default function NewBirthCertificateScreen() {
                 return;
             }
 
-            setIsSubmitting(true);
-            setTimeout(() => {
-                const refId = "BIRTH" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                setApplicationId(refId);
-                setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            const submitData = async () => {
+                setIsSubmitting(true);
+                try {
+                    const formDataObj = new FormData();
+
+                    // Child Details
+                    formDataObj.append('child_name', formData.childName);
+                    formDataObj.append('gender', formData.gender);
+                    formDataObj.append('dob', formData.dob);
+                    formDataObj.append('time_of_birth', formData.timeOfBirth);
+                    formDataObj.append('place_of_birth', formData.placeOfBirth);
+                    formDataObj.append('hospital_name', formData.hospitalName || "");
+                    formDataObj.append('registration_date', formData.registrationDate);
+
+                    // Father's Details
+                    formDataObj.append('father_name', formData.fatherName);
+                    formDataObj.append('father_aadhaar', formData.fatherAadhaar);
+                    formDataObj.append('father_mobile', formData.fatherMobile);
+                    formDataObj.append('father_occupation', formData.fatherOccupation || "");
+
+                    // Mother's Details
+                    formDataObj.append('mother_name', formData.motherName);
+                    formDataObj.append('mother_aadhaar', formData.motherAadhaar);
+                    formDataObj.append('mother_mobile', formData.motherMobile);
+                    formDataObj.append('mother_occupation', formData.motherOccupation || "");
+
+                    // Address Details
+                    formDataObj.append('house_no', formData.houseNo);
+                    formDataObj.append('street', formData.street || "");
+                    formDataObj.append('village', formData.village);
+                    formDataObj.append('district', formData.district);
+                    formDataObj.append('state', formData.state);
+                    formDataObj.append('pincode', formData.pincode);
+
+                    // Registration Type
+                    formDataObj.append('registration_type', formData.registrationType);
+                    formDataObj.append('delay_reason', formData.delayReason || "");
+
+                    // Documents
+                    if (documents.hospitalReport) {
+                        formDataObj.append('hospital_report', {
+                            uri: documents.hospitalReport.uri,
+                            name: documents.hospitalReport.name,
+                            type: documents.hospitalReport.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.parentsAadhaar) {
+                        formDataObj.append('parents_aadhaar', {
+                            uri: documents.parentsAadhaar.uri,
+                            name: documents.parentsAadhaar.name,
+                            type: documents.parentsAadhaar.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.addressProof) {
+                        formDataObj.append('address_proof', {
+                            uri: documents.addressProof.uri,
+                            name: documents.addressProof.name,
+                            type: documents.addressProof.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.marriageCertificate) {
+                        formDataObj.append('marriage_certificate', {
+                            uri: documents.marriageCertificate.uri,
+                            name: documents.marriageCertificate.name,
+                            type: documents.marriageCertificate.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+                    if (documents.affidavit) {
+                        formDataObj.append('affidavit', {
+                            uri: documents.affidavit.uri,
+                            name: documents.affidavit.name,
+                            type: documents.affidavit.mimeType || 'application/octet-stream',
+                        } as any);
+                    }
+
+                    const response = await api.post('/certificate/birth/apply', formDataObj);
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id);
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Submission failed");
+                    }
+                } catch (error: any) {
+                    console.error("Birth certificate error:", error);
+                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+
+            submitData();
         }
     };
 

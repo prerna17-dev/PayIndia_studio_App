@@ -1,0 +1,12 @@
+{
+    "ignore": [
+        "src/logs/**",
+        "src/uploads/**",
+        "*.log",
+        "test_sms.js",
+        "debug_sms.js",
+        "nodemon.json"
+    ],
+    "ext": "js,json",
+    "verbose": true
+}
