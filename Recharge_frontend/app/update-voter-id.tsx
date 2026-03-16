@@ -562,10 +562,10 @@ const s = StyleSheet.create({
     verifyBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 16, borderRadius: 12, justifyContent: 'center', height: 48 },
     verifyBtnText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
 
-    mainBtn: { borderRadius: 16, overflow: 'hidden' },
+    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
     btnDisabled: { opacity: 0.6 },
-    btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
-    mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+    btnGrad: { paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
+    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
 
     typeList: { gap: 16, paddingRight: 20, marginBottom: 20 },
     typeItem: { alignItems: 'center', width: 70 },

@@ -496,7 +496,7 @@ export default function NewPANScreen() {
                                         style={[styles.docUploadCard, aadhaarDoc && styles.docUploadCardActive]}
                                         onPress={() => pickDocument("aadhaar")}
                                     >
-                                        <View style={styles.docIconCircle}>
+                                        <View style={[styles.docIconCircle, aadhaarDoc && { backgroundColor: '#2196F3' }]}>
                                             <MaterialCommunityIcons name="card-account-details" size={24} color={aadhaarDoc ? "#FFF" : "#2196F3"} />
                                         </View>
                                         <View style={styles.docTextContent}>
@@ -515,7 +515,7 @@ export default function NewPANScreen() {
                                         style={[styles.docUploadCard, addressProof && styles.docUploadCardActive]}
                                         onPress={() => pickDocument("address")}
                                     >
-                                        <View style={[styles.docIconCircle, { backgroundColor: '#E8F5E9' }]}>
+                                        <View style={[styles.docIconCircle, { backgroundColor: addressProof ? '#43A047' : '#E8F5E9' }]}>
                                             <MaterialCommunityIcons name="home-map-marker" size={24} color={addressProof ? "#FFF" : "#43A047"} />
                                         </View>
                                         <View style={styles.docTextContent}>
@@ -534,7 +534,7 @@ export default function NewPANScreen() {
                                         style={[styles.docUploadCard, dobProof && styles.docUploadCardActive]}
                                         onPress={() => pickDocument("dob")}
                                     >
-                                        <View style={[styles.docIconCircle, { backgroundColor: '#FFF8E1' }]}>
+                                        <View style={[styles.docIconCircle, { backgroundColor: dobProof ? '#FFB300' : '#FFF8E1' }]}>
                                             <MaterialCommunityIcons name="calendar-check" size={24} color={dobProof ? "#FFF" : "#FFB300"} />
                                         </View>
                                         <View style={styles.docTextContent}>
@@ -553,7 +553,7 @@ export default function NewPANScreen() {
                                         style={[styles.docUploadCard, photo && styles.docUploadCardActive]}
                                         onPress={pickPhoto}
                                     >
-                                        <View style={[styles.docIconCircle, { backgroundColor: '#FFEBEE' }]}>
+                                        <View style={[styles.docIconCircle, { backgroundColor: photo ? '#E53935' : '#FFEBEE' }]}>
                                             <MaterialCommunityIcons name="account-box" size={24} color={photo ? "#FFF" : "#E53935"} />
                                         </View>
                                         <View style={styles.docTextContent}>
@@ -1041,7 +1041,7 @@ const styles = StyleSheet.create({
     actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
     actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
-    mainBtn: { borderRadius: 16, overflow: 'hidden', width: '100%' },
-    btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
-    mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
+    btnGrad: { paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
+    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
 });

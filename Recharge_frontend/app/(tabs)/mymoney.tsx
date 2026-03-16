@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 60, // Increased padding
+    paddingTop: 50,
     paddingBottom: 15,
     zIndex: 1,
   },
@@ -883,13 +883,13 @@ const styles = StyleSheet.create({
   insightCard: {
     borderRadius: 12,
     padding: 15,
-    shadowColor: "#FFC107",
+    shadowColor: "#2196F3",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 4,
     elevation: 3,
     borderWidth: 1,
-    borderColor: "#FFE082",
+    borderColor: "#BBDEFB",
   },
 
   insightHeader: {

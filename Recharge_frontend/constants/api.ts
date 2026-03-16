@@ -5,13 +5,14 @@
 
 // Replace this IP address with your computer's current IP address (IPv4)
 // Run 'ipconfig' in terminal to find your IPv4 address
-export const API_BASE_URL = "http://192.168.1.9:5000";
+export const API_BASE_URL = "http://192.168.1.7:5000";
 
 
 export const API_ENDPOINTS = {
     // Auth
     SEND_OTP: `${API_BASE_URL}/api/auth/send-otp`,
     VERIFY_OTP: `${API_BASE_URL}/api/auth/verify-otp`,
+    LOGOUT: `${API_BASE_URL}/api/auth/logout`,
 
     // Banking
     BANK_LIST: `${API_BASE_URL}/api/banking/bank-list`,
@@ -23,6 +24,7 @@ export const API_ENDPOINTS = {
 
     // Profile
     USER_PROFILE: `${API_BASE_URL}/api/user/profile`,
+    UPDATE_PROFILE: `${API_BASE_URL}/api/user/profile`,
 
     // Recharge
     RECHARGE_OPERATORS: `${API_BASE_URL}/api/recharge/operators`,

@@ -1158,21 +1158,7 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textAlign: 'center',
     },
-    mainBtn: {
-        width: '100%',
-        borderRadius: 16,
-        overflow: 'hidden',
-    },
-    btnGrad: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 16,
-        gap: 10,
-    },
-    mainBtnText: {
-        color: "#FFF",
-        fontSize: 16,
-        fontWeight: "800",
-    },
+    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
+    btnGrad: { paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
+    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
 });

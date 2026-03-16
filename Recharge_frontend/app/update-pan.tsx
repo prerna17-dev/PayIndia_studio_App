@@ -103,6 +103,16 @@ export default function PANCorrectionScreen() {
         setNewName(""); setNewDob(""); setNewFatherName(""); setNewContact(""); setNewAddress("");
     }, [selectedType]);
 
+
+    const formatDob = (text: string) => {
+        const cleaned = text.replace(/\D/g, "");
+        let formatted = "";
+        if (cleaned.length <= 2) formatted = cleaned;
+        else if (cleaned.length <= 4) formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
+        else formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4, 8)}`;
+        setNewDob(formatted);
+    };
+
     const handleSendOtp = () => {
         if (panNumber.length !== 10 || mobileNumber.length !== 10) return Alert.alert("Error", "Enter valid PAN and Mobile number");
         setIsOtpSent(true);
@@ -382,7 +392,10 @@ export default function PANCorrectionScreen() {
                                             {selectedType === 'dob' && (
                                                 <View>
                                                     <Text style={s.inputLabel}>Corrected Date of Birth *</Text>
-                                                    <View style={s.inputRow}><TextInput style={s.field} placeholder="DD/MM/YYYY" value={newDob} onChangeText={setNewDob} keyboardType="numeric" maxLength={10} /></View>
+                                                    <View style={s.inputRow}>
+                                                        <Ionicons name="calendar-outline" size={18} color="#64748B" />
+                                                        <TextInput style={s.field} placeholder="DD/MM/YYYY" value={newDob} onChangeText={formatDob} keyboardType="numeric" maxLength={10} />
+                                                    </View>
                                                 </View>
                                             )}
 
@@ -521,10 +534,10 @@ const s = StyleSheet.create({
     verifyBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 16, borderRadius: 12, justifyContent: 'center', height: 48 },
     verifyBtnText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
 
-    mainBtn: { borderRadius: 16, overflow: 'hidden' },
+    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
     btnDisabled: { opacity: 0.6 },
-    btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
-    mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+    btnGrad: { paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
+    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
 
     // Single-select grid (radio style)
     typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },

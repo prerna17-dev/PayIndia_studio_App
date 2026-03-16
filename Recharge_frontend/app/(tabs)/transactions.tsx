@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 60, // Increased padding
+    paddingTop: 50,
     paddingBottom: 15,
     zIndex: 1,
   },
