@@ -3,7 +3,6 @@ import * as DocumentPicker from "expo-document-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import api from "../services/api";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -162,76 +161,14 @@ export default function VoterIDUpdateScreen() {
         setStep(3);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         setIsSubmitting(true);
-        try {
-            const formData = new FormData();
-            formData.append("voter_id_number", voterID);
-            formData.append("aadhar_number", aadhaarNo.replace(/\s/g, ""));
-            formData.append("mobile_number", mobileNumber);
-            
-            // Correction details
-            formData.append("corrected_name", newName);
-            formData.append("corrected_dob", newDob);
-            formData.append("corrected_gender", newGender);
-            formData.append("corrected_address", newAddress);
-            formData.append("corrected_state", newState);
-            formData.append("corrected_pincode", newPincode);
-            formData.append("correction_type", selectedType || "");
-
-            // Documents
-            if (uploadedDocs.nameProof) {
-                formData.append("identity_proof", {
-                    uri: uploadedDocs.nameProof.uri,
-                    name: uploadedDocs.nameProof.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.dobProof) {
-                formData.append("dob_proof", {
-                    uri: uploadedDocs.dobProof.uri,
-                    name: uploadedDocs.dobProof.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.addressProof) {
-                formData.append("address_proof", {
-                    uri: uploadedDocs.addressProof.uri,
-                    name: uploadedDocs.addressProof.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.genderProof) {
-                formData.append("identity_proof", {
-                    uri: uploadedDocs.genderProof.uri,
-                    name: uploadedDocs.genderProof.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.newPhoto) {
-                formData.append("photo", {
-                    uri: uploadedDocs.newPhoto.uri,
-                    name: uploadedDocs.newPhoto.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-
-            const response = await api.post("/voter/correction/submit", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            if (response.data.success) {
-                setApplicationId(response.data.data.correctionId.toString());
-                setIsSubmitted(true);
-            } else {
-                Alert.alert("Error", response.data.message || "Submission failed");
-            }
-        } catch (error: any) {
-            console.error("Voter correction error:", error);
-            Alert.alert("Error", error.response?.data?.message || "Failed to submit. Please try again.");
-        } finally {
+        setTimeout(() => {
+            const refId = "VOT" + Math.random().toString(36).substr(2, 9).toUpperCase();
+            setApplicationId(refId);
             setIsSubmitting(false);
-        }
+            setIsSubmitted(true);
+        }, 2000);
     };
 
     const renderDocumentUploads = () => {
@@ -625,10 +562,10 @@ const s = StyleSheet.create({
     verifyBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 16, borderRadius: 12, justifyContent: 'center', height: 48 },
     verifyBtnText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
 
-    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
+    mainBtn: { borderRadius: 16, overflow: 'hidden', width: '100%' },
     btnDisabled: { opacity: 0.6 },
-    btnGrad: { paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
-    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+    btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
+    mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
 
     typeList: { gap: 16, paddingRight: 20, marginBottom: 20 },
     typeItem: { alignItems: 'center', width: 70 },
@@ -666,14 +603,14 @@ const s = StyleSheet.create({
     warningText: { flex: 1, fontSize: 12, color: '#856404', lineHeight: 18, fontWeight: '600' },
 
     // Success Screen
-    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: '#FFF' },
+    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#FFF' },
     successIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F8E9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
     successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 10 },
     successSubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 30, paddingHorizontal: 20 },
     idCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#E2E8F0' },
     idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
     idValue: { fontSize: 24, fontWeight: '800', color: '#0D47A1' },
-    successActions: { flexDirection: 'row', gap: 15, marginBottom: 30 },
+    successActions: { flexDirection: 'row', gap: 20, marginBottom: 40 },
     actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
     actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },

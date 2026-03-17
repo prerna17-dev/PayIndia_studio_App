@@ -177,7 +177,7 @@ export default function WaterBillPaymentScreen() {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "water",
+                    billType: "Water Bill Payment",
                     borrowerName: billDetails?.consumerName,
                     loanAccountNumber: billDetails?.consumerNumber,
                     lenderName: selectedBoard,
@@ -279,6 +279,7 @@ export default function WaterBillPaymentScreen() {
                                                     value={consumerNumber}
                                                     onChangeText={setConsumerNumber}
                                                     keyboardType={consumerKeyboardType}
+                                                    maxLength={20}
                                                 />
                                                 <TouchableOpacity
                                                     onPress={() => setConsumerKeyboardType(consumerKeyboardType === 'number-pad' ? 'default' : 'number-pad')}

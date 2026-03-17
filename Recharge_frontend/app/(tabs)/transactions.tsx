@@ -4,7 +4,6 @@ import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as React from "react";
 import {
-  ActivityIndicator,
   BackHandler,
   Dimensions,
   SafeAreaView,
@@ -13,122 +12,57 @@ import {
   Text,
   TouchableOpacity,
   View,
+  ActivityIndicator,
   RefreshControl,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_BASE_URL } from "../../constants/api";
 
 const { width } = Dimensions.get("window");
 
+// Transaction data interface from backend
 interface Transaction {
-  transaction_id?: number;
-  id?: string;
-  user_id?: number;
+  transaction_id: number;
+  user_id: number;
   transaction_type: string;
-  type?: string;
   amount: number;
   description: string;
-  status: "success" | "pending" | "failed";
-  transaction_reference?: string;
+  status: string;
+  transaction_reference: string;
   created_at: string;
-  date: string;
-  category: string;
-  icon: string;
-  iconType: "ionicons" | "materialcommunity";
-  iconColor: string;
 }
 
-const typeToIcon = (
-  type: string
-): { icon: string; iconType: "ionicons" | "materialcommunity"; iconColor: string; category: string } => {
-  switch (type) {
-    case "Recharge":
-      return { icon: "phone-portrait", iconType: "ionicons", iconColor: "#4CAF50", category: "Recharge" };
-    case "Wallet_Credit":
-      return { icon: "wallet", iconType: "ionicons", iconColor: "#2196F3", category: "Wallet" };
-    case "Wallet_Debit":
-      return { icon: "wallet-outline", iconType: "ionicons", iconColor: "#FF5722", category: "Wallet" };
-    case "Loan":
-      return { icon: "cash", iconType: "ionicons", iconColor: "#9C27B0", category: "Loan" };
-    case "Insurance":
-      return { icon: "shield-checkmark", iconType: "ionicons", iconColor: "#009688", category: "Insurance" };
-    case "Bill_Payment":
-      return { icon: "receipt", iconType: "ionicons", iconColor: "#FF9800", category: "Bill" };
-    default:
-      return { icon: "swap-horizontal", iconType: "ionicons", iconColor: "#607D8B", category: type };
-  }
-};
+import { API_BASE_URL } from "../../constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HistoryScreen() {
   const router = useRouter();
+
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
-  const [activeFilter, setActiveFilter] = React.useState("All");
+  const [filter, setFilter] = React.useState("All");
 
   const fetchTransactions = async () => {
     try {
       const token = await AsyncStorage.getItem("userToken");
-      if (!token) return;
-
-      const res = await fetch(`${API_BASE_URL}/api/user/transactions`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
-      const data = await res.json();
-
-      if (res.ok && data.success && Array.isArray(data.data)) {
-        const mapped: Transaction[] = data.data.map((t: any) => {
-          const meta = typeToIcon(t.transaction_type || "");
-          let displayDate = "N/A";
-          try {
-             if (t.created_at) {
-               displayDate = new Date(t.created_at).toLocaleString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-             }
-          } catch (dateErr) {
-            console.warn("Date parsing error:", dateErr);
-          }
-
-          return {
-            transaction_id: t.transaction_id,
-            id: String(t.transaction_id || Math.random()),
-            type: t.description || t.transaction_type || "Transaction",
-            transaction_type: t.transaction_type || "Unknown",
-            description: t.description || "",
-            amount: parseFloat(t.amount) || 0,
-            created_at: t.created_at || "",
-            date: displayDate,
-            status: (t.status?.toLowerCase() || "pending") as Transaction["status"],
-            category: meta.category,
-            icon: meta.icon,
-            iconType: meta.iconType,
-            iconColor: meta.iconColor,
-          };
-        });
-        setTransactions(mapped);
+      const data = await response.json();
+      if (response.ok) {
+        setTransactions(data);
       }
-    } catch (e) {
-      console.error("Failed to fetch transactions", e);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
       setRefreshing(false);
     }
   };
 
   React.useEffect(() => {
     fetchTransactions();
-
-    const onBackPress = () => {
-      router.push("/(tabs)/explore");
-      return true;
-    };
-    const subscription = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-    return () => subscription.remove();
   }, []);
 
   const onRefresh = () => {
@@ -136,42 +70,30 @@ export default function HistoryScreen() {
     fetchTransactions();
   };
 
-  const hasTransactions = transactions.length > 0;
-  const filteredTransactions =
-    activeFilter === "All"
-      ? transactions
-      : transactions.filter((t) => t.status === activeFilter.toLowerCase());
+  React.useEffect(() => {
+    const onBackPress = () => {
+      router.push("/(tabs)/explore");
+      return true;
+    };
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      onBackPress,
+    );
+
+    return () => subscription.remove();
+  }, []);
 
   const handleBackPress = () => {
     router.push("/(tabs)/explore");
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "success": return "#4CAF50";
-      case "pending": return "#FF9800";
-      case "failed": return "#F44336";
-      default: return "#999";
-    }
-  };
-
-  const getTransactionUI = (type: string) => {
-    switch (type) {
-      case "Wallet_Credit":
-        return { icon: "wallet", color: "#4CAF50", label: "Money Added", isCredit: true };
-      case "Wallet_Debit":
-        return { icon: "bank-transfer-out", color: "#F44336", label: "Money Withdrawn", isCredit: false };
-      case "Recharge":
-        return { icon: "phone-portrait", color: "#2196F3", label: "Mobile Recharge", isCredit: false };
-      default:
-        return { icon: "receipt", color: "#9C27B0", label: type, isCredit: false };
-    }
-  };
-
   const renderEmptyState = () => (
     <View style={styles.emptyStateContainer}>
+      {/* Illustration */}
       <View style={styles.illustrationContainer}>
         <View style={styles.illustrationCircle}>
+          {/* Clipboard */}
           <View style={styles.clipboard}>
             <View style={styles.clipboardClip} />
             <View style={styles.clipboardContent}>
@@ -185,23 +107,50 @@ export default function HistoryScreen() {
               </View>
             </View>
           </View>
+
+          {/* Coins Stack - Left */}
           <View style={styles.coinsStackLeft}>
             <View style={[styles.coin, { bottom: 0, left: 0 }]} />
             <View style={[styles.coin, { bottom: 8, left: 2 }]} />
             <View style={[styles.coin, { bottom: 16, left: 4 }]} />
           </View>
+
+          {/* Coins Stack - Right Bottom */}
           <View style={styles.coinsStackRight}>
             <View style={[styles.coin, { bottom: 0, right: 0 }]} />
             <View style={[styles.coin, { bottom: 6, right: 3 }]} />
           </View>
+
+          {/* Magnifying Glass */}
+          <View style={styles.magnifyingGlass}>
+            <View style={styles.magnifyingLens} />
+            <View style={styles.magnifyingHandle} />
+          </View>
+
+          {/* Hourglass */}
+          <View style={styles.hourglass}>
+            <View style={styles.hourglassTop} />
+            <View style={styles.hourglassMiddle} />
+            <View style={styles.hourglassBottom} />
+          </View>
+
+          {/* Sparkles */}
           <View style={[styles.sparkle, { top: 20, left: 30 }]}>
             <Ionicons name="sparkles" size={20} color="#FFD700" />
           </View>
           <View style={[styles.sparkle, { top: 40, right: 40 }]}>
             <Ionicons name="sparkles" size={16} color="#FFD700" />
           </View>
+          <View style={[styles.sparkle, { bottom: 60, left: 50 }]}>
+            <Ionicons name="sparkles" size={14} color="#FFD700" />
+          </View>
+          <View style={[styles.sparkle, { bottom: 40, right: 30 }]}>
+            <Ionicons name="sparkles" size={18} color="#FFD700" />
+          </View>
         </View>
       </View>
+
+      {/* Text Content */}
       <View style={styles.emptyTextContainer}>
         <Text style={styles.emptyTitle}>No Transactions Yet</Text>
         <Text style={styles.emptyDescription}>
@@ -209,6 +158,8 @@ export default function HistoryScreen() {
           once you start recharging & paying bills.
         </Text>
       </View>
+
+      {/* CTA Button */}
       <TouchableOpacity
         style={styles.ctaButton}
         onPress={() => router.push("/(tabs)/explore")}
@@ -218,10 +169,72 @@ export default function HistoryScreen() {
     </View>
   );
 
-  const renderTransactionItem = (transaction: Transaction) => {
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "success":
+        return "#4CAF50";
+      case "pending":
+        return "#FF9800";
+      case "failed":
+        return "#F44336";
+      default:
+        return "#999";
+    }
+  };
+
+  const getTransactionUI = (type: string) => {
+    switch (type) {
+      case "Wallet_Credit":
+        return {
+          icon: "wallet",
+          color: "#4CAF50",
+          label: "Money Added",
+          isCredit: true,
+        };
+      case "Wallet_Debit":
+        return {
+          icon: "bank-transfer-out",
+          color: "#F44336",
+          label: "Money Withdrawn",
+          isCredit: false,
+        };
+      case "Recharge":
+        return {
+          icon: "phone-portrait",
+          color: "#2196F3",
+          label: "Mobile Recharge",
+          isCredit: false,
+        };
+      default:
+        return {
+          icon: "receipt",
+          color: "#9C27B0",
+          label: type,
+          isCredit: false,
+        };
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }) + " • " + date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
+  const renderTransactionItem = (transaction: Transaction, index: number) => {
     const ui = getTransactionUI(transaction.transaction_type);
     return (
-      <TouchableOpacity key={transaction.id} style={styles.transactionCard}>
+      <TouchableOpacity
+        key={transaction.transaction_id || `txn-${index}`}
+        style={styles.transactionCard}
+      >
         <View style={styles.transactionLeft}>
           <View
             style={[
@@ -245,7 +258,7 @@ export default function HistoryScreen() {
           </View>
           <View style={styles.transactionDetails}>
             <Text style={styles.transactionType}>{ui.label}</Text>
-            <Text style={styles.transactionDate}>{transaction.date}</Text>
+            <Text style={styles.transactionDate}>{formatDate(transaction.created_at)}</Text>
             <Text style={styles.transactionDesc} numberOfLines={1}>{transaction.description}</Text>
           </View>
         </View>
@@ -269,7 +282,7 @@ export default function HistoryScreen() {
                 { color: getStatusColor(transaction.status) },
               ]}
             >
-              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+              {transaction.status}
             </Text>
           </View>
         </View>
@@ -279,36 +292,30 @@ export default function HistoryScreen() {
 
   const renderTransactionsList = () => (
     <View style={styles.transactionsContainer}>
+      {/* Filter Tabs */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filterContainer}
         contentContainerStyle={styles.filterContent}
       >
-        {["All", "Success", "Pending", "Failed"].map((filter) => (
+        {["All", "Success", "Pending", "Failed"].map((f) => (
           <TouchableOpacity
-            key={filter}
-            style={[styles.filterTab, activeFilter === filter && styles.filterTabActive]}
-            onPress={() => setActiveFilter(filter)}
+            key={f}
+            style={[styles.filterTab, filter === f && styles.filterTabActive]}
+            onPress={() => setFilter(f)}
           >
-            <Text
-              style={activeFilter === filter ? styles.filterTabTextActive : styles.filterTabText}
-            >
-              {filter}
-            </Text>
+            <Text style={filter === f ? styles.filterTabTextActive : styles.filterTabText}>{f}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
+      {/* Transactions List */}
       <View style={styles.transactionsList}>
         <Text style={styles.transactionsSectionTitle}>Recent Transactions</Text>
-        {filteredTransactions.length > 0 ? (
-          filteredTransactions.map((transaction) => renderTransactionItem(transaction))
-        ) : (
-          <Text style={{ textAlign: "center", color: "#999", marginTop: 20 }}>
-            No transactions found for "{activeFilter}" filter.
-          </Text>
-        )}
+        {transactions
+          .filter(t => filter === "All" || t.status.toLowerCase() === filter.toLowerCase())
+          .map((transaction, index) => renderTransactionItem(transaction, index))}
       </View>
     </View>
   );
@@ -318,24 +325,31 @@ export default function HistoryScreen() {
       <StatusBar style="dark" />
 
       <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
         <LinearGradient
           colors={["#E1F5FE", "#B3E5FC", "#81D4FA", "#4FC3F7"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 4, y: 4 }}
           style={styles.header}
         >
+          {/* Decorative Wave */}
           <View style={styles.decorativeWave} />
+
           <View style={styles.headerContent}>
-            <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBackPress}
+            >
               <Ionicons name="arrow-back" size={24} color="#0D47A1" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Transaction History</Text>
-            <TouchableOpacity style={styles.filterButton} onPress={fetchTransactions}>
-              <Ionicons name="refresh-outline" size={24} color="#0D47A1" />
+            <TouchableOpacity style={styles.filterButton}>
+              <Ionicons name="filter-outline" size={24} color="#0D47A1" />
             </TouchableOpacity>
           </View>
         </LinearGradient>
 
+        {/* Content */}
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -343,18 +357,16 @@ export default function HistoryScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
         >
-          {isLoading ? (
-            <View style={{ alignItems: "center", justifyContent: "center", paddingTop: 80 }}>
-              <ActivityIndicator size="large" color="#2196F3" />
-              <Text style={{ color: "#999", marginTop: 12 }}>Loading transactions...</Text>
+          {loading ? (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingTop: 100 }}>
+              <ActivityIndicator size="large" color="#0D47A1" />
             </View>
-          ) : hasTransactions ? (
-            renderTransactionsList()
           ) : (
-            renderEmptyState()
+            transactions.length > 0 ? renderTransactionsList() : renderEmptyState()
           )}
         </ScrollView>
 
+        {/* Bottom Navigation - Matching home screen */}
         <View style={styles.bottomNav}>
           <TouchableOpacity
             style={styles.navItem}
@@ -366,7 +378,7 @@ export default function HistoryScreen() {
 
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push("/(tabs)/mymoney")}
+            onPress={() => router.push("/mymoney")}
           >
             <Ionicons name="wallet-outline" size={24} color="#999" />
             <Text style={styles.navText}>My Money</Text>
@@ -374,10 +386,12 @@ export default function HistoryScreen() {
 
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => router.push("/(tabs)/transactions")}
+            onPress={() => router.push("/transactions")}
           >
             <Ionicons name="time-outline" size={24} color="#2196F3" />
-            <Text style={[styles.navText, styles.navTextActive]}>Transactions</Text>
+            <Text style={[styles.navText, styles.navTextActive]}>
+              Transactions
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -394,8 +408,15 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F8F8F8" },
-  safeArea: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: "#F8F8F8",
+  },
+
+  safeArea: {
+    flex: 1,
+  },
+
   header: {
     paddingTop: 10,
     paddingBottom: 5,
@@ -406,6 +427,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     zIndex: 10,
   },
+
   decorativeWave: {
     position: "absolute",
     width: 250,
@@ -415,26 +437,38 @@ const styles = StyleSheet.create({
     top: -80,
     right: -80,
   },
+
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 60, // Increased padding
     paddingBottom: 15,
     zIndex: 1,
   },
-  backButton: { padding: 5 },
+
+  backButton: {
+    padding: 5,
+  },
+
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#0D47A1",
     letterSpacing: 0.3,
   },
-  filterButton: { padding: 5 },
-  scrollContent: { flexGrow: 1, paddingBottom: 20 },
 
-  // Empty State
+  filterButton: {
+    padding: 5,
+  },
+
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+
+  // Empty State Styles
   emptyStateContainer: {
     flex: 1,
     alignItems: "center",
@@ -442,7 +476,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingVertical: 40,
   },
-  illustrationContainer: { marginBottom: 30, alignItems: "center", justifyContent: "center" },
+
+  illustrationContainer: {
+    marginBottom: 30,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   illustrationCircle: {
     width: 280,
     height: 280,
@@ -452,6 +492,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
   },
+
   clipboard: {
     width: 120,
     height: 150,
@@ -466,10 +507,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+
   clipboardClip: {
     position: "absolute",
     top: -8,
-    left: "50%" as any,
+    left: "50%",
     marginLeft: -20,
     width: 40,
     height: 16,
@@ -478,7 +520,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#90CAF9",
   },
-  clipboardContent: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 15 },
+
+  clipboardContent: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 15,
+  },
+
   rupeeCircle: {
     width: 50,
     height: 50,
@@ -488,11 +537,36 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 15,
   },
-  rupeeSymbol: { fontSize: 24, fontWeight: "bold", color: "#0D47A1" },
-  clipboardLines: { gap: 8 },
-  clipboardLine: { width: 60, height: 4, backgroundColor: "#BBDEFB", borderRadius: 2 },
-  coinsStackLeft: { position: "absolute", bottom: 30, left: 20 },
-  coinsStackRight: { position: "absolute", bottom: 30, right: 30 },
+
+  rupeeSymbol: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#0D47A1",
+  },
+
+  clipboardLines: {
+    gap: 8,
+  },
+
+  clipboardLine: {
+    width: 60,
+    height: 4,
+    backgroundColor: "#BBDEFB",
+    borderRadius: 2,
+  },
+
+  coinsStackLeft: {
+    position: "absolute",
+    bottom: 30,
+    left: 20,
+  },
+
+  coinsStackRight: {
+    position: "absolute",
+    bottom: 30,
+    right: 30,
+  },
+
   coin: {
     position: "absolute",
     width: 35,
@@ -504,8 +578,76 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sparkle: { position: "absolute" },
-  emptyTextContainer: { alignItems: "center", marginBottom: 30 },
+
+  magnifyingGlass: {
+    position: "absolute",
+    right: 15,
+    top: 60,
+  },
+
+  magnifyingLens: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 4,
+    borderColor: "#2196F3",
+    backgroundColor: "rgba(255, 255, 255, 0.3)",
+  },
+
+  magnifyingHandle: {
+    position: "absolute",
+    bottom: -15,
+    right: -5,
+    width: 4,
+    height: 20,
+    backgroundColor: "#2196F3",
+    transform: [{ rotate: "45deg" }],
+    borderRadius: 2,
+  },
+
+  hourglass: {
+    position: "absolute",
+    right: 25,
+    bottom: 50,
+    alignItems: "center",
+  },
+
+  hourglassTop: {
+    width: 20,
+    height: 15,
+    backgroundColor: "#BBDEFB",
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+    borderWidth: 2,
+    borderColor: "#2196F3",
+  },
+
+  hourglassMiddle: {
+    width: 8,
+    height: 6,
+    backgroundColor: "#2196F3",
+    marginVertical: -2,
+  },
+
+  hourglassBottom: {
+    width: 20,
+    height: 15,
+    backgroundColor: "#BBDEFB",
+    borderBottomLeftRadius: 3,
+    borderBottomRightRadius: 3,
+    borderWidth: 2,
+    borderColor: "#2196F3",
+  },
+
+  sparkle: {
+    position: "absolute",
+  },
+
+  emptyTextContainer: {
+    alignItems: "center",
+    marginBottom: 30,
+  },
+
   emptyTitle: {
     fontSize: 24,
     fontWeight: "bold",
@@ -513,6 +655,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     letterSpacing: 0.3,
   },
+
   emptyDescription: {
     fontSize: 14,
     color: "#666",
@@ -520,6 +663,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     paddingHorizontal: 10,
   },
+
   ctaButton: {
     backgroundColor: "#2196F3",
     paddingVertical: 16,
@@ -531,6 +675,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
+
   ctaButtonText: {
     fontSize: 16,
     fontWeight: "bold",
@@ -538,10 +683,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // Transactions List
-  transactionsContainer: { flex: 1, paddingTop: 10 },
-  filterContainer: { maxHeight: 50, marginBottom: 15 },
-  filterContent: { paddingHorizontal: 20, gap: 10 },
+  // Transactions List Styles
+  transactionsContainer: {
+    flex: 1,
+    paddingTop: 10,
+  },
+
+  filterContainer: {
+    maxHeight: 50,
+    marginBottom: 15,
+  },
+
+  filterContent: {
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+
   filterTab: {
     paddingVertical: 8,
     paddingHorizontal: 20,
@@ -550,10 +707,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E0E0E0",
   },
-  filterTabActive: { backgroundColor: "#2196F3", borderColor: "#2196F3" },
-  filterTabText: { fontSize: 14, color: "#666", fontWeight: "500" },
-  filterTabTextActive: { fontSize: 14, color: "#FFFFFF", fontWeight: "bold" },
-  transactionsList: { paddingHorizontal: 20 },
+
+  filterTabActive: {
+    backgroundColor: "#2196F3",
+    borderColor: "#2196F3",
+  },
+
+  filterTabText: {
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "500",
+  },
+
+  filterTabTextActive: {
+    fontSize: 14,
+    color: "#0D47A1",
+    fontWeight: "bold",
+  },
+
+  transactionsList: {
+    paddingHorizontal: 20,
+  },
+
   transactionsSectionTitle: {
     fontSize: 16,
     fontWeight: "bold",
@@ -561,6 +736,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     letterSpacing: 0.3,
   },
+
   transactionCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -575,7 +751,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  transactionLeft: { flexDirection: "row", alignItems: "center", flex: 1 },
+
+  transactionLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+
   transactionIcon: {
     width: 48,
     height: 48,
@@ -584,35 +766,52 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 12,
   },
-  transactionDetails: { flex: 1 },
+
+  transactionDetails: {
+    flex: 1,
+  },
+
   transactionType: {
     fontSize: 15,
     fontWeight: "600",
     color: "#1A1A1A",
     marginBottom: 4,
   },
+
   transactionDate: {
     fontSize: 11,
     color: "#64748B",
     marginBottom: 2,
   },
+
   transactionDesc: {
     fontSize: 12,
     color: "#94A3B8",
   },
+
   transactionRight: {
     alignItems: "flex-end",
   },
+
   transactionAmount: {
     fontSize: 16,
     fontWeight: "bold",
     color: "#1A1A1A",
     marginBottom: 6,
   },
-  statusBadge: { paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12 },
-  statusText: { fontSize: 11, fontWeight: "600" },
 
-  // Bottom Nav
+  statusBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+  },
+
+  statusText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+
+  // Bottom Navigation - Matching home screen
   bottomNav: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
@@ -625,7 +824,22 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-  navItem: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4 },
-  navText: { fontSize: 12, color: "#999", fontWeight: "500" },
-  navTextActive: { color: "#2196F3", fontWeight: "bold" },
+
+  navItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+
+  navText: {
+    fontSize: 12,
+    color: "#999",
+    fontWeight: "500",
+  },
+
+  navTextActive: {
+    color: "#2196F3",
+    fontWeight: "600",
+  },
 });

@@ -193,7 +193,7 @@ const EducationFeesScreen = () => {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "education",
+                    billType: "Education Fees",
                     borrowerName: feeDetails?.studentName,
                     loanAccountNumber: feeDetails?.studentId,
                     lenderName: selectedInstitution,

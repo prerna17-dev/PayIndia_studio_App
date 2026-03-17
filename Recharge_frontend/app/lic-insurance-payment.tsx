@@ -201,7 +201,7 @@ export default function LicInsurancePaymentScreen() {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "insurance",
+                    billType: "Lic Insurance Payment",
                     borrowerName: policyDetails?.policyHolderName,
                     loanAccountNumber: policyDetails?.policyNumber,
                     lenderName: selectedInsurer,

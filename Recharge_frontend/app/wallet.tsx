@@ -29,7 +29,7 @@ export default function WalletScreen() {
   const params = useLocalSearchParams();
 
   // Payment related params
-  const { amount, billType, consumerNumber, lenderName, policyNumber, borrowerName, loanAccountNumber } = params;
+  const { amount, billType, consumerNumber, lenderName, policyNumber, borrowerName, loanAccountNumber, mobileNumber, operatorName } = params;
   const isPaymentFlow = !!amount;
 
   // State
@@ -350,6 +350,12 @@ export default function WalletScreen() {
                     <Text style={styles.confirmValue}>{lenderName}</Text>
                   </View>
                 )}
+                {operatorName && (
+                  <View style={styles.confirmRow}>
+                    <Text style={styles.confirmLabel}>Operator</Text>
+                    <Text style={styles.confirmValue}>{operatorName}</Text>
+                  </View>
+                )}
                 {consumerNumber && (
                   <View style={styles.confirmRow}>
                     <Text style={styles.confirmLabel}>Consumer No.</Text>
@@ -364,8 +370,14 @@ export default function WalletScreen() {
                 )}
                 {loanAccountNumber && (
                   <View style={styles.confirmRow}>
-                    <Text style={styles.confirmLabel}>Loan Acc No.</Text>
+                    <Text style={styles.confirmLabel}>{String(billType).includes("Credit Card") ? "Card Number" : String(billType).includes("FASTag") ? "Vehicle No." : String(billType).includes("Broadband") ? "Account ID" : String(billType).includes("Landline") ? "Phone Number" : String(billType).includes("Postpaid") ? "Mobile Number" : String(billType).includes("Cable") ? "Subscriber ID" : "Loan Acc No."}</Text>
                     <Text style={styles.confirmValue}>{loanAccountNumber}</Text>
+                  </View>
+                )}
+                {mobileNumber && (
+                  <View style={styles.confirmRow}>
+                    <Text style={styles.confirmLabel}>Mobile No.</Text>
+                    <Text style={styles.confirmValue}>{mobileNumber}</Text>
                   </View>
                 )}
                 <View style={styles.totalRow}>
@@ -826,7 +838,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 50,
+    paddingTop: 60, // Increased padding
     paddingBottom: 15,
     zIndex: 1,
   },
@@ -1180,11 +1192,14 @@ const styles = StyleSheet.create({
   confirmLabel: {
     fontSize: 14,
     color: "#64748B",
+    flex: 1,
   },
   confirmValue: {
     fontSize: 14,
     fontWeight: "600",
     color: "#1A1A1A",
+    flex: 1.5,
+    textAlign: "right",
   },
   totalRow: {
     flexDirection: "row",

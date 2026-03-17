@@ -4,7 +4,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -22,7 +21,6 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
-    mimeType?: string;
 }
 
 interface FormDataType {
@@ -181,8 +179,7 @@ export default function NewNonCreamyLayerScreen() {
                     [docType]: {
                         name: asset.name,
                         size: asset.size,
-                        uri: asset.uri,
-                        mimeType: asset.mimeType
+                        uri: asset.uri
                     }
                 }));
             }
@@ -246,92 +243,18 @@ export default function NewNonCreamyLayerScreen() {
                 setCurrentStep(3);
             }
         } else {
-            const submitApplication = async () => {
-                setIsSubmitting(true);
-                try {
-                    const formDataObj = new FormData();
+            if (!formData.finalConfirmation) {
+                Alert.alert("Confirmation", "Please confirm that all details are accurate");
+                return;
+            }
 
-                    // Applicant Details
-                    formDataObj.append('full_name', formData.fullName);
-                    formDataObj.append('aadhaar_number', formData.aadhaarNumber);
-                    formDataObj.append('dob', formData.dob);
-                    formDataObj.append('gender', formData.gender);
-                    formDataObj.append('mobile_number', formData.mobileNumber);
-                    formDataObj.append('email', formData.email || "");
-
-                    // Caste Details
-                    formDataObj.append('category', formData.category);
-                    formDataObj.append('sub_caste', formData.subCaste);
-                    formDataObj.append('caste_cert_number', formData.casteCertNumber);
-                    formDataObj.append('issuing_authority', formData.issuingAuthority);
-                    formDataObj.append('issue_date', formData.issueDate);
-
-                    // Family Income
-                    formDataObj.append('father_name', formData.fatherName);
-                    formDataObj.append('mother_name', formData.motherName);
-                    formDataObj.append('parent_occupation', formData.parentOccupation);
-                    formDataObj.append('income_year1', formData.incomeYear1);
-                    formDataObj.append('income_year2', formData.incomeYear2);
-                    formDataObj.append('income_year3', formData.incomeYear3);
-                    formDataObj.append('income_source', formData.incomeSource);
-
-                    // Status Details
-                    formDataObj.append('marital_status', formData.maritalStatus);
-                    formDataObj.append('caste_before_marriage', formData.casteBeforeMarriage || "");
-                    formDataObj.append('husband_name', formData.husbandName || "");
-                    formDataObj.append('marriage_reg_details', formData.marriageRegDetails || "");
-                    formDataObj.append('gazette_name_change', formData.gazetteNameChange || "");
-
-                    // Migrant Details
-                    formDataObj.append('is_migrant', formData.isMigrant);
-                    formDataObj.append('previous_state', formData.previousState || "");
-                    formDataObj.append('previous_district', formData.previousDistrict || "");
-
-                    // Documents
-                    const docMapping: Record<string, string> = {
-                        idProof: 'id_proof',
-                        addressProof: 'address_proof',
-                        casteCert: 'caste_cert',
-                        incomeProofYear1: 'income_proof_year1',
-                        incomeProofYear2: 'income_proof_year2',
-                        incomeProofYear3: 'income_proof_year3',
-                        photo: 'photo',
-                        schoolLeaving: 'school_leaving',
-                        casteAffidavit: 'caste_affidavit',
-                        preMarriageCaste: 'pre_marriage_caste',
-                        marriageCert: 'marriage_cert',
-                        gazetteCopy: 'gazette_copy',
-                        fatherCasteCert: 'father_caste_cert'
-                    };
-
-                    Object.keys(docMapping).forEach(key => {
-                        const doc = documents[key as keyof DocumentsState];
-                        if (doc) {
-                            formDataObj.append(docMapping[key], {
-                                uri: doc.uri,
-                                name: doc.name,
-                                type: doc.mimeType || 'application/octet-stream',
-                            } as any);
-                        }
-                    });
-
-                    const response = await api.post('/certificate/ncl/apply', formDataObj);
-
-                    if (response.data.success) {
-                        setApplicationId(response.data.data.reference_id);
-                        setIsSubmitted(true);
-                    } else {
-                        Alert.alert("Error", response.data.message || "Submission failed");
-                    }
-                } catch (error: any) {
-                    console.error("NCL application error:", error);
-                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
-                } finally {
-                    setIsSubmitting(false);
-                }
-            };
-
-            submitApplication();
+            setIsSubmitting(true);
+            setTimeout(() => {
+                const refId = "NCL" + Math.random().toString(36).substr(2, 9).toUpperCase();
+                setApplicationId(refId);
+                setIsSubmitting(false);
+                setIsSubmitted(true);
+            }, 2000);
         }
     };
 

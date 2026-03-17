@@ -3,7 +3,6 @@ import * as DocumentPicker from "expo-document-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import api from "../services/api";
 import React, { useEffect, useState } from "react";
 import {
     Alert,
@@ -22,7 +21,6 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
-    mimeType?: string;
 }
 
 interface FormDataType {
@@ -136,8 +134,7 @@ export default function NewFerfarApplicationScreen() {
                     [docType]: {
                         name: asset.name,
                         size: asset.size,
-                        uri: asset.uri,
-                        mimeType: asset.mimeType
+                        uri: asset.uri
                     }
                 }));
             }
@@ -196,67 +193,14 @@ export default function NewFerfarApplicationScreen() {
         }
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         setIsSubmitting(true);
-        try {
-            const formDataToSend = new FormData();
-
-            // Applicant & Land Details
-            formDataToSend.append("full_name", formData.fullName);
-            formDataToSend.append("aadhaar_number", formData.aadhaarNumber);
-            formDataToSend.append("mobile_number", formData.mobileNumber);
-            formDataToSend.append("district", formData.district);
-            formDataToSend.append("taluka", formData.taluka);
-            formDataToSend.append("village", formData.village);
-            formDataToSend.append("survey_number", formData.surveyNumber);
-            formDataToSend.append("mutation_type", formData.mutationType);
-
-            // Documents
-            if (documents.aadhaarCard) {
-                formDataToSend.append("aadhaar_card", {
-                    uri: documents.aadhaarCard.uri,
-                    name: documents.aadhaarCard.name,
-                    type: documents.aadhaarCard.mimeType || "application/octet-stream",
-                } as any);
-            }
-            if (documents.saleDeed) {
-                formDataToSend.append("index_2", {
-                    uri: documents.saleDeed.uri,
-                    name: documents.saleDeed.name,
-                    type: documents.saleDeed.mimeType || "application/octet-stream",
-                } as any);
-            }
-            if (documents.legalDoc) {
-                formDataToSend.append("death_cert", {
-                    uri: documents.legalDoc.uri,
-                    name: documents.legalDoc.name,
-                    type: documents.legalDoc.mimeType || "application/octet-stream",
-                } as any);
-            }
-            if (documents.prev712) {
-                formDataToSend.append("ferfar_cert", {
-                    uri: documents.prev712.uri,
-                    name: documents.prev712.name,
-                    type: documents.prev712.mimeType || "application/octet-stream",
-                } as any);
-            }
-
-            const response = await api.post("/certificate/land/ferfar/apply", formDataToSend, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            if (response.data.success) {
-                setApplicationId(response.data.data.reference_id || response.data.data.applicationId);
-                setIsSubmitted(true);
-            } else {
-                Alert.alert("Error", response.data.message || "Submission failed");
-            }
-        } catch (error: any) {
-            console.error("Ferfar submission error:", error);
-            Alert.alert("Error", error.response?.data?.message || "Failed to submit. Please try again.");
-        } finally {
+        setTimeout(() => {
+            const id = "FRF" + Math.floor(Math.random() * 90000000 + 10000000);
+            setApplicationId(id);
             setIsSubmitting(false);
-        }
+            setIsSubmitted(true);
+        }, 2000);
     };
 
     const handleBack = () => {

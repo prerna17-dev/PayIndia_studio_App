@@ -1,7 +1,11 @@
 {
   "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
     "@react-navigation/native": "^7.1.28",
     "expo": "^55.0.4",
+    "expo-document-picker": "~55.0.8",
+    "react": "^19.2.0",
+    "react-native": "^0.83.2",
     "react-native-document-picker": "^9.3.1"
   }
 }

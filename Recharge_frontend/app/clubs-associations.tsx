@@ -167,7 +167,7 @@ const ClubsAssociationsScreen = () => {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "clubs",
+                    billType: "Clubs Associations",
                     borrowerName: duesDetails?.memberName,
                     loanAccountNumber: duesDetails?.membershipId,
                     lenderName: selectedClub,

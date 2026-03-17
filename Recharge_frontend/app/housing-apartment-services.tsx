@@ -161,7 +161,7 @@ const HousingApartmentServicesScreen = () => {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "housing",
+                    billType: "Housing Apartment Services",
                     borrowerName: duesDetails?.residentName,
                     loanAccountNumber: duesDetails?.flatNumber,
                     lenderName: selectedSociety,

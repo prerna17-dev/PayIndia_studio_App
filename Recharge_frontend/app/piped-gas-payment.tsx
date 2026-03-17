@@ -179,7 +179,7 @@ export default function PipedGasPaymentScreen() {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "gas",
+                    billType: "Piped Gas Payment",
                     borrowerName: billDetails?.consumerName,
                     loanAccountNumber: billDetails?.consumerNumber,
                     lenderName: selectedProvider,

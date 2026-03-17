@@ -1,12 +1,15 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
+    BackHandler,
     Modal,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -14,13 +17,13 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    KeyboardAvoidingView,
 } from 'react-native';
 
 interface Issuer {
     id: string;
     name: string;
-    logo: string;
-    category: string;
+    icon: string;
 }
 
 interface TagDetails {
@@ -33,67 +36,80 @@ interface TagDetails {
     registeredMobile: string;
 }
 
+const popularIssuers: Issuer[] = [
+    { id: 'sbi', name: 'SBI FASTag', icon: 'bank' },
+    { id: 'hdfc', name: 'HDFC Bank', icon: 'bank-outline' },
+    { id: 'icici', name: 'ICICI Bank', icon: 'bank-transfer' },
+    { id: 'axis', name: 'Axis Bank', icon: 'shield-check-outline' },
+    { id: 'paytm', name: 'Paytm FASTag', icon: 'credit-card-outline' },
+    { id: 'kotak', name: 'Kotak Bank', icon: 'card-account-details-outline' },
+];
+
+const allIssuers = [
+    // Public Sector
+    "State Bank of India (SBI)", "Bank of Baroda", "Punjab National Bank", "Union Bank of India",
+    "Canara Bank", "Indian Bank", "Central Bank of India", "Bank of Maharashtra",
+    "UCO Bank", "Indian Overseas Bank", "Punjab & Sind Bank",
+    // Private Sector
+    "HDFC Bank", "ICICI Bank", "Axis Bank", "Kotak Mahindra Bank",
+    "IDFC First Bank", "IndusInd Bank", "Yes Bank", "Federal Bank",
+    "South Indian Bank", "Karur Vysya Bank", "City Union Bank",
+    // Payment Banks
+    "Paytm Payments Bank", "Airtel Payments Bank", "India Post Payments Bank (IPPB)",
+    "Fino Payments Bank",
+    // Other
+    "Equitas Small Finance Bank", "AU Small Finance Bank", "IDBI Bank", "Saraswat Bank",
+];
+
+const quickAmounts = ['500', '1000', '1500', '2000'];
+
 export default function FASTagScreen() {
     const router = useRouter();
 
-    // State
+    // Form states
     const [selectedIssuer, setSelectedIssuer] = useState<Issuer | null>(null);
-    const [showIssuerModal, setShowIssuerModal] = useState(false);
     const [vehicleNumber, setVehicleNumber] = useState('');
     const [mobileNumber, setMobileNumber] = useState('');
     const [isFetching, setIsFetching] = useState(false);
     const [tagDetails, setTagDetails] = useState<TagDetails | null>(null);
     const [rechargeAmount, setRechargeAmount] = useState('');
+    const [selectedPaymentMode, setSelectedPaymentMode] = useState('Wallet');
+    const [isConfirmed, setIsConfirmed] = useState(false);
 
-    // FASTag Issuer Banks (India-wide comprehensive list)
-    const fastagIssuers: Issuer[] = [
-        // Public Sector Banks
-        { id: '1', name: 'State Bank of India (SBI FASTag)', logo: '🏦', category: 'Public Sector' },
-        { id: '2', name: 'Bank of Baroda FASTag', logo: '🏦', category: 'Public Sector' },
-        { id: '3', name: 'Punjab National Bank FASTag', logo: '🏦', category: 'Public Sector' },
-        { id: '4', name: 'Union Bank of India FASTag', logo: '🏦', category: 'Public Sector' },
-        { id: '5', name: 'Canara Bank FASTag', logo: '🏦', category: 'Public Sector' },
-        { id: '6', name: 'Indian Bank FASTag', logo: '🏦', category: 'Public Sector' },
-        { id: '7', name: 'Central Bank of India FASTag', logo: '🏦', category: 'Public Sector' },
-        { id: '8', name: 'Bank of Maharashtra FASTag', logo: '🏦', category: 'Public Sector' },
-        { id: '9', name: 'UCO Bank FASTag', logo: '🏦', category: 'Public Sector' },
-        { id: '10', name: 'Indian Overseas Bank FASTag', logo: '🏦', category: 'Public Sector' },
-        { id: '11', name: 'Punjab & Sind Bank FASTag', logo: '🏦', category: 'Public Sector' },
+    // Card Details states
+    const [cardNumber, setCardNumber] = useState('');
+    const [expiryDate, setExpiryDate] = useState('');
+    const [cvv, setCvv] = useState('');
+    const [cardHolder, setCardHolder] = useState('');
 
-        // Private Sector Banks
-        { id: '12', name: 'HDFC Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '13', name: 'ICICI Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '14', name: 'Axis Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '15', name: 'Kotak Mahindra Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '16', name: 'IDFC First Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '17', name: 'IndusInd Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '18', name: 'Yes Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '19', name: 'Federal Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '20', name: 'South Indian Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '21', name: 'Karur Vysya Bank FASTag', logo: '🏦', category: 'Private Sector' },
-        { id: '22', name: 'City Union Bank FASTag', logo: '🏦', category: 'Private Sector' },
+    // Modal states
+    const [showIssuerModal, setShowIssuerModal] = useState(false);
+    const [issuerSearchQuery, setIssuerSearchQuery] = useState('');
 
-        // Payment Banks
-        { id: '23', name: 'Paytm Payments Bank FASTag', logo: '💳', category: 'Payment Banks' },
-        { id: '24', name: 'Airtel Payments Bank FASTag', logo: '💳', category: 'Payment Banks' },
-        { id: '25', name: 'India Post Payments Bank (IPPB) FASTag', logo: '💳', category: 'Payment Banks' },
-        { id: '26', name: 'Fino Payments Bank FASTag', logo: '💳', category: 'Payment Banks' },
+    // Animations
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
 
-        // NBFC / Other Issuers
-        { id: '27', name: 'Equitas Small Finance Bank FASTag', logo: '🏢', category: 'Other Issuers' },
-        { id: '28', name: 'AU Small Finance Bank FASTag', logo: '🏢', category: 'Other Issuers' },
-        { id: '29', name: 'ESAF Small Finance Bank FASTag', logo: '🏢', category: 'Other Issuers' },
-        { id: '30', name: 'LivQuik FASTag', logo: '🏢', category: 'Other Issuers' },
-        { id: '31', name: 'IDBI Bank FASTag', logo: '🏢', category: 'Other Issuers' },
-        { id: '32', name: 'Saraswat Bank FASTag', logo: '🏢', category: 'Other Issuers' },
-    ];
+    const handleBack = useCallback(() => {
+        if (tagDetails) {
+            setTagDetails(null);
+            setIsConfirmed(false);
+            setRechargeAmount('');
+            return true;
+        }
+        router.back();
+        return true;
+    }, [router, tagDetails]);
 
-    // Quick amounts
-    const quickAmounts = ['500', '1000', '1500', '2000'];
+    useFocusEffect(
+        useCallback(() => {
+            const backHandler = BackHandler.addEventListener("hardwareBackPress", handleBack);
+            return () => backHandler.remove();
+        }, [handleBack])
+    );
 
-    // Handle Vehicle Number Input (Auto uppercase and format)
+    // Handle Vehicle Number Input (Auto uppercase)
     const handleVehicleNumberChange = (text: string) => {
-        // Remove spaces and convert to uppercase
         const formatted = text.replace(/\s/g, '').toUpperCase();
         setVehicleNumber(formatted);
     };
@@ -104,90 +120,87 @@ export default function FASTagScreen() {
         return regex.test(number);
     };
 
-    // Handle Issuer Selection
-    const handleIssuerSelect = (issuer: Issuer) => {
-        setSelectedIssuer(issuer);
-        setShowIssuerModal(false);
-        setTagDetails(null);
+    const validateForm = () => {
+        return selectedIssuer && validateVehicleNumber(vehicleNumber);
     };
 
     // Fetch FASTag Details
-    const handleFetchDetails = async () => {
-        if (!selectedIssuer) {
-            Alert.alert('Select Issuer', 'Please select your FASTag issuer bank');
-            return;
-        }
-
-        if (!validateVehicleNumber(vehicleNumber)) {
-            Alert.alert('Invalid Vehicle Number', 'Please enter a valid vehicle number (e.g., MH12AB1234)');
-            return;
-        }
+    const handleFetchDetails = () => {
+        if (!validateForm()) return;
 
         setIsFetching(true);
-
-        // Simulate API call
         setTimeout(() => {
-            // Mock FASTag details
             setTagDetails({
                 vehicleNumber: vehicleNumber,
-                bankName: selectedIssuer.name,
-                availableBalance: '₹850',
+                bankName: selectedIssuer!.name,
+                availableBalance: '₹0',
                 minimumBalance: '₹100',
                 tagId: 'FAST' + Math.random().toString(36).substr(2, 9).toUpperCase(),
                 vehicleClass: 'Car/Jeep/Van',
-                registeredMobile: mobileNumber || '98765XXXXX',
+                registeredMobile: mobileNumber || 'N/A',
             });
             setIsFetching(false);
-        }, 2000);
+
+            Animated.parallel([
+                Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+                Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+            ]).start();
+        }, 1500);
     };
 
-    // Handle Quick Amount
-    const handleQuickAmount = (amount: string) => {
-        setRechargeAmount(amount);
+    // Card number formatter
+    const handleCardNumberChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = '';
+        for (let i = 0; i < cleaned.length && i < 16; i++) {
+            if (i > 0 && i % 4 === 0) formatted += ' ';
+            formatted += cleaned[i];
+        }
+        setCardNumber(formatted);
     };
 
-    // Calculate Payment
-    const calculatePayment = () => {
-        const amount = parseInt(rechargeAmount) || 0;
-        const platformFee = Math.ceil(amount * 0.01); // 1% platform fee
-        const total = amount + platformFee;
-        return { amount, platformFee, total };
+    // Expiry formatter
+    const handleExpiryChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = cleaned;
+        if (cleaned.length > 2) formatted = `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}`;
+        setExpiryDate(formatted);
+    };
+
+    // Check if card payment is ready
+    const isCardPaymentReady = () => {
+        if (!selectedPaymentMode.includes('Card (Debit') && !selectedPaymentMode.includes('Card') && selectedPaymentMode !== 'Debit Card' && selectedPaymentMode !== 'Credit Card') return true;
+        return cardNumber.replace(/\s/g, '').length === 16 && expiryDate.length === 5 && cvv.length === 3 && cardHolder.trim().length > 2;
     };
 
     // Handle Payment
     const handlePayment = () => {
-        if (!rechargeAmount || parseInt(rechargeAmount) < 100) {
-            Alert.alert('Invalid Amount', 'Minimum recharge amount is ₹100');
-            return;
-        }
+        if (!rechargeAmount || parseInt(rechargeAmount) < 100 || !isConfirmed) return;
+        if (!isCardPaymentReady()) return;
 
-        const { amount, platformFee, total } = calculatePayment();
-
-        Alert.alert(
-            'Confirm Payment',
-            `Recharge ₹${amount} to ${vehicleNumber}?\n\nPlatform Fee: ₹${platformFee}\nTotal: ₹${total}`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Pay Now',
-                    onPress: () => {
-                        // Navigate to payment or show success
-                        Alert.alert('Success! ✅', `FASTag recharged successfully!\n\nTransaction ID: ${Math.random().toString(36).substr(2, 9).toUpperCase()}`);
-                    },
+        if (selectedPaymentMode === 'Wallet') {
+            router.push({
+                pathname: "/wallet" as any,
+                params: {
+                    amount: rechargeAmount,
+                    billType: "FASTag Recharge",
+                    lenderName: tagDetails?.bankName,
+                    loanAccountNumber: tagDetails?.vehicleNumber,
+                    borrowerName: tagDetails?.vehicleNumber,
                 },
-            ]
-        );
+            });
+        } else {
+            Alert.alert("Redirecting", `Redirecting to ${selectedPaymentMode} Gateway...`);
+        }
     };
 
-    // Group issuers by category
-    const groupedIssuers = fastagIssuers.reduce((acc: { [key: string]: Issuer[] }, issuer) => {
-        const category = issuer.category;
-        if (!acc[category]) {
-            acc[category] = [];
-        }
-        acc[category].push(issuer);
-        return acc;
-    }, {});
+    const handleIssuerModalSelect = (name: string) => {
+        const found = popularIssuers.find(p => p.name === name);
+        const issuerItem = found || { id: name.toLowerCase().replace(/\s/g, ''), name, icon: 'bank' };
+        setSelectedIssuer(issuerItem);
+        setShowIssuerModal(false);
+        setTagDetails(null);
+    };
 
     return (
         <View style={styles.container}>
@@ -197,300 +210,301 @@ export default function FASTagScreen() {
             <SafeAreaView style={styles.safeArea}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                         <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>FASTag Recharge</Text>
+                    <View style={styles.headerCenter}>
+                        <Text style={styles.headerTitle}>FASTag Recharge</Text>
+                        <Text style={styles.headerSubtitle}>Instant toll recharge for all banks</Text>
+                    </View>
                     <View style={styles.placeholder} />
                 </View>
 
-                <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
-                >
-                    {/* Banner */}
-                    <View style={styles.bannerContainer}>
-                        <LinearGradient
-                            colors={['#E3F2FD', '#BBDEFB', '#90CAF9']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.banner}
-                        >
-                            <View style={styles.bannerIcon}>
-                                <Text style={styles.bannerEmoji}>🚗</Text>
-                            </View>
-                            <View style={styles.bannerContent}>
-                                <Text style={styles.bannerTitle}>FASTag Recharge</Text>
-                                <Text style={styles.bannerSubtitle}>All banks • Instant process</Text>
-                            </View>
-                        </LinearGradient>
-                    </View>
+                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+                    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
 
-                    {/* Select FASTag Issuer */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>FASTag Issuer Bank</Text>
-                        <TouchableOpacity
-                            style={styles.selectCard}
-                            onPress={() => setShowIssuerModal(true)}
-                        >
-                            {selectedIssuer ? (
-                                <View style={styles.selectedIssuer}>
-                                    <Text style={styles.issuerEmoji}>{selectedIssuer.logo}</Text>
-                                    <Text style={styles.issuerName}>{selectedIssuer.name}</Text>
-                                </View>
-                            ) : (
-                                <Text style={styles.placeholderText}>Select FASTag Issuer</Text>
-                            )}
-                            <Ionicons name="chevron-down" size={20} color="#666" />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Vehicle Number */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>Vehicle Number</Text>
-                        <View style={styles.inputCard}>
-                            <MaterialCommunityIcons name="car" size={20} color="#2196F3" />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="MH12AB1234"
-                                placeholderTextColor="#999"
-                                value={vehicleNumber}
-                                onChangeText={handleVehicleNumberChange}
-                                autoCapitalize="characters"
-                                maxLength={13}
-                            />
-                        </View>
-                        <Text style={styles.helperText}>Format: AA00AA0000 (e.g., MH12AB1234)</Text>
-                        {vehicleNumber && !validateVehicleNumber(vehicleNumber) && (
-                            <Text style={styles.errorText}>Invalid vehicle number format</Text>
-                        )}
-                    </View>
-
-                    {/* Mobile Number (Optional) */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>Registered Mobile (Optional)</Text>
-                        <View style={styles.inputCard}>
-                            <Ionicons name="call" size={20} color="#4CAF50" />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter mobile number"
-                                placeholderTextColor="#999"
-                                value={mobileNumber}
-                                onChangeText={setMobileNumber}
-                                keyboardType="phone-pad"
-                                maxLength={10}
-                            />
-                        </View>
-                    </View>
-
-                    {/* Fetch Details Button */}
-                    <View style={styles.section}>
-                        <TouchableOpacity
-                            style={[
-                                styles.fetchButton,
-                                (!selectedIssuer || !validateVehicleNumber(vehicleNumber)) && styles.fetchButtonDisabled,
-                            ]}
-                            onPress={handleFetchDetails}
-                            disabled={!selectedIssuer || !validateVehicleNumber(vehicleNumber) || isFetching}
-                        >
-                            {isFetching ? (
-                                <ActivityIndicator color="#FFFFFF" />
-                            ) : (
-                                <>
-                                    <MaterialCommunityIcons name="magnify" size={20} color="#FFFFFF" />
-                                    <Text style={styles.fetchButtonText}>Fetch FASTag Details</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* FASTag Details Card */}
-                    {tagDetails && (
-                        <>
-                            <View style={styles.tagDetailsCard}>
-                                <View style={styles.tagHeader}>
-                                    <Text style={styles.tagEmoji}>🚗</Text>
-                                    <View style={styles.tagHeaderText}>
-                                        <Text style={styles.tagVehicle}>{tagDetails.vehicleNumber}</Text>
-                                        <Text style={styles.tagBank}>{tagDetails.bankName}</Text>
-                                    </View>
-                                </View>
-
-                                <View style={styles.tagDetailsGrid}>
-                                    <View style={styles.tagDetailRow}>
-                                        <Text style={styles.tagDetailLabel}>Tag ID</Text>
-                                        <Text style={styles.tagDetailValue}>{tagDetails.tagId}</Text>
-                                    </View>
-
-                                    <View style={styles.tagDetailRow}>
-                                        <Text style={styles.tagDetailLabel}>Vehicle Class</Text>
-                                        <Text style={styles.tagDetailValue}>{tagDetails.vehicleClass}</Text>
-                                    </View>
-
-                                    <View style={styles.tagDetailRow}>
-                                        <Text style={styles.tagDetailLabel}>Registered Mobile</Text>
-                                        <Text style={styles.tagDetailValue}>{tagDetails.registeredMobile}</Text>
-                                    </View>
-
-                                    <View style={styles.balanceRow}>
-                                        <View style={styles.balanceItem}>
-                                            <Text style={styles.balanceLabel}>Available Balance</Text>
-                                            <Text style={styles.balanceValue}>{tagDetails.availableBalance}</Text>
-                                        </View>
-                                        <View style={styles.balanceItem}>
-                                            <Text style={styles.balanceLabel}>Minimum Balance</Text>
-                                            <Text style={styles.balanceMinValue}>{tagDetails.minimumBalance}</Text>
-                                        </View>
-                                    </View>
-                                </View>
-                            </View>
-
-                            {/* Recharge Amount Section */}
-                            <View style={styles.section}>
-                                <Text style={styles.sectionLabel}>Recharge Amount</Text>
-
-                                {/* Quick Amounts */}
-                                <View style={styles.quickAmounts}>
-                                    {quickAmounts.map((amount) => (
+                        {!tagDetails ? (
+                            <>
+                                {/* Popular Issuers Grid */}
+                                <Text style={styles.sectionTitle}>Select FASTag Issuer</Text>
+                                <View style={styles.grid}>
+                                    {popularIssuers.map((item) => (
                                         <TouchableOpacity
-                                            key={amount}
-                                            style={[
-                                                styles.quickAmountBtn,
-                                                rechargeAmount === amount && styles.quickAmountBtnActive,
-                                            ]}
-                                            onPress={() => handleQuickAmount(amount)}
+                                            key={item.id}
+                                            style={[styles.gridItem, selectedIssuer?.id === item.id && styles.selectedGridItem]}
+                                            onPress={() => { setSelectedIssuer(item); setTagDetails(null); }}
                                         >
-                                            <Text style={[
-                                                styles.quickAmountText,
-                                                rechargeAmount === amount && styles.quickAmountTextActive,
-                                            ]}>
-                                                ₹{amount}
-                                            </Text>
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-
-                                {/* Custom Amount */}
-                                <View style={styles.inputCard}>
-                                    <Text style={styles.currencySymbol}>₹</Text>
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Enter custom amount"
-                                        placeholderTextColor="#999"
-                                        value={rechargeAmount}
-                                        onChangeText={setRechargeAmount}
-                                        keyboardType="number-pad"
-                                    />
-                                </View>
-                                <Text style={styles.helperText}>Minimum amount: ₹100</Text>
-                            </View>
-
-                            {/* Payment Summary */}
-                            {rechargeAmount && parseInt(rechargeAmount) >= 100 && (
-                                <View style={styles.paymentSummary}>
-                                    <Text style={styles.summaryTitle}>Payment Summary</Text>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Recharge Amount</Text>
-                                        <Text style={styles.summaryValue}>₹{calculatePayment().amount}</Text>
-                                    </View>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Platform Fee (1%)</Text>
-                                        <Text style={styles.summaryValue}>₹{calculatePayment().platformFee}</Text>
-                                    </View>
-                                    <View style={styles.summaryDivider} />
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryTotalLabel}>Total Amount</Text>
-                                        <Text style={styles.summaryTotalValue}>₹{calculatePayment().total}</Text>
-                                    </View>
-                                </View>
-                            )}
-
-                            {/* Bottom Spacing */}
-                            <View style={{ height: 100 }} />
-                        </>
-                    )}
-                </ScrollView>
-
-                {/* Proceed to Pay Button */}
-                {tagDetails && rechargeAmount && (
-                    <View style={styles.bottomBar}>
-                        <TouchableOpacity
-                            style={[
-                                styles.payButton,
-                                (!rechargeAmount || parseInt(rechargeAmount) < 100) && styles.payButtonDisabled,
-                            ]}
-                            onPress={handlePayment}
-                            disabled={!rechargeAmount || parseInt(rechargeAmount) < 100}
-                        >
-                            <LinearGradient
-                                colors={rechargeAmount && parseInt(rechargeAmount) >= 100 ? ['#4CAF50', '#45A049'] : ['#E0E0E0', '#BDBDBD']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.payButtonGradient}
-                            >
-                                <Text style={styles.payButtonText}>
-                                    Proceed to Pay ₹{calculatePayment().total}
-                                </Text>
-                                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </SafeAreaView>
-
-            {/* Issuer Selection Modal */}
-            <Modal
-                visible={showIssuerModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowIssuerModal(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select FASTag Issuer</Text>
-                            <TouchableOpacity onPress={() => setShowIssuerModal(false)}>
-                                <Ionicons name="close" size={24} color="#666" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView>
-                            {Object.keys(groupedIssuers).map((category) => (
-                                <View key={category}>
-                                    <Text style={styles.categoryHeader}>{category}</Text>
-                                    {groupedIssuers[category].map((issuer: any) => (
-                                        <TouchableOpacity
-                                            key={issuer.id}
-                                            style={styles.issuerOption}
-                                            onPress={() => handleIssuerSelect(issuer)}
-                                        >
-                                            <View style={styles.issuerLeft}>
-                                                <Text style={styles.issuerLogo}>{issuer.logo}</Text>
-                                                <Text style={styles.issuerOptionName}>{issuer.name}</Text>
+                                            <View style={[styles.iconCircle, selectedIssuer?.id === item.id && styles.selectedIconCircle]}>
+                                                <MaterialCommunityIcons
+                                                    name={item.icon as any}
+                                                    size={24}
+                                                    color={selectedIssuer?.id === item.id ? "#FFFFFF" : "#0D47A1"}
+                                                />
                                             </View>
-                                            {selectedIssuer?.id === issuer.id && (
-                                                <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-                                            )}
+                                            <Text style={styles.gridLabel}>{item.name}</Text>
                                         </TouchableOpacity>
                                     ))}
                                 </View>
-                            ))}
-                        </ScrollView>
+
+                                {/* View All Providers */}
+                                <View style={styles.browseContainer}>
+                                    <TouchableOpacity style={styles.browseButton} onPress={() => setShowIssuerModal(true)}>
+                                        <Text style={styles.browseText}>View All Providers</Text>
+                                        <Ionicons name="chevron-forward" size={14} color="#0D47A1" />
+                                    </TouchableOpacity>
+                                </View>
+
+                                {/* Form Card */}
+                                <View style={styles.formCard}>
+                                    {selectedIssuer && (
+                                        <View style={[styles.fieldGroup, { marginBottom: 15 }]}>
+                                            <Text style={styles.fieldLabel}>Selected FASTag Issuer</Text>
+                                            <View style={[styles.inputContainer, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }]}>
+                                                <MaterialCommunityIcons
+                                                    name={(selectedIssuer.icon as any) || "bank"}
+                                                    size={18}
+                                                    color="#0D47A1"
+                                                />
+                                                <TextInput
+                                                    style={[styles.input, { color: '#475569' }]}
+                                                    value={selectedIssuer.name}
+                                                    editable={false}
+                                                />
+                                                <TouchableOpacity onPress={() => setSelectedIssuer(null)}>
+                                                    <Ionicons name="close-circle" size={20} color="#94A3B8" />
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    )}
+
+                                    <View style={styles.fieldGroup}>
+                                        <Text style={styles.fieldLabel}>Vehicle Number *</Text>
+                                        <View style={styles.inputContainer}>
+                                            <MaterialCommunityIcons name="car" size={16} color="#94A3B8" />
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="e.g. MH12AB1234"
+                                                placeholderTextColor="#94A3B8"
+                                                autoCapitalize="characters"
+                                                maxLength={13}
+                                                value={vehicleNumber}
+                                                onChangeText={handleVehicleNumberChange}
+                                            />
+                                        </View>
+                                        {vehicleNumber.length > 0 && !validateVehicleNumber(vehicleNumber) && (
+                                            <Text style={styles.errorText}>Invalid format (e.g. MH12AB1234)</Text>
+                                        )}
+                                    </View>
+
+                                    <View style={[styles.fieldGroup, { marginTop: 15 }]}>
+                                        <Text style={styles.fieldLabel}>Registered Mobile (Optional)</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="phone-portrait-outline" size={16} color="#94A3B8" />
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Enter 10 digit number"
+                                                placeholderTextColor="#94A3B8"
+                                                keyboardType="phone-pad"
+                                                maxLength={10}
+                                                value={mobileNumber}
+                                                onChangeText={setMobileNumber}
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                <TouchableOpacity onPress={handleFetchDetails} disabled={!validateForm() || isFetching} style={{ marginBottom: 30 }}>
+                                    <LinearGradient
+                                        colors={!validateForm() || isFetching ? ["#E0E0E0", "#E0E0E0"] : ["#0D47A1", "#1565C0"]}
+                                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                        style={styles.actionButton}
+                                    >
+                                        {isFetching ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.actionButtonText}>Fetch FASTag Details</Text>}
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                            <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+                                {/* FASTag Card Visualization */}
+                                <LinearGradient colors={['#0D47A1', '#1565C0', '#1976D2']} style={styles.fastagCard}>
+                                    <View style={styles.cardHeader}>
+                                        <Text style={styles.cardBankName}>{tagDetails.bankName}</Text>
+                                        <MaterialCommunityIcons name="highway" size={28} color="#FFD700" />
+                                    </View>
+                                    <View style={styles.cardVehicleContainer}>
+                                        <MaterialCommunityIcons name="car" size={22} color="rgba(255,255,255,0.7)" />
+                                        <Text style={styles.cardVehicleNumber}>{tagDetails.vehicleNumber}</Text>
+                                    </View>
+                                    <View style={styles.cardFooter}>
+                                        <View>
+                                            <Text style={styles.cardLabel}>TAG ID</Text>
+                                            <Text style={styles.cardValue}>{tagDetails.tagId}</Text>
+                                        </View>
+                                        <View style={{ alignItems: 'flex-end' }}>
+                                            <Text style={styles.cardLabel}>VEHICLE CLASS</Text>
+                                            <Text style={styles.cardValue}>{tagDetails.vehicleClass}</Text>
+                                        </View>
+                                    </View>
+                                </LinearGradient>
+
+                                {/* Balance Info */}
+                                <View style={styles.balanceBanner}>
+                                    <View style={styles.balanceItem}>
+                                        <Text style={styles.balanceLabel}>Available Balance</Text>
+                                        <Text style={styles.balanceValue}>{tagDetails.availableBalance}</Text>
+                                    </View>
+                                    <View style={styles.balanceDivider} />
+                                    <View style={styles.balanceItem}>
+                                        <Text style={styles.balanceLabel}>Min Balance</Text>
+                                        <Text style={[styles.balanceValue, { color: '#FF9800' }]}>{tagDetails.minimumBalance}</Text>
+                                    </View>
+                                </View>
+
+                                {/* Recharge Amount */}
+                                <View style={styles.summaryCard}>
+                                    <Text style={styles.sectionTitleSmall}>Recharge Amount</Text>
+                                    <View style={styles.summaryDivider} />
+
+                                    <View style={styles.quickAmounts}>
+                                        {quickAmounts.map((amt) => (
+                                            <TouchableOpacity
+                                                key={amt}
+                                                style={[styles.quickAmountChip, rechargeAmount === amt && styles.selectedQuickAmount]}
+                                                onPress={() => setRechargeAmount(amt)}
+                                            >
+                                                <Text style={[styles.quickAmountText, rechargeAmount === amt && styles.selectedQuickAmountText]}>₹{amt}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    <View style={styles.fieldGroup}>
+                                        <Text style={styles.fieldLabel}>Or Enter Custom Amount</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1E293B' }}>₹</Text>
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Min ₹100"
+                                                placeholderTextColor="#94A3B8"
+                                                keyboardType="number-pad"
+                                                value={rechargeAmount}
+                                                onChangeText={setRechargeAmount}
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                {/* Payment Mode */}
+                                <View style={styles.formCard}>
+                                    <Text style={styles.sectionTitleSmall}>Select Payment Mode</Text>
+                                    <View style={styles.paymentModes}>
+                                        {['Wallet', 'Debit Card', 'Credit Card', 'Net Banking'].map((mode) => (
+                                            <TouchableOpacity
+                                                key={mode}
+                                                style={[styles.paymentModeCard, selectedPaymentMode === mode && styles.selectedPaymentModeCard]}
+                                                onPress={() => setSelectedPaymentMode(mode)}
+                                            >
+                                                <Ionicons name={mode === 'Wallet' ? 'wallet' : 'cash-outline'} size={18} color={selectedPaymentMode === mode ? '#0D47A1' : '#64748B'} />
+                                                <Text style={[styles.paymentModeText, selectedPaymentMode === mode && styles.selectedPaymentModeText]}>{mode}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    {/* Card Details Form */}
+                                    {(selectedPaymentMode === 'Debit Card' || selectedPaymentMode === 'Credit Card') && (
+                                        <View style={styles.cardFormContainer}>
+                                            <View style={styles.fieldGroup}>
+                                                <Text style={styles.fieldLabel}>Name on Card</Text>
+                                                <View style={styles.inputContainer}>
+                                                    <Ionicons name="person-outline" size={16} color="#94A3B8" />
+                                                    <TextInput style={styles.input} placeholder="Card Holder Name" placeholderTextColor="#94A3B8" value={cardHolder} onChangeText={setCardHolder} autoCapitalize="characters" />
+                                                </View>
+                                            </View>
+                                            <View style={[styles.fieldGroup, { marginTop: 12 }]}>
+                                                <Text style={styles.fieldLabel}>Card Number</Text>
+                                                <View style={styles.inputContainer}>
+                                                    <Ionicons name="card-outline" size={16} color="#94A3B8" />
+                                                    <TextInput style={styles.input} placeholder="0000 0000 0000 0000" placeholderTextColor="#94A3B8" keyboardType="numeric" value={cardNumber} onChangeText={handleCardNumberChange} maxLength={19} />
+                                                </View>
+                                            </View>
+                                            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                                                    <Text style={styles.fieldLabel}>Expiry</Text>
+                                                    <View style={styles.inputContainer}>
+                                                        <TextInput style={[styles.input, { marginLeft: 0 }]} placeholder="MM/YY" placeholderTextColor="#94A3B8" keyboardType="numeric" value={expiryDate} onChangeText={handleExpiryChange} maxLength={5} />
+                                                    </View>
+                                                </View>
+                                                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                                                    <Text style={styles.fieldLabel}>CVV</Text>
+                                                    <View style={styles.inputContainer}>
+                                                        <TextInput style={[styles.input, { marginLeft: 0 }]} placeholder="123" placeholderTextColor="#94A3B8" keyboardType="numeric" secureTextEntry value={cvv} onChangeText={setCvv} maxLength={3} />
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    )}
+                                </View>
+
+                                <TouchableOpacity style={styles.confirmRow} onPress={() => setIsConfirmed(!isConfirmed)}>
+                                    <Ionicons name={isConfirmed ? "checkbox" : "square-outline"} size={20} color="#0D47A1" />
+                                    <Text style={styles.confirmText}>I confirm that the vehicle and FASTag details are correct and authorize this recharge.</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity onPress={handlePayment} disabled={!isConfirmed || !rechargeAmount || parseInt(rechargeAmount) < 100 || !isCardPaymentReady()} style={{ marginBottom: 40 }}>
+                                    <LinearGradient
+                                        colors={!isConfirmed || !rechargeAmount || parseInt(rechargeAmount) < 100 || !isCardPaymentReady() ? ["#E0E0E0", "#E0E0E0"] : ["#0D47A1", "#1565C0"]}
+                                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                        style={styles.actionButton}
+                                    >
+                                        <Text style={styles.actionButtonText}>
+                                            Pay ₹{parseInt(rechargeAmount) || 0}
+                                        </Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        )}
+                    </ScrollView>
+                </KeyboardAvoidingView>
+
+                {/* Issuer Selection Modal */}
+                <Modal visible={showIssuerModal} transparent animationType="slide" onRequestClose={() => setShowIssuerModal(false)}>
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Select FASTag Issuer</Text>
+                                <TouchableOpacity onPress={() => setShowIssuerModal(false)}><Ionicons name="close" size={24} color="#666" /></TouchableOpacity>
+                            </View>
+                            <View style={styles.modalSearch}>
+                                <Ionicons name="search" size={20} color="#666" />
+                                <TextInput
+                                    style={styles.modalSearchInput}
+                                    placeholder="Search Provider..."
+                                    value={issuerSearchQuery}
+                                    onChangeText={setIssuerSearchQuery}
+                                />
+                            </View>
+                            <ScrollView style={styles.optionsList}>
+                                {allIssuers.filter(b => b.toLowerCase().includes(issuerSearchQuery.toLowerCase())).map((name, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.optionItem}
+                                        onPress={() => handleIssuerModalSelect(name)}
+                                    >
+                                        <Text style={styles.optionText}>{name}</Text>
+                                        {selectedIssuer?.name === name && <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />}
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
                     </View>
-                </View>
-            </Modal>
+                </Modal>
+            </SafeAreaView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F6F9FC',
-    },
-    safeArea: {
-        flex: 1,
-    },
+    container: { flex: 1, backgroundColor: "#F5F7FA" },
+    safeArea: { flex: 1 },
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -499,422 +513,164 @@ const styles = StyleSheet.create({
         paddingTop: 50,
         paddingBottom: 20,
         backgroundColor: '#FFFFFF',
-    },
-    backButton: {
-        padding: 5,
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
-    placeholder: {
-        width: 34,
-    },
-
-    scrollContent: {
-        paddingBottom: 20,
-    },
-
-    // Banner
-    bannerContainer: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 15,
-    },
-    banner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 20,
-        borderRadius: 24,
-        gap: 15,
-        shadowColor: '#2196F3',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    bannerIcon: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    bannerEmoji: {
-        fontSize: 28,
-    },
-    bannerContent: {
-        flex: 1,
-    },
-    bannerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#0D47A1',
-        marginBottom: 4,
-    },
-    bannerSubtitle: {
-        fontSize: 13,
-        color: '#1565C0',
-        opacity: 0.9,
-    },
-
-    // Section
-    section: {
-        paddingHorizontal: 20,
-        marginBottom: 20,
-    },
-    sectionLabel: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#1A1A1A',
-        marginBottom: 10,
-    },
-
-    // Select Card
-    selectCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        padding: 18,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 4,
-    },
-    selectedIssuer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        flex: 1,
-    },
-    issuerEmoji: {
-        fontSize: 24,
-    },
-    issuerName: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#1A1A1A',
-        flex: 1,
-    },
-    placeholderText: {
-        fontSize: 16,
-        color: '#999',
-    },
-
-    // Input Card
-    inputCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        paddingHorizontal: 18,
-        paddingVertical: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 4,
-        gap: 12,
-    },
-    input: {
-        flex: 1,
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1A1A1A',
-    },
-    currencySymbol: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#666',
-    },
-    helperText: {
-        fontSize: 12,
-        color: '#999',
-        marginTop: 8,
-    },
-    errorText: {
-        fontSize: 12,
-        color: '#E53935',
-        marginTop: 8,
-    },
-
-    // Fetch Button
-    fetchButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        backgroundColor: '#2196F3',
-        paddingVertical: 16,
-        borderRadius: 24,
-        shadowColor: '#2196F3',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    fetchButtonDisabled: {
-        backgroundColor: '#E0E0E0',
-        shadowColor: '#999',
-    },
-    fetchButtonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
-
-    // Tag Details Card
-    tagDetailsCard: {
-        marginHorizontal: 20,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 4,
-    },
-    tagHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 20,
-        paddingBottom: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
+        borderBottomColor: '#F0F0F0'
     },
-    tagEmoji: {
-        fontSize: 32,
-    },
-    tagHeaderText: {
-        flex: 1,
-    },
-    tagVehicle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-        marginBottom: 4,
-    },
-    tagBank: {
-        fontSize: 13,
-        color: '#666',
-    },
-    tagDetailsGrid: {
-        gap: 14,
-    },
-    tagDetailRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    tagDetailLabel: {
-        fontSize: 14,
-        color: '#666',
-    },
-    tagDetailValue: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#1A1A1A',
-    },
-    balanceRow: {
-        flexDirection: 'row',
-        gap: 12,
-        marginTop: 10,
-        paddingTop: 15,
-        borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-    },
-    balanceItem: {
-        flex: 1,
-        backgroundColor: '#F1F8FE',
-        padding: 12,
-        borderRadius: 12,
-    },
-    balanceLabel: {
-        fontSize: 12,
-        color: '#666',
-        marginBottom: 4,
-    },
-    balanceValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#4CAF50',
-    },
-    balanceMinValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#FF9800',
-    },
+    backButton: { padding: 5 },
+    headerCenter: { flex: 1, alignItems: "center" },
+    headerTitle: { fontSize: 18, fontWeight: "bold", color: "#1A1A1A" },
+    headerSubtitle: { fontSize: 11, color: "#666", marginTop: 2 },
+    placeholder: { width: 34 },
+    scrollContent: { padding: 20 },
+    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 16 },
+    sectionTitleSmall: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 12 },
 
-    // Quick Amounts
-    quickAmounts: {
-        flexDirection: 'row',
-        gap: 10,
+    // Grid
+    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 },
+    gridItem: {
+        width: '31%',
+        alignItems: 'center',
         marginBottom: 15,
-    },
-    quickAmountBtn: {
-        flex: 1,
-        backgroundColor: '#FFFFFF',
         paddingVertical: 12,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: '#E0E0E0',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        elevation: 1,
+        borderWidth: 1,
+        borderColor: 'transparent'
+    },
+    selectedGridItem: { borderColor: '#0D47A1', backgroundColor: '#F0F7FF' },
+    iconCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        backgroundColor: '#F1F8FE',
+        justifyContent: 'center',
         alignItems: 'center',
+        marginBottom: 8
     },
-    quickAmountBtnActive: {
-        borderColor: '#2196F3',
-        backgroundColor: '#F1F8FE',
-    },
-    quickAmountText: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#666',
-    },
-    quickAmountTextActive: {
-        color: '#2196F3',
-    },
+    selectedIconCircle: { backgroundColor: '#0D47A1' },
+    gridLabel: { fontSize: 10, fontWeight: '600', color: '#1A1A1A', textAlign: 'center' },
 
-    // Payment Summary
-    paymentSummary: {
-        marginHorizontal: 20,
-        backgroundColor: '#F1F8FE',
+    // Browse
+    browseContainer: { alignItems: 'center', marginBottom: 20 },
+    browseButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#E3F2FD',
+        paddingHorizontal: 15,
+        paddingVertical: 8,
         borderRadius: 20,
-        padding: 20,
         borderWidth: 1,
         borderColor: '#BBDEFB',
-        marginBottom: 20,
+        gap: 6
     },
-    summaryTitle: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#0D47A1',
-        marginBottom: 15,
-    },
-    summaryRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
-    },
-    summaryLabel: {
-        fontSize: 14,
-        color: '#666',
-    },
-    summaryValue: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#1A1A1A',
-    },
-    summaryDivider: {
-        height: 1,
-        backgroundColor: '#BBDEFB',
-        marginVertical: 12,
-    },
-    summaryTotalLabel: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
-    summaryTotalValue: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#4CAF50',
-    },
+    browseText: { fontSize: 13, fontWeight: '700', color: '#0D47A1' },
 
-    // Bottom Bar
-    bottomBar: {
-        paddingHorizontal: 20,
-        paddingVertical: 15,
+    // Form
+    formCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, marginBottom: 20, elevation: 1 },
+    fieldGroup: { width: '100%' },
+    fieldLabel: { fontSize: 12, fontWeight: "700", color: "#64748B", marginBottom: 8 },
+    inputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F8FAFC",
+        borderRadius: 12,
+        paddingHorizontal: 15,
+        height: 52,
+        borderWidth: 1,
+        borderColor: "#E2E8F0"
+    },
+    input: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1E293B', fontWeight: '500' },
+    errorText: { fontSize: 11, color: '#D32F2F', marginTop: 6 },
+    actionButton: { height: 56, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+    actionButtonText: { fontSize: 16, fontWeight: "bold", color: "#FFFFFF" },
+
+    // FASTag Card
+    fastagCard: {
+        width: '100%',
+        height: 200,
+        borderRadius: 20,
+        padding: 25,
+        marginBottom: 20,
+        elevation: 5,
+        justifyContent: 'space-between'
+    },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    cardBankName: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+    cardVehicleContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    cardVehicleNumber: { color: '#FFFFFF', fontSize: 24, fontWeight: '700', letterSpacing: 3 },
+    cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+    cardLabel: { color: '#BBDEFB', fontSize: 9, fontWeight: 'bold', marginBottom: 4 },
+    cardValue: { color: '#FFFFFF', fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
+
+    // Balance Banner
+    balanceBanner: {
+        flexDirection: 'row',
         backgroundColor: '#FFFFFF',
-        borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 8,
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 20,
+        elevation: 1,
+        alignItems: 'center'
     },
-    payButton: {
-        borderRadius: 24,
-        overflow: 'hidden',
+    balanceItem: { flex: 1, alignItems: 'center' },
+    balanceDivider: { width: 1, height: 40, backgroundColor: '#E2E8F0' },
+    balanceLabel: { fontSize: 11, color: '#64748B', marginBottom: 6 },
+    balanceValue: { fontSize: 18, fontWeight: 'bold', color: '#4CAF50' },
+
+    // Summary Card
+    summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, marginBottom: 20, elevation: 1 },
+    summaryDivider: { height: 1, backgroundColor: '#F1F5F9', marginBottom: 15 },
+
+    // Quick Amounts
+    quickAmounts: { flexDirection: 'row', gap: 10, marginBottom: 18 },
+    quickAmountChip: {
+        flex: 1,
+        paddingVertical: 12,
+        borderRadius: 12,
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        alignItems: 'center'
     },
-    payButtonDisabled: {
-        opacity: 0.6,
-    },
-    payButtonGradient: {
+    selectedQuickAmount: { borderColor: '#0D47A1', backgroundColor: '#F0F7FF' },
+    quickAmountText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+    selectedQuickAmountText: { color: '#0D47A1' },
+
+    // Payment Modes
+    paymentModes: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    paymentModeCard: {
+        flex: 1,
+        minWidth: '45%',
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 10,
-        paddingVertical: 16,
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+        gap: 6
     },
-    payButtonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
+    selectedPaymentModeCard: { borderColor: '#0D47A1', backgroundColor: '#F0F7FF' },
+    paymentModeText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+    selectedPaymentModeText: { color: '#0D47A1' },
+
+    // Card Form
+    cardFormContainer: { marginTop: 15, padding: 16, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+
+    // Confirm
+    confirmRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 25 },
+    confirmText: { fontSize: 11, color: '#64748B', flex: 1 },
 
     // Modal
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        backgroundColor: '#FFFFFF',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        maxHeight: '80%',
-        paddingBottom: 20,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
-    categoryHeader: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        color: '#2196F3',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        backgroundColor: '#F1F8FE',
-    },
-    issuerOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    issuerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        flex: 1,
-    },
-    issuerLogo: {
-        fontSize: 24,
-    },
-    issuerOptionName: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#1A1A1A',
-        flex: 1,
-    },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '80%', paddingTop: 20 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
+    modalSearch: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 12, margin: 20, paddingHorizontal: 15, paddingVertical: 10 },
+    modalSearchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1A1A1A' },
+    optionsList: { paddingHorizontal: 20 },
+    optionItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    optionText: { fontSize: 15, color: '#1A1A1A' },
 });

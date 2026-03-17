@@ -4,7 +4,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -24,7 +23,6 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
-    mimeType?: string;
 }
 
 interface FormDataType {
@@ -146,10 +144,7 @@ export default function NewEmploymentRegistrationScreen() {
                     Alert.alert("Too Large", "Max size is 5MB");
                     return;
                 }
-                setDocuments(prev => ({ ...prev, [docType]: {
-                    ...file,
-                    mimeType: file.mimeType
-                } }));
+                setDocuments(prev => ({ ...prev, [docType]: file }));
             }
         } catch (err) { Alert.alert("Error", "Upload failed"); }
     };
@@ -188,90 +183,13 @@ export default function NewEmploymentRegistrationScreen() {
             }
             setCurrentStep(3);
         } else {
-            const submitApplication = async () => {
-                setIsSubmitting(true);
-                try {
-                    const formDataObj = new FormData();
-
-                    // Basic Details
-                    formDataObj.append('full_name', formData.fullName);
-                    formDataObj.append('aadhaar_number', formData.aadhaarNumber);
-                    formDataObj.append('dob', formData.dob);
-                    formDataObj.append('gender', formData.gender);
-                    formDataObj.append('category', formData.category);
-                    formDataObj.append('mobile_number', formData.mobileNumber);
-                    formDataObj.append('email', formData.email || "");
-
-                    // Address & Status
-                    formDataObj.append('house_no', formData.houseNo || "");
-                    formDataObj.append('area', formData.area || "");
-                    formDataObj.append('village', formData.village);
-                    formDataObj.append('taluka', formData.taluka);
-                    formDataObj.append('district', formData.district || "");
-                    formDataObj.append('pincode', formData.pincode);
-                    formDataObj.append('employment_status', formData.employmentStatus);
-                    formDataObj.append('experience_years', formData.experienceYears || "0");
-
-                    // Education & Skills
-                    formDataObj.append('qualification', formData.qualification);
-                    formDataObj.append('computer_skills', formData.computerSkills || "");
-                    formDataObj.append('languages', formData.languages || "");
-                    formDataObj.append('pref_sector', formData.prefSector);
-
-                    // Documents
-                    if (documents.aadhaarCard) {
-                        formDataObj.append('aadhaar_card', {
-                            uri: documents.aadhaarCard.uri,
-                            name: documents.aadhaarCard.name,
-                            type: documents.aadhaarCard.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.educationCert) {
-                        formDataObj.append('education_cert', {
-                            uri: documents.educationCert.uri,
-                            name: documents.educationCert.name,
-                            type: documents.educationCert.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.photo) {
-                        formDataObj.append('photo', {
-                            uri: documents.photo.uri,
-                            name: documents.photo.name,
-                            type: documents.photo.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.experienceCert) {
-                        formDataObj.append('experience_cert', {
-                            uri: documents.experienceCert.uri,
-                            name: documents.experienceCert.name,
-                            type: documents.experienceCert.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.casteCert) {
-                        formDataObj.append('caste_cert', {
-                            uri: documents.casteCert.uri,
-                            name: documents.casteCert.name,
-                            type: documents.casteCert.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-
-                    const response = await api.post('/social/employment/apply', formDataObj);
-
-                    if (response.data.success) {
-                        setApplicationId(response.data.data.reference_id);
-                        setIsSubmitted(true);
-                    } else {
-                        Alert.alert("Error", response.data.message || "Submission failed");
-                    }
-                } catch (error: any) {
-                    console.error("Employment registration error:", error);
-                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
-                } finally {
-                    setIsSubmitting(false);
-                }
-            };
-
-            submitApplication();
+            if (!formData.finalConfirmation) { Alert.alert("Wait", "Confirm declaration"); return; }
+            setIsSubmitting(true);
+            setTimeout(() => {
+                setApplicationId("ER-" + Math.random().toString(36).substr(2, 6).toUpperCase());
+                setIsSubmitting(false);
+                setIsSubmitted(true);
+            }, 2000);
         }
     };
 

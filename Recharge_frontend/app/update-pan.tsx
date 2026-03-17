@@ -4,7 +4,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
 import {
     ActivityIndicator,
     Alert,
@@ -98,57 +97,34 @@ export default function PANCorrectionScreen() {
         return () => backHandler.remove();
     }, [step]);
 
+    const formatDob = (text: string) => {
+        const cleaned = text.replace(/\D/g, "");
+        let formatted = cleaned;
+        if (cleaned.length > 2) {
+            formatted = cleaned.slice(0, 2) + "/" + cleaned.slice(2);
+        }
+        if (cleaned.length > 4) {
+            formatted = formatted.slice(0, 5) + "/" + cleaned.slice(4, 8);
+        }
+        return formatted;
+    };
+
     // Reset docs when type changes
     useEffect(() => {
         setUploadedDocs({});
         setNewName(""); setNewDob(""); setNewFatherName(""); setNewContact(""); setNewAddress("");
     }, [selectedType]);
 
-    const formatDob = (text: string) => {
-        const cleaned = text.replace(/\D/g, "");
-        let formatted = "";
-        if (cleaned.length <= 2) formatted = cleaned;
-        else if (cleaned.length <= 4) formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2)}`;
-        else formatted = `${cleaned.slice(0, 2)}/${cleaned.slice(2, 4)}/${cleaned.slice(4, 8)}`;
-        setNewDob(formatted);
-    };
-
-    const handleSendOtp = async () => {
+    const handleSendOtp = () => {
         if (panNumber.length !== 10 || mobileNumber.length !== 10) return Alert.alert("Error", "Enter valid PAN and Mobile number");
-        try {
-            const response = await api.post("/pan/correction/send-otp", {
-                mobile_number: mobileNumber,
-                pan_number: panNumber,
-            });
-            if (response.data.success) {
-                setIsOtpSent(true);
-                Alert.alert("OTP Sent", "Verification code sent to your mobile");
-            } else {
-                Alert.alert("Error", response.data.message || "Failed to send OTP");
-            }
-        } catch (error: any) {
-            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
-        }
+        setIsOtpSent(true);
+        Alert.alert("OTP Sent", "Verification code sent to your mobile");
     };
 
-    const handleVerifyOtp = async () => {
+    const handleVerifyOtp = () => {
         if (otp.length !== 6) return Alert.alert("Error", "Enter 6-digit OTP");
         setIsVerifying(true);
-        try {
-            const response = await api.post("/pan/correction/verify-otp", {
-                mobile_number: mobileNumber,
-                otp_code: otp,
-            });
-            if (response.data.success) {
-                setStep(2);
-            } else {
-                Alert.alert("Error", response.data.message || "Invalid OTP");
-            }
-        } catch (error: any) {
-            Alert.alert("Error", error.response?.data?.message || "OTP verification failed");
-        } finally {
-            setIsVerifying(false);
-        }
+        setTimeout(() => { setIsVerifying(false); setStep(2); }, 1200);
     };
 
     const handleFileUpload = async (docId: string) => {
@@ -183,63 +159,14 @@ export default function PANCorrectionScreen() {
         setStep(3);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         setIsSubmitting(true);
-        try {
-            const formData = new FormData();
-            formData.append("pan_number", panNumber);
-            formData.append("mobile_number", mobileNumber);
-            formData.append("corrected_name", newName);
-            formData.append("corrected_dob", newDob);
-            formData.append("correction_type", selectedType || "");
-
-            // Map files correctly
-            if (uploadedDocs.nameProof) {
-                formData.append("proof_of_name", {
-                    uri: uploadedDocs.nameProof.uri,
-                    name: uploadedDocs.nameProof.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.nameId || uploadedDocs.addressId || uploadedDocs.photoId) {
-                const idDoc = uploadedDocs.nameId || uploadedDocs.addressId || uploadedDocs.photoId;
-                formData.append("identity_proof", {
-                    uri: idDoc.uri,
-                    name: idDoc.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.dobProof) {
-                formData.append("proof_of_dob", {
-                    uri: uploadedDocs.dobProof.uri,
-                    name: uploadedDocs.dobProof.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.photoPassport) {
-                formData.append("photo_sign", {
-                    uri: uploadedDocs.photoPassport.uri,
-                    name: uploadedDocs.photoPassport.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-
-            const response = await api.post("/pan/correction/submit", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            if (response.data.success) {
-                setApplicationId(response.data.data.correctionId.toString());
-                setIsSubmitted(true);
-            } else {
-                Alert.alert("Error", response.data.message || "Submission failed");
-            }
-        } catch (error: any) {
-            console.error("PAN Correction submission error:", error);
-            Alert.alert("Error", error.response?.data?.message || "Failed to submit. Please try again.");
-        } finally {
+        setTimeout(() => {
+            const refId = "PAN" + Math.random().toString(36).substr(2, 9).toUpperCase();
+            setApplicationId(refId);
             setIsSubmitting(false);
-        }
+            setIsSubmitted(true);
+        }, 2000);
     };
 
     const getNewValue = () => {
@@ -467,10 +394,7 @@ export default function PANCorrectionScreen() {
                                             {selectedType === 'dob' && (
                                                 <View>
                                                     <Text style={s.inputLabel}>Corrected Date of Birth *</Text>
-                                                    <View style={s.inputRow}>
-                                                        <Ionicons name="calendar-outline" size={18} color="#64748B" />
-                                                        <TextInput style={s.field} placeholder="DD/MM/YYYY" value={newDob} onChangeText={formatDob} keyboardType="numeric" maxLength={10} />
-                                                    </View>
+                                                    <View style={s.inputRow}><TextInput style={s.field} placeholder="DD/MM/YYYY" value={newDob} onChangeText={(text) => setNewDob(formatDob(text))} keyboardType="numeric" maxLength={10} /></View>
                                                 </View>
                                             )}
 
@@ -609,10 +533,10 @@ const s = StyleSheet.create({
     verifyBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 16, borderRadius: 12, justifyContent: 'center', height: 48 },
     verifyBtnText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
 
-    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
+    mainBtn: { borderRadius: 16, overflow: 'hidden', width: '100%' },
     btnDisabled: { opacity: 0.6 },
-    btnGrad: { paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
-    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+    btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
+    mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
 
     // Single-select grid (radio style)
     typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
@@ -648,14 +572,14 @@ const s = StyleSheet.create({
     infoText: { flex: 1, fontSize: 12, color: '#0D47A1', lineHeight: 18, fontWeight: '600' },
 
     // Success Screen
-    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: '#FFF' },
+    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#FFF' },
     successIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F8E9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
     successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 10 },
     successSubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 30, paddingHorizontal: 20 },
     idCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#E2E8F0' },
     idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
     idValue: { fontSize: 24, fontWeight: '800', color: '#0D47A1' },
-    successActions: { flexDirection: 'row', gap: 15, marginBottom: 30 },
+    successActions: { flexDirection: 'row', gap: 20, marginBottom: 40 },
     actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
     actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },

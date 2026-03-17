@@ -143,43 +143,14 @@ export default function UpdateUdyamDetailsScreen() {
         setStep(3);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         setIsSubmitting(true);
-        try {
-            const formDataObj = new FormData();
-            formDataObj.append("udyam_number", udyamNumber);
-            formDataObj.append("aadhaar_number", aadhaar.replace(/\s/g, ""));
-            formDataObj.append("update_type", selectedUpdate || "");
-            formDataObj.append("new_value", getNewData());
-
-            // Append documents
-            Object.keys(docs).forEach(key => {
-                const file = docs[key];
-                formDataObj.append(key, {
-                    uri: file.uri,
-                    name: file.name,
-                    type: "application/octet-stream",
-                } as any);
-            });
-
-            const response = await api.post("/business/udyam/correction/submit", formDataObj, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
-            });
-
-            if (response.data.success) {
-                setApplicationId(response.data.data.correctionId.toString());
-                setIsSubmitted(true);
-            } else {
-                Alert.alert("Error", response.data.message || "Update request failed");
-            }
-        } catch (error: any) {
-            console.error("Udyam update error:", error);
-            Alert.alert("Error", error.response?.data?.message || "Failed to submit request. Please try again.");
-        } finally {
+        setTimeout(() => {
+            const refId = "UDY" + Math.random().toString(36).substr(2, 9).toUpperCase();
+            setApplicationId(refId);
             setIsSubmitting(false);
-        }
+            setIsSubmitted(true);
+        }, 2000);
     };
 
     const getNewData = () => {

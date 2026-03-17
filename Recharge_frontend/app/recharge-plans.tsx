@@ -20,10 +20,19 @@ const PLANS_BY_CATEGORY: Record<string, any[]> = {
         { id: '1', price: '₹299', data: '1.5GB/day', validity: '28 Days', benefit: 'Unlimited Calls + 100 SMS/day' },
         { id: '2', price: '₹719', data: '1.5GB/day', validity: '84 Days', benefit: 'Best seller for 3 months' },
         { id: '3', price: '₹399', data: '2GB/day', validity: '28 Days', benefit: 'Extra 5GB Data included' },
+        { id: '4', price: '₹666', data: '1.5GB/day', validity: '84 Days', benefit: 'Unlimited Calls + 100 SMS/day' },
+        { id: '5', price: '₹239', data: '1.5GB/day', validity: '28 Days', benefit: 'Truly Unlimited' },
+        { id: '6', price: '₹479', data: '1.5GB/day', validity: '56 Days', benefit: 'Long term connectivity' },
+        { id: '7', price: '₹2999', data: '2.5GB/day', validity: '365 Days', benefit: 'Annual pack with full benefits' },
+        { id: '8', price: '₹999', data: '3GB/day', validity: '84 Days', benefit: 'Heavy data usage pack' },
     ],
     'Data': [
         { id: 'd1', price: '₹15', data: '1GB', validity: 'Existing Pack', benefit: 'Data Booster' },
         { id: 'd2', price: '₹25', data: '2GB', validity: '1 Day', benefit: 'Quick Data Add-on' },
+        { id: 'd3', price: '₹61', data: '6GB', validity: 'Existing Pack', benefit: 'Extra Data' },
+        { id: 'd4', price: '₹121', data: '12GB', validity: 'Existing Pack', benefit: 'Work from home data' },
+        { id: 'd5', price: '₹148', data: '15GB', validity: 'Existing Pack', benefit: 'Gaming & Streaming data' },
+        { id: 'd6', price: '₹301', data: '50GB', validity: '30 Days', benefit: 'Bulk data add-on' },
     ],
     'Unlimited': [
         { id: 'u1', price: '₹239', data: '1.5GB/day', validity: '28 Days', benefit: 'Truly Unlimited' },
@@ -44,11 +53,27 @@ export default function RechargePlansScreen() {
     const [activeTab, setActiveTab] = useState('Popular');
 
     const handleSelectPlan = (plan: any) => {
-        Alert.alert('Recharge', `Starting recharge of ${plan.price} for ${number}`);
+        const cleanPrice = plan.price.replace(/[^0-9.]/g, '');
+        router.push({
+            pathname: '/recharge-payment',
+            params: {
+                number: number,
+                operator: operator,
+                circle: circle,
+                amount: cleanPrice,
+                planName: plan.data + ' | ' + plan.validity,
+                planBenefit: plan.benefit
+            }
+        });
     };
 
     const renderPlanCard = ({ item }: { item: any }) => (
-        <TouchableOpacity style={styles.planCard} onPress={() => handleSelectPlan(item)}>
+        <TouchableOpacity 
+            style={styles.planCard} 
+            onPress={() => handleSelectPlan(item)}
+            activeOpacity={0.7}
+            delayPressIn={100}
+        >
             <View style={styles.planHeader}>
                 <Text style={styles.planPrice}>{item.price}</Text>
                 <View style={styles.selectButton}>
@@ -110,6 +135,8 @@ export default function RechargePlansScreen() {
                     renderItem={renderPlanCard}
                     contentContainerStyle={styles.listContent}
                     showsVerticalScrollIndicator={false}
+                    style={{ flex: 1 }}
+                    keyboardShouldPersistTaps="handled"
                 />
             </SafeAreaView>
         </View>

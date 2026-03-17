@@ -183,7 +183,7 @@ export default function LoanRepaymentScreen() {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "loan",
+                    billType: "Loan Repayment",
                     borrowerName: loanDetails?.borrowerName,
                     loanAccountNumber: loanDetails?.loanAccountNumber,
                     lenderName: selectedLender,

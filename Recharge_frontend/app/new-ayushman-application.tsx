@@ -4,7 +4,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -23,7 +22,6 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
-    mimeType?: string;
 }
 
 interface FamilyMember {
@@ -175,16 +173,7 @@ export default function NewAyushmanApplicationScreen() {
                 copyToCacheDirectory: true,
             });
             if (result.canceled === false && result.assets && result.assets[0]) {
-                const asset = result.assets[0];
-                setDocuments(prev => ({ 
-                    ...prev, 
-                    [docType]: {
-                        name: asset.name,
-                        size: asset.size,
-                        uri: asset.uri,
-                        mimeType: asset.mimeType,
-                    } 
-                }));
+                setDocuments(prev => ({ ...prev, [docType]: result.assets[0] }));
             }
         } catch (err) { Alert.alert("Error", "Upload failed"); }
     };
@@ -212,81 +201,13 @@ export default function NewAyushmanApplicationScreen() {
             }
             setCurrentStep(3);
         } else {
-            const submitApplication = async () => {
-                setIsSubmitting(true);
-                try {
-                    const formDataObj = new FormData();
-
-                    // Applicant Details
-                    formDataObj.append('full_name', formData.fullName);
-                    formDataObj.append('aadhaar_number', formData.aadhaarNumber);
-                    formDataObj.append('mobile_number', formData.mobileNumber);
-                    formDataObj.append('gender', formData.gender);
-                    formDataObj.append('dob', formData.dob);
-                    formDataObj.append('state', formData.state);
-                    formDataObj.append('district', formData.district || "");
-                    formDataObj.append('village', formData.village || "");
-
-                    // Family & Eligibility
-                    formDataObj.append('ration_card_number', formData.rationCardNumber);
-                    formDataObj.append('eligibility_type', formData.eligibilityType);
-                    formDataObj.append('is_eligible', String(formData.isEligible));
-                    formDataObj.append('family_members', JSON.stringify(formData.familyMembers));
-
-                    // Documents
-                    if (documents.aadhaarHead) {
-                        formDataObj.append('aadhaar_head', {
-                            uri: documents.aadhaarHead.uri,
-                            name: documents.aadhaarHead.name,
-                            type: documents.aadhaarHead.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.rationCard) {
-                        formDataObj.append('ration_card', {
-                            uri: documents.rationCard.uri,
-                            name: documents.rationCard.name,
-                            type: documents.rationCard.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.addressProof) {
-                        formDataObj.append('address_proof', {
-                            uri: documents.addressProof.uri,
-                            name: documents.addressProof.name,
-                            type: documents.addressProof.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.photo) {
-                        formDataObj.append('photo', {
-                            uri: documents.photo.uri,
-                            name: documents.photo.name,
-                            type: documents.photo.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.seccProof) {
-                        formDataObj.append('secc_proof', {
-                            uri: documents.seccProof.uri,
-                            name: documents.seccProof.name,
-                            type: documents.seccProof.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-
-                    const response = await api.post('/social/ayushman/apply', formDataObj);
-
-                    if (response.data.success) {
-                        setApplicationId(response.data.data.reference_id);
-                        setIsSubmitted(true);
-                    } else {
-                        Alert.alert("Error", response.data.message || "Submission failed");
-                    }
-                } catch (error: any) {
-                    console.error("Ayushman application error:", error);
-                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
-                } finally {
-                    setIsSubmitting(false);
-                }
-            };
-
-            submitApplication();
+            if (!formData.declaration) { Alert.alert("Wait", "Confirm declaration"); return; }
+            setIsSubmitting(true);
+            setTimeout(() => {
+                setApplicationId("PMJAY-" + Math.random().toString(36).substr(2, 6).toUpperCase());
+                setIsSubmitting(false);
+                setIsSubmitted(true);
+            }, 2000);
         }
     };
 

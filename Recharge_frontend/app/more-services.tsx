@@ -46,7 +46,10 @@ export default function MoreServicesScreen() {
           </View>
 
           {/* ✅ NEW: My Bills Section */}
-          <TouchableOpacity style={styles.myBillsCard}>
+          <TouchableOpacity
+            style={styles.myBillsCard}
+            onPress={() => router.push('/my-bills')}
+          >
             <Text style={styles.myBillsText}>My bills</Text>
             <Ionicons name="chevron-forward" size={24} color="#1A1A1A" />
           </TouchableOpacity>
@@ -402,6 +405,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+
     elevation: 3,
     zIndex: 999,
   },

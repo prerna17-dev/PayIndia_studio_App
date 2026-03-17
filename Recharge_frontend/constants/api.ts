@@ -12,7 +12,6 @@ export const API_ENDPOINTS = {
     // Auth
     SEND_OTP: `${API_BASE_URL}/api/auth/send-otp`,
     VERIFY_OTP: `${API_BASE_URL}/api/auth/verify-otp`,
-    LOGOUT: `${API_BASE_URL}/api/auth/logout`,
 
     // Banking
     BANK_LIST: `${API_BASE_URL}/api/banking/bank-list`,
@@ -24,7 +23,6 @@ export const API_ENDPOINTS = {
 
     // Profile
     USER_PROFILE: `${API_BASE_URL}/api/user/profile`,
-    UPDATE_PROFILE: `${API_BASE_URL}/api/user/profile`,
 
     // Recharge
     RECHARGE_OPERATORS: `${API_BASE_URL}/api/recharge/operators`,
@@ -36,7 +34,4 @@ export const API_ENDPOINTS = {
     FETCH_BILL: `${API_BASE_URL}/api/bill/fetch`,
     PAY_BILL: `${API_BASE_URL}/api/bill/pay`,
     BILL_STATUS: `${API_BASE_URL}/api/bill/status`,
-    // Wallet / Payment
-    CREATE_PAYMENT_ORDER: `${API_BASE_URL}/api/wallet/create-order`,
-    VERIFY_PAYMENT: `${API_BASE_URL}/api/wallet/verify-payment`,
 };

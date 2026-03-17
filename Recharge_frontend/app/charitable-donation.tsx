@@ -152,7 +152,7 @@ const CharitableDonationScreen = () => {
                 pathname: "/wallet" as any,
                 params: {
                     amount: amount,
-                    billType: "donation",
+                    billType: "Charitable Donation",
                     borrowerName: donorName,
                     loanAccountNumber: panNumber || mobile,
                     lenderName: selectedOrg,

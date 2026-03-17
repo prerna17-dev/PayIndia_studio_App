@@ -229,7 +229,7 @@ export default function MunicipalTaxesScreen() {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "municipal_tax",
+                    billType: "Municipal Taxes",
                     borrowerName: taxDetails?.ownerName,
                     loanAccountNumber: taxDetails?.propertyId,
                     lenderName: taxDetails?.taxType,

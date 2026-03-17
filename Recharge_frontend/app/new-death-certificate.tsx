@@ -4,7 +4,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -22,7 +21,6 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
-    mimeType?: string;
 }
 
 interface FormDataType {
@@ -154,7 +152,6 @@ export default function NewDeathCertificateScreen() {
                         name: file.name,
                         size: file.size,
                         uri: file.uri,
-                        mimeType: file.mimeType,
                     },
                 }));
             }
@@ -233,89 +230,18 @@ export default function NewDeathCertificateScreen() {
             setCurrentStep(3);
         } else {
             // Step 3
-            const submitApplication = async () => {
-                setIsSubmitting(true);
-                try {
-                    const formDataObj = new FormData();
+            if (!formData.finalDeclaration) {
+                Alert.alert("Required", "Please accept the final declaration");
+                return;
+            }
 
-                    // Deceased Details
-                    formDataObj.append('deceased_name', formData.deceasedName);
-                    formDataObj.append('deceased_aadhaar', formData.deceasedAadhaar);
-                    formDataObj.append('gender', formData.gender);
-                    formDataObj.append('dob', formData.dob || "");
-                    formDataObj.append('date_of_death', formData.dateOfDeath);
-                    formDataObj.append('time_of_death', formData.timeOfDeath || "");
-                    formDataObj.append('place_of_death', formData.placeOfDeath);
-                    formDataObj.append('hospital_name', formData.hospitalName || "");
-                    formDataObj.append('cause_of_death', formData.causeOfDeath || "");
-
-                    // Applicant Details
-                    formDataObj.append('applicant_name', formData.applicantName);
-                    formDataObj.append('applicant_aadhaar', formData.applicantAadhaar);
-                    formDataObj.append('relationship', formData.relationship);
-                    formDataObj.append('mobile_number', formData.mobileNumber);
-                    formDataObj.append('email', formData.email || "");
-
-                    // Address
-                    formDataObj.append('house_no', formData.houseNo);
-                    formDataObj.append('street', formData.street || "");
-                    formDataObj.append('village', formData.village);
-                    formDataObj.append('taluka', formData.taluka || "");
-                    formDataObj.append('district', formData.district);
-                    formDataObj.append('state', formData.state || "");
-                    formDataObj.append('pincode', formData.pincode);
-
-                    // Registration Type
-                    formDataObj.append('registration_type', formData.registrationType);
-                    formDataObj.append('delay_reason', formData.delayReason || "");
-
-                    // Documents
-                    if (documents.deathReport) {
-                        formDataObj.append('death_report', {
-                            uri: documents.deathReport.uri,
-                            name: documents.deathReport.name,
-                            type: documents.deathReport.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.deceasedAadhaarDoc) {
-                        formDataObj.append('deceased_aadhaar', {
-                            uri: documents.deceasedAadhaarDoc.uri,
-                            name: documents.deceasedAadhaarDoc.name,
-                            type: documents.deceasedAadhaarDoc.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.applicantAadhaarDoc) {
-                        formDataObj.append('applicant_aadhaar', {
-                            uri: documents.applicantAadhaarDoc.uri,
-                            name: documents.applicantAadhaarDoc.name,
-                            type: documents.applicantAadhaarDoc.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.addressProof) {
-                        formDataObj.append('address_proof', {
-                            uri: documents.addressProof.uri,
-                            name: documents.addressProof.name,
-                            type: documents.addressProof.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-
-                    const response = await api.post('/certificate/death/apply', formDataObj);
-
-                    if (response.data.success) {
-                        setApplicationId(response.data.data.reference_id);
-                        setIsSubmitted(true);
-                    } else {
-                        Alert.alert("Error", response.data.message || "Submission failed");
-                    }
-                } catch (error: any) {
-                    console.error("Death application error:", error);
-                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
-                } finally {
-                    setIsSubmitting(false);
-                }
-            };
-
-            submitApplication();
+            setIsSubmitting(true);
+            setTimeout(() => {
+                const refId = "DEATH" + Math.random().toString(36).substr(2, 9).toUpperCase();
+                setApplicationId(refId);
+                setIsSubmitting(false);
+                setIsSubmitted(true);
+            }, 2000);
         }
     };
 

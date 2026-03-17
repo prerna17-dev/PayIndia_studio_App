@@ -207,7 +207,7 @@ export default function MunicipalServicesScreen() {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "municipal",
+                    billType: "Municipal Services",
                     borrowerName: serviceDetails?.ownerName,
                     loanAccountNumber: serviceDetails?.consumerId,
                     lenderName: selectedService,

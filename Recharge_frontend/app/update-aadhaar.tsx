@@ -4,7 +4,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
 import {
     ActivityIndicator,
     Alert,
@@ -118,42 +117,19 @@ export default function AadhaarUpdateScreen() {
         setNewDob(formatted);
     };
 
-    const handleSendOtp = async () => {
+    const handleSendOtp = () => {
         if (mobileNumber.length !== 10) return Alert.alert("Error", "Enter valid 10-digit mobile");
-        try {
-            const response = await api.post("/aadhar/correction/send-otp", {
-                mobile_number: mobileNumber,
-                aadhar_number: aadhaarNumber.replace(/\s/g, ""),
-            });
-            if (response.data.success) {
-                setIsOtpSent(true);
-                Alert.alert("Success", "OTP sent to registered mobile");
-            } else {
-                Alert.alert("Error", response.data.message || "Failed to send OTP");
-            }
-        } catch (error: any) {
-            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
-        }
+        setIsOtpSent(true);
+        Alert.alert("Success", "OTP sent to registered mobile");
     };
 
-    const handleVerifyOtp = async () => {
+    const handleVerifyOtp = () => {
         if (otp.length !== 6) return Alert.alert("Error", "Enter 6-digit OTP");
         setIsVerifying(true);
-        try {
-            const response = await api.post("/aadhar/correction/verify-otp", {
-                mobile_number: mobileNumber,
-                otp_code: otp,
-            });
-            if (response.data.success) {
-                setStep(2);
-            } else {
-                Alert.alert("Error", response.data.message || "Invalid OTP");
-            }
-        } catch (error: any) {
-            Alert.alert("Error", error.response?.data?.message || "OTP verification failed");
-        } finally {
+        setTimeout(() => {
             setIsVerifying(false);
-        }
+            setStep(2);
+        }, 1200);
     };
 
     const handleFileUpload = async (docId: string) => {
@@ -165,10 +141,7 @@ export default function AadhaarUpdateScreen() {
                 const sizeInMb = asset.size ? (asset.size / (1024 * 1024)).toFixed(1) : "0.5";
                 setUploadedDocs(prev => ({ ...prev, [docId]: { name: asset.name, size: `${sizeInMb} MB`, uri: asset.uri } }));
             }
-        } catch (err) {
-            console.error("File upload error:", err);
-            Alert.alert("Error", "Failed to upload document");
-        }
+        } catch (err) { Alert.alert("Error", "Failed to upload document"); }
     };
 
     const removeDoc = (docId: string) => {
@@ -196,85 +169,14 @@ export default function AadhaarUpdateScreen() {
         setStep(3);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         setIsSubmitting(true);
-        try {
-            const formData = new FormData();
-            formData.append("aadhar_number", aadhaarNumber.replace(/\s/g, ""));
-            formData.append("mobile_number", mobileNumber);
-            formData.append("corrected_name", newName);
-            formData.append("corrected_dob", newDob);
-            formData.append("correction_type", selectedType || "");
-
-            // Documents mapping
-            if (uploadedDocs.nameProof1) {
-                formData.append("identity_proof", {
-                    uri: uploadedDocs.nameProof1.uri,
-                    name: uploadedDocs.nameProof1.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.nameProof2) {
-                formData.append("identity_proof_2", {
-                    uri: uploadedDocs.nameProof2.uri,
-                    name: uploadedDocs.nameProof2.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.genderProof) {
-                formData.append("identity_proof", {
-                    uri: uploadedDocs.genderProof.uri,
-                    name: uploadedDocs.genderProof.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.mobileProof) {
-                formData.append("identity_proof", {
-                    uri: uploadedDocs.mobileProof.uri,
-                    name: uploadedDocs.mobileProof.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-
-            if (uploadedDocs.addressProof1) {
-                formData.append("address_proof", {
-                    uri: uploadedDocs.addressProof1.uri,
-                    name: uploadedDocs.addressProof1.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-            if (uploadedDocs.addressProof2) {
-                formData.append("address_proof_2", {
-                    uri: uploadedDocs.addressProof2.uri,
-                    name: uploadedDocs.addressProof2.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-
-            if (uploadedDocs.dobProof) {
-                formData.append("dob_proof", {
-                    uri: uploadedDocs.dobProof.uri,
-                    name: uploadedDocs.dobProof.name,
-                    type: "application/octet-stream",
-                } as any);
-            }
-
-            const response = await api.post("/aadhar/correction/submit", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            if (response.data.success) {
-                setApplicationId(response.data.data.correctionId.toString());
-                setIsSubmitted(true);
-            } else {
-                Alert.alert("Error", response.data.message || "Submission failed");
-            }
-        } catch (error: any) {
-            console.error("Submission error:", error);
-            Alert.alert("Error", error.response?.data?.message || "Failed to submit. Please try again.");
-        } finally {
+        setTimeout(() => {
+            const refId = "UPD" + Math.random().toString(36).substr(2, 9).toUpperCase();
+            setApplicationId(refId);
             setIsSubmitting(false);
-        }
+            setIsSubmitted(true);
+        }, 2000);
     };
 
     const renderDocumentUploads = () => {

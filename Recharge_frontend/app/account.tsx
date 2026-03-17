@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_ENDPOINTS } from "../constants/api";
+import { API_ENDPOINTS, API_BASE_URL } from "../constants/api";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -108,7 +108,11 @@ export default function AccountScreen() {
                 >
                   {userData?.profile_image ? (
                     <Image
-                      source={{ uri: userData.profile_image }}
+                      source={{
+                        uri: userData.profile_image.startsWith('http')
+                          ? userData.profile_image
+                          : `${API_BASE_URL}${userData.profile_image}`
+                      }}
                       style={styles.profileImage}
                     />
                   ) : (

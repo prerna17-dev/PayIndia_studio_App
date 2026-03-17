@@ -18,6 +18,9 @@ import {
   Animated,
 } from "react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_ENDPOINTS, API_BASE_URL } from "../../constants/api";
+
 const { width } = Dimensions.get("window");
 
 // Animated Quick Action Chip
@@ -141,6 +144,33 @@ export default function HomeScreen({
   const [hasNewNotifications, setHasNewNotifications] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
+
+  const fetchProfile = async () => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      if (!token) return;
+
+      const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        setUserData(data);
+      }
+    } catch (error) {
+      console.error("Error fetching profile in Home:", error);
+    }
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProfile();
+    }, [])
+  );
 
   // Track keyboard visibility to hide bottom nav
   useEffect(() => {
@@ -318,7 +348,18 @@ export default function HomeScreen({
                 onPress={() => router.push("/account")}
               >
                 <View style={[styles.iconWrapper, styles.profileWrapper]}>
-                  <Ionicons name="person" size={22} color="#1976D2" />
+                  {userData?.profile_image ? (
+                    <Image
+                      source={{
+                        uri: userData.profile_image.startsWith("http")
+                          ? userData.profile_image
+                          : `${API_BASE_URL}${userData.profile_image}`
+                      }}
+                      style={styles.profileThumbnail}
+                    />
+                  ) : (
+                    <Ionicons name="person" size={22} color="#1976D2" />
+                  )}
                 </View>
               </TouchableOpacity>
             </View>
@@ -338,8 +379,8 @@ export default function HomeScreen({
 
             {/* Centered Tagline */}
             <View style={styles.taglineSection}>
-              <Text style={styles.taglineText}>All Digital Seva</Text>
-              <Text style={styles.taglineText}>at One Place</Text>
+              <Text style={styles.taglineText}>Welcome, {userData?.name || "User"}</Text>
+              <Text style={styles.taglineSubText}>All Digital Seva at One Place</Text>
             </View>
 
             {/* Mountain and Trees Background */}
@@ -1221,6 +1262,14 @@ const styles = StyleSheet.create({
   profileWrapper: {
     backgroundColor: "#E3F2FD",
     borderColor: "#BBDEFB",
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileThumbnail: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   notificationDot: {
     position: "absolute",
@@ -1248,6 +1297,14 @@ const styles = StyleSheet.create({
     color: "#000000",
     letterSpacing: 0.3,
     textAlign: "center",
+  },
+  taglineSubText: {
+    fontSize: 14,
+    color: "#000000",
+    opacity: 0.7,
+    fontWeight: "500",
+    textAlign: "center",
+    marginTop: 4,
   },
 
   // Landscape Background - Mountains & Trees

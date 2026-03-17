@@ -1,821 +1,545 @@
-import { Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
+    BackHandler,
     Modal,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TextInput,
     TouchableOpacity,
     View,
+    KeyboardAvoidingView,
 } from 'react-native';
 
-// ── BROADBAND PROVIDERS ────────────────────────────────────────
-const PROVIDERS = [
-    { id: 'airtel', name: 'Airtel Xstream Fiber', short: 'A', color: '#E11900', bg: '#FFF0EE', icon: 'wifi' },
-    { id: 'jio', name: 'JioFiber', short: 'J', color: '#005AB5', bg: '#EEF4FF', icon: 'wifi' },
-    { id: 'bsnl', name: 'BSNL Broadband', short: 'B', color: '#1B5E20', bg: '#F0FAF0', icon: 'wifi' },
-    { id: 'act', name: 'ACT Fibernet', short: 'ACT', color: '#7C3AED', bg: '#F5F0FF', icon: 'wifi' },
-    { id: 'tata', name: 'Tata Play Fiber', short: 'T', color: '#0EA5E9', bg: '#EFF9FF', icon: 'wifi' },
-    { id: 'hathway', name: 'Hathway', short: 'H', color: '#D97706', bg: '#FFFBEB', icon: 'wifi' },
-    { id: 'tikona', name: 'Tikona', short: 'TK', color: '#059669', bg: '#ECFDF5', icon: 'wifi' },
-    { id: 'you', name: 'YOU Broadband', short: 'Y', color: '#DC2626', bg: '#FEF2F2', icon: 'wifi' },
-    { id: 'excitel', name: 'Excitel', short: 'EX', color: '#4F46E5', bg: '#EEF2FF', icon: 'wifi' },
-    { id: 'localIsp', name: 'Local ISP / Others', short: '⚙', color: '#6B7280', bg: '#F9FAFB', icon: 'wifi' },
+interface Provider {
+    id: string;
+    name: string;
+    icon: string;
+}
+
+interface BillDetails {
+    customerName: string;
+    planName: string;
+    billingPeriod: string;
+    billAmount: number;
+    dueDate: string;
+    accountId: string;
+    providerName: string;
+}
+
+const popularProviders: Provider[] = [
+    { id: 'airtel', name: 'Airtel Xstream', icon: 'wifi' },
+    { id: 'jio', name: 'JioFiber', icon: 'access-point' },
+    { id: 'bsnl', name: 'BSNL', icon: 'broadcast' },
+    { id: 'act', name: 'ACT Fibernet', icon: 'flash-outline' },
+    { id: 'tata', name: 'Tata Play', icon: 'satellite-variant' },
+    { id: 'hathway', name: 'Hathway', icon: 'router-wireless' },
 ];
 
-const CIRCLES = [
-    'Andhra Pradesh', 'Assam', 'Bihar & Jharkhand', 'Chennai',
-    'Delhi & NCR', 'Gujarat', 'Haryana', 'Himachal Pradesh',
-    'Jammu & Kashmir', 'Karnataka', 'Kerala', 'Kolkata',
-    'Madhya Pradesh', 'Maharashtra', 'Mumbai', 'North East',
-    'Odisha', 'Punjab', 'Rajasthan', 'Tamil Nadu',
-    'UP East', 'UP West', 'West Bengal',
+const allProviders = [
+    "Airtel Xstream Fiber", "JioFiber", "BSNL Broadband", "ACT Fibernet",
+    "Tata Play Fiber", "Hathway", "Tikona", "YOU Broadband",
+    "Excitel", "Spectra", "MTNL", "RailTel",
+    "Alliance Broadband", "Netplus", "D-VoiS", "Local ISP / Others",
 ];
-
-const PAY_METHODS = [
-    { id: 'upi', label: 'UPI', icon: 'qr-code', color: '#7C3AED' },
-    { id: 'debit', label: 'Debit Card', icon: 'card', color: '#0EA5E9' },
-    { id: 'credit', label: 'Credit Card', icon: 'card-outline', color: '#F59E0B' },
-    { id: 'netbanking', label: 'Net Banking', icon: 'business', color: '#10B981' },
-    { id: 'wallet', label: 'Wallet Balance', icon: 'wallet', color: '#EC4899' },
-];
-
-// Mock bill data returned after fetch
-const MOCK_BILL = {
-    customerName: 'Suresh Patil',
-    address: 'Flat 3B, Shivaji Nagar, Pune - 411005',
-    billingPeriod: '01 Jan – 31 Jan 2026',
-    planName: '100 Mbps Unlimited Plan',
-    billAmount: 849,
-    dueDate: '20 Feb 2026',
-    lateFee: 100,
-    breakdown: {
-        planCharges: 719,
-        gst: 130,
-        addons: 0,
-        lateFee: 0,
-    },
-};
 
 export default function BroadbandBillScreen() {
     const router = useRouter();
 
-    // ── STATE ──────────────────────────────────────────────────
-    const [selectedProvider, setSelectedProvider] = useState<typeof PROVIDERS[0] | null>(null);
+    // Form states
+    const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
     const [accountNumber, setAccountNumber] = useState('');
     const [mobileNumber, setMobileNumber] = useState('');
-    const [selectedCircle, setSelectedCircle] = useState('Maharashtra');
     const [isFetching, setIsFetching] = useState(false);
-    const [bill, setBill] = useState<typeof MOCK_BILL | null>(null);
-    const [fetchError, setFetchError] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState('upi');
-    const [promoCode, setPromoCode] = useState('');
-    const [promoApplied, setPromoApplied] = useState(false);
-    const [showBreakdown, setShowBreakdown] = useState(false);
-    const [showLastBills, setShowLastBills] = useState(false);
-    const [saveConnection, setSaveConnection] = useState(false);
-    const [autoPay, setAutoPay] = useState(false);
+    const [billDetails, setBillDetails] = useState<BillDetails | null>(null);
+    const [selectedPaymentMode, setSelectedPaymentMode] = useState('Wallet');
+    const [isConfirmed, setIsConfirmed] = useState(false);
+
+    // Card detail states
+    const [cardNumber, setCardNumber] = useState('');
+    const [expiryDate, setExpiryDate] = useState('');
+    const [cvv, setCvv] = useState('');
+    const [cardHolder, setCardHolder] = useState('');
+
+    // Modal states
     const [showProviderModal, setShowProviderModal] = useState(false);
-    const [showCircleModal, setShowCircleModal] = useState(false);
+    const [providerSearchQuery, setProviderSearchQuery] = useState('');
 
-    // ── VALIDATION ────────────────────────────────────────────
-    const canFetch =
-        selectedProvider !== null &&
-        accountNumber.length >= 6 &&
-        (mobileNumber === '' || mobileNumber.length === 10);
+    // Animations
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
 
-    // ── FETCH BILL ─────────────────────────────────────────────
-    const handleFetchBill = () => {
-        setIsFetching(true);
-        setFetchError(false);
-        setBill(null);
+    const handleBack = useCallback(() => {
+        if (billDetails) {
+            setBillDetails(null);
+            setIsConfirmed(false);
+            return true;
+        }
+        router.back();
+        return true;
+    }, [router, billDetails]);
 
-        setTimeout(() => {
-            // Simulate: if account starts with '000' → error
-            if (accountNumber.startsWith('000')) {
-                setFetchError(true);
-            } else {
-                setBill(MOCK_BILL);
-            }
-            setIsFetching(false);
-        }, 2200);
+    useFocusEffect(
+        useCallback(() => {
+            const backHandler = BackHandler.addEventListener("hardwareBackPress", handleBack);
+            return () => backHandler.remove();
+        }, [handleBack])
+    );
+
+    const validateForm = () => {
+        return selectedProvider && accountNumber.length >= 6;
     };
 
-    // ── PROMO ──────────────────────────────────────────────────
-    const handleApplyPromo = () => {
-        if (promoCode.trim().toUpperCase() === 'BROAD50') {
-            setPromoApplied(true);
+    // Fetch Bill
+    const handleFetchBill = () => {
+        if (!validateForm()) return;
+        setIsFetching(true);
+        setTimeout(() => {
+            setBillDetails({
+                customerName: 'N/A',
+                planName: 'N/A',
+                billingPeriod: 'N/A',
+                billAmount: 0,
+                dueDate: 'N/A',
+                accountId: accountNumber,
+                providerName: selectedProvider!.name,
+            });
+            setIsFetching(false);
+            Animated.parallel([
+                Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+                Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+            ]).start();
+        }, 1500);
+    };
+
+    // Card number formatter
+    const handleCardNumberChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = '';
+        for (let i = 0; i < cleaned.length && i < 16; i++) {
+            if (i > 0 && i % 4 === 0) formatted += ' ';
+            formatted += cleaned[i];
+        }
+        setCardNumber(formatted);
+    };
+
+    const handleExpiryChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = cleaned;
+        if (cleaned.length > 2) formatted = `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}`;
+        setExpiryDate(formatted);
+    };
+
+    const isCardMode = selectedPaymentMode === 'Debit Card' || selectedPaymentMode === 'Credit Card';
+    const isCardPaymentReady = () => {
+        if (!isCardMode) return true;
+        return cardNumber.replace(/\s/g, '').length === 16 && expiryDate.length === 5 && cvv.length === 3 && cardHolder.trim().length > 2;
+    };
+
+    // Payment
+    const handlePayment = () => {
+        if (!isConfirmed || !isCardPaymentReady()) return;
+        if (selectedPaymentMode === 'Wallet') {
+            router.push({
+                pathname: "/wallet" as any,
+                params: {
+                    amount: String(billDetails?.billAmount || 0),
+                    billType: "Broadband Bill",
+                    lenderName: billDetails?.providerName,
+                    loanAccountNumber: billDetails?.accountId,
+                    borrowerName: billDetails?.customerName,
+                },
+            });
         } else {
-            Alert.alert('Invalid Code', 'Try BROAD50 for ₹50 off!');
+            Alert.alert("Redirecting", `Redirecting to ${selectedPaymentMode} Gateway...`);
         }
     };
 
-    const discount = promoApplied ? 50 : 0;
-    const totalPayable = bill ? bill.billAmount - discount : 0;
-
-    // ── PAY ────────────────────────────────────────────────────
-    const handlePay = () => {
-        Alert.alert(
-            'Confirm Payment',
-            `Pay ₹${totalPayable} for ${accountNumber}\nvia ${paymentMethod.toUpperCase()}`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Confirm', onPress: () => Alert.alert('✅ Payment Successful!', 'Your broadband bill is paid.') },
-            ]
-        );
+    const handleProviderModalSelect = (name: string) => {
+        const found = popularProviders.find(p => p.name === name);
+        const item = found || { id: name.toLowerCase().replace(/\s/g, ''), name, icon: 'wifi' };
+        setSelectedProvider(item);
+        setShowProviderModal(false);
+        setBillDetails(null);
     };
 
     return (
-        <View style={s.root}>
+        <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
             <StatusBar style="dark" />
 
-            <SafeAreaView style={s.safe}>
-
-                {/* ─── HEADER ─────────────────────────────────── */}
-                <View style={s.header}>
-                    <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-                        <Ionicons name="arrow-back" size={22} color="#111827" />
+            <SafeAreaView style={styles.safeArea}>
+                {/* Header */}
+                <View style={styles.header}>
+                    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
-                    <View style={s.headerMid}>
-                        <Text style={s.headerTitle}>Broadband Bill</Text>
-                        {selectedProvider && (
-                            <Text style={s.headerSub}>{selectedProvider.name}</Text>
-                        )}
+                    <View style={styles.headerCenter}>
+                        <Text style={styles.headerTitle}>Broadband Bill</Text>
+                        <Text style={styles.headerSubtitle}>Pay your internet bill instantly</Text>
                     </View>
-                    <TouchableOpacity style={s.backBtn}>
-                        <Ionicons name="information-circle-outline" size={22} color="#6B7280" />
-                    </TouchableOpacity>
+                    <View style={styles.placeholder} />
                 </View>
 
-                <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={s.scroll}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {/* ─── BANNER ─────────────────────────────────── */}
-                    <LinearGradient
-                        colors={['#EFF6FF', '#DBEAFE', '#EFF6FF']}
-                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                        style={s.banner}
-                    >
-                        <View style={s.bannerIconWrap}>
-                            <MaterialCommunityIcons name="wifi" size={34} color="#1D4ED8" />
-                        </View>
-                        <View style={s.bannerText}>
-                            <Text style={s.bannerTitle}>Broadband Bill Payment</Text>
-                            <Text style={s.bannerSub}>10+ providers • Instant confirmation</Text>
-                        </View>
-                    </LinearGradient>
+                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+                    <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
 
-                    {/* ─── DETAILS CARD ────────────────────────────── */}
-                    <View style={s.card}>
-                        <Text style={s.cardTitle}>Enter Connection Details</Text>
-
-                        {/* Provider */}
-                        <Text style={s.fieldLabel}>Broadband Provider *</Text>
-                        <TouchableOpacity style={s.dropRow} onPress={() => setShowProviderModal(true)}>
-                            {selectedProvider ? (
-                                <View style={[s.providerDot, { backgroundColor: selectedProvider.color }]}>
-                                    <Text style={s.providerDotText}>{selectedProvider.short}</Text>
-                                </View>
-                            ) : (
-                                <MaterialCommunityIcons name="wifi" size={18} color="#9CA3AF" />
-                            )}
-                            <Text style={[s.dropText, !selectedProvider && s.dropPlaceholder]}>
-                                {selectedProvider ? selectedProvider.name : 'Select broadband provider'}
-                            </Text>
-                            <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-                        </TouchableOpacity>
-
-                        {/* Account Number */}
-                        <Text style={s.fieldLabel}>Account Number / Customer ID *</Text>
-                        <View style={s.inputWrap}>
-                            <MaterialCommunityIcons name="identifier" size={18} color="#9CA3AF" />
-                            <TextInput
-                                style={s.textField}
-                                placeholder="Enter account / customer ID"
-                                placeholderTextColor="#9CA3AF"
-                                autoCapitalize="characters"
-                                value={accountNumber}
-                                onChangeText={setAccountNumber}
-                                maxLength={20}
-                            />
-                        </View>
-                        <Text style={s.helperText}>Min 6 characters (varies by provider)</Text>
-
-                        {/* Mobile */}
-                        <Text style={s.fieldLabel}>Registered Mobile (Optional)</Text>
-                        <View style={s.inputWrap}>
-                            <View style={s.dialChip}>
-                                <Text style={s.flagTxt}>🇮🇳</Text>
-                                <Text style={s.dialTxt}>+91</Text>
-                            </View>
-                            <View style={s.divV} />
-                            <TextInput
-                                style={s.textField}
-                                placeholder="10-digit mobile"
-                                placeholderTextColor="#9CA3AF"
-                                keyboardType="phone-pad"
-                                maxLength={10}
-                                value={mobileNumber}
-                                onChangeText={setMobileNumber}
-                            />
-                        </View>
-                        {mobileNumber.length > 0 && mobileNumber.length < 10 && (
-                            <Text style={s.errorTxt}>Enter valid 10-digit number</Text>
-                        )}
-
-                        {/* Circle */}
-                        <Text style={s.fieldLabel}>Circle / State</Text>
-                        <TouchableOpacity style={s.dropRow} onPress={() => setShowCircleModal(true)}>
-                            <Ionicons name="location-outline" size={18} color="#9CA3AF" />
-                            <Text style={s.dropText}>{selectedCircle}</Text>
-                            <Ionicons name="chevron-down" size={18} color="#9CA3AF" />
-                        </TouchableOpacity>
-
-                        {/* Toggles */}
-                        <View style={s.toggleRow}>
-                            <View style={s.toggleLeft}>
-                                <Ionicons name="star-outline" size={17} color="#F59E0B" />
-                                <Text style={s.toggleLabel}>Save connection</Text>
-                            </View>
-                            <Switch
-                                value={saveConnection}
-                                onValueChange={setSaveConnection}
-                                trackColor={{ false: '#E5E7EB', true: '#FEF3C7' }}
-                                thumbColor={saveConnection ? '#F59E0B' : '#fff'}
-                            />
-                        </View>
-                        <View style={s.toggleRow}>
-                            <View style={s.toggleLeft}>
-                                <MaterialCommunityIcons name="autorenew" size={17} color="#10B981" />
-                                <Text style={s.toggleLabel}>Enable AutoPay</Text>
-                            </View>
-                            <Switch
-                                value={autoPay}
-                                onValueChange={setAutoPay}
-                                trackColor={{ false: '#E5E7EB', true: '#D1FAE5' }}
-                                thumbColor={autoPay ? '#10B981' : '#fff'}
-                            />
-                        </View>
-                    </View>
-
-                    {/* ─── FETCH BUTTON ──────────────────────────── */}
-                    <TouchableOpacity
-                        style={[s.fetchBtn, !canFetch && s.fetchBtnDim]}
-                        onPress={handleFetchBill}
-                        disabled={!canFetch || isFetching}
-                        activeOpacity={0.88}
-                    >
-                        <LinearGradient
-                            colors={canFetch ? ['#1D4ED8', '#2563EB'] : ['#D1D5DB', '#9CA3AF']}
-                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                            style={s.fetchGrad}
-                        >
-                            {isFetching
-                                ? <ActivityIndicator color="#fff" />
-                                : <>
-                                    <MaterialCommunityIcons name="file-find" size={20} color="#fff" />
-                                    <Text style={s.fetchTxt}>Fetch Bill</Text>
-                                </>
-                            }
-                        </LinearGradient>
-                    </TouchableOpacity>
-
-                    {/* ─── ERROR CARD ────────────────────────────── */}
-                    {fetchError && (
-                        <View style={s.errorCard}>
-                            <View style={s.errorIconWrap}>
-                                <Ionicons name="close-circle" size={36} color="#DC2626" />
-                            </View>
-                            <Text style={s.errorCardTitle}>Account Not Found</Text>
-                            <Text style={s.errorCardSub}>Please check your Customer ID and try again</Text>
-                            <TouchableOpacity
-                                style={s.editBtn}
-                                onPress={() => { setFetchError(false); setAccountNumber(''); }}
-                            >
-                                <Text style={s.editBtnTxt}>Edit Details</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {/* ─── BILL SUMMARY ─────────────────────────── */}
-                    {bill && !fetchError && (
-                        <>
-                            <View style={s.billCard}>
-                                <View style={s.billCardHeader}>
-                                    <MaterialCommunityIcons name="receipt" size={22} color={selectedProvider?.color ?? '#1D4ED8'} />
-                                    <Text style={s.billCardTitle}>Bill Details</Text>
+                        {!billDetails ? (
+                            <>
+                                {/* Popular Providers Grid */}
+                                <Text style={styles.sectionTitle}>Select Broadband Provider</Text>
+                                <View style={styles.grid}>
+                                    {popularProviders.map((item) => (
+                                        <TouchableOpacity
+                                            key={item.id}
+                                            style={[styles.gridItem, selectedProvider?.id === item.id && styles.selectedGridItem]}
+                                            onPress={() => { setSelectedProvider(item); setBillDetails(null); }}
+                                        >
+                                            <View style={[styles.iconCircle, selectedProvider?.id === item.id && styles.selectedIconCircle]}>
+                                                <MaterialCommunityIcons
+                                                    name={item.icon as any}
+                                                    size={24}
+                                                    color={selectedProvider?.id === item.id ? "#FFFFFF" : "#0D47A1"}
+                                                />
+                                            </View>
+                                            <Text style={styles.gridLabel}>{item.name}</Text>
+                                        </TouchableOpacity>
+                                    ))}
                                 </View>
 
-                                <View style={s.billRow}>
-                                    <Text style={s.billKey}>Customer Name</Text>
-                                    <Text style={s.billVal}>{bill.customerName}</Text>
-                                </View>
-                                <View style={s.billRow}>
-                                    <Text style={s.billKey}>Plan</Text>
-                                    <Text style={s.billVal}>{bill.planName}</Text>
-                                </View>
-                                <View style={s.billRow}>
-                                    <Text style={s.billKey}>Billing Period</Text>
-                                    <Text style={s.billVal}>{bill.billingPeriod}</Text>
-                                </View>
-                                <View style={s.billRow}>
-                                    <Text style={s.billKey}>Address</Text>
-                                    <Text style={[s.billVal, s.billAddr]}>{bill.address}</Text>
-                                </View>
-                                <View style={s.billRow}>
-                                    <Text style={s.billKey}>Due Date</Text>
-                                    <Text style={[s.billVal, s.dueTxt]}>{bill.dueDate}</Text>
-                                </View>
-                                <View style={[s.billRow, s.billRowLast]}>
-                                    <Text style={s.billKey}>Bill Amount</Text>
-                                    <Text style={s.billAmtTxt}>₹{bill.billAmount}</Text>
+                                {/* View All Providers */}
+                                <View style={styles.browseContainer}>
+                                    <TouchableOpacity style={styles.browseButton} onPress={() => setShowProviderModal(true)}>
+                                        <Text style={styles.browseText}>View All Providers</Text>
+                                        <Ionicons name="chevron-forward" size={14} color="#0D47A1" />
+                                    </TouchableOpacity>
                                 </View>
 
-                                {/* Urgency line */}
-                                <View style={s.urgencyBanner}>
-                                    <Ionicons name="time-outline" size={14} color="#B45309" />
-                                    <Text style={s.urgencyTxt}>
-                                        Pay ₹{bill.billAmount} before {bill.dueDate} to avoid late fee of ₹{bill.lateFee}
-                                    </Text>
-                                </View>
-
-                                {/* Breakdown accordion */}
-                                <TouchableOpacity
-                                    style={s.accordionHeader}
-                                    onPress={() => setShowBreakdown(!showBreakdown)}
-                                >
-                                    <MaterialCommunityIcons name="format-list-bulleted" size={16} color="#6B7280" />
-                                    <Text style={s.accordionTxt}>
-                                        {showBreakdown ? 'Hide' : 'View'} Bill Breakdown
-                                    </Text>
-                                    <Ionicons
-                                        name={showBreakdown ? 'chevron-up' : 'chevron-down'}
-                                        size={14} color="#9CA3AF"
-                                    />
-                                </TouchableOpacity>
-
-                                {showBreakdown && (
-                                    <View style={s.breakdownBox}>
-                                        <View style={s.bdRow}>
-                                            <Text style={s.bdKey}>Plan Charges</Text>
-                                            <Text style={s.bdVal}>₹{bill.breakdown.planCharges}</Text>
+                                {/* Form Card */}
+                                <View style={styles.formCard}>
+                                    {selectedProvider && (
+                                        <View style={[styles.fieldGroup, { marginBottom: 15 }]}>
+                                            <Text style={styles.fieldLabel}>Selected Provider</Text>
+                                            <View style={[styles.inputContainer, { backgroundColor: '#F1F5F9', borderColor: '#CBD5E1' }]}>
+                                                <MaterialCommunityIcons name={(selectedProvider.icon as any) || "wifi"} size={18} color="#0D47A1" />
+                                                <TextInput style={[styles.input, { color: '#475569' }]} value={selectedProvider.name} editable={false} />
+                                                <TouchableOpacity onPress={() => setSelectedProvider(null)}>
+                                                    <Ionicons name="close-circle" size={20} color="#94A3B8" />
+                                                </TouchableOpacity>
+                                            </View>
                                         </View>
-                                        <View style={s.bdRow}>
-                                            <Text style={s.bdKey}>GST (18%)</Text>
-                                            <Text style={s.bdVal}>₹{bill.breakdown.gst}</Text>
+                                    )}
+
+                                    <View style={styles.fieldGroup}>
+                                        <Text style={styles.fieldLabel}>Account No. / Customer ID *</Text>
+                                        <View style={styles.inputContainer}>
+                                            <MaterialCommunityIcons name="identifier" size={16} color="#94A3B8" />
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Enter account / customer ID"
+                                                placeholderTextColor="#94A3B8"
+                                                autoCapitalize="characters"
+                                                value={accountNumber}
+                                                onChangeText={setAccountNumber}
+                                                maxLength={20}
+                                            />
                                         </View>
-                                        <View style={s.bdRow}>
-                                            <Text style={s.bdKey}>Add-ons</Text>
-                                            <Text style={s.bdVal}>
-                                                {bill.breakdown.addons > 0 ? `₹${bill.breakdown.addons}` : '—'}
-                                            </Text>
-                                        </View>
-                                        <View style={s.bdRow}>
-                                            <Text style={s.bdKey}>Late Fee</Text>
-                                            <Text style={[s.bdVal, bill.breakdown.lateFee > 0 && s.lateFeeRed]}>
-                                                {bill.breakdown.lateFee > 0 ? `₹${bill.breakdown.lateFee}` : '—'}
-                                            </Text>
-                                        </View>
-                                        <View style={s.bdDivider} />
-                                        <View style={s.bdRow}>
-                                            <Text style={s.bdTotal}>Total</Text>
-                                            <Text style={s.bdTotal}>₹{bill.billAmount}</Text>
+                                        <Text style={styles.helperText}>Min 6 characters (varies by provider)</Text>
+                                    </View>
+
+                                    <View style={[styles.fieldGroup, { marginTop: 15 }]}>
+                                        <Text style={styles.fieldLabel}>Registered Mobile (Optional)</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="phone-portrait-outline" size={16} color="#94A3B8" />
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Enter 10 digit number"
+                                                placeholderTextColor="#94A3B8"
+                                                keyboardType="phone-pad"
+                                                maxLength={10}
+                                                value={mobileNumber}
+                                                onChangeText={setMobileNumber}
+                                            />
                                         </View>
                                     </View>
-                                )}
-                            </View>
+                                </View>
 
-                            {/* ─── PAYMENT METHOD ─────────────────────── */}
-                            <Text style={s.sectionLabel}>Choose Payment Method</Text>
-                            <View style={s.payCard}>
-                                {PAY_METHODS.map((pm, i) => (
-                                    <TouchableOpacity
-                                        key={pm.id}
-                                        style={[
-                                            s.payRow,
-                                            paymentMethod === pm.id && s.payRowActive,
-                                            i === PAY_METHODS.length - 1 && s.payRowLast,
-                                        ]}
-                                        onPress={() => setPaymentMethod(pm.id)}
+                                <TouchableOpacity onPress={handleFetchBill} disabled={!validateForm() || isFetching} style={{ marginBottom: 30 }}>
+                                    <LinearGradient
+                                        colors={!validateForm() || isFetching ? ["#E0E0E0", "#E0E0E0"] : ["#0D47A1", "#1565C0"]}
+                                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                        style={styles.actionButton}
                                     >
-                                        <View style={[s.payIcon, { backgroundColor: pm.color + '18' }]}>
-                                            <Ionicons name={pm.icon as any} size={20} color={pm.color} />
+                                        {isFetching ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.actionButtonText}>Fetch Bill Details</Text>}
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                            <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+
+                                {/* User Entered Details */}
+                                <View style={styles.formCard}>
+                                    <Text style={styles.sectionTitleSmall}>Connection Details</Text>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Provider</Text>
+                                        <Text style={styles.detailValue}>{billDetails.providerName}</Text>
+                                    </View>
+                                    <View style={styles.detailRow}>
+                                        <Text style={styles.detailLabel}>Account / Customer ID</Text>
+                                        <Text style={styles.detailValue}>{billDetails.accountId}</Text>
+                                    </View>
+                                    {mobileNumber ? (
+                                        <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
+                                            <Text style={styles.detailLabel}>Mobile Number</Text>
+                                            <Text style={styles.detailValue}>{mobileNumber}</Text>
                                         </View>
-                                        <Text style={s.payLabel}>{pm.label}</Text>
-                                        <View style={[s.radio, paymentMethod === pm.id && { borderColor: pm.color }]}>
-                                            {paymentMethod === pm.id && (
-                                                <View style={[s.radioFill, { backgroundColor: pm.color }]} />
-                                            )}
+                                    ) : null}
+                                </View>
+
+                                {/* Bill Info Banner */}
+                                <View style={styles.balanceBanner}>
+                                    <View style={styles.balanceItem}>
+                                        <Text style={styles.balanceLabel}>Bill Amount</Text>
+                                        <Text style={styles.balanceValue}>₹{billDetails.billAmount}</Text>
+                                    </View>
+                                    <View style={styles.balanceDivider} />
+                                    <View style={styles.balanceItem}>
+                                        <Text style={styles.balanceLabel}>Due Date</Text>
+                                        <Text style={[styles.balanceValue, { color: '#D32F2F', fontSize: 14 }]}>{billDetails.dueDate}</Text>
+                                    </View>
+                                </View>
+
+                                {/* Payment Mode */}
+                                <View style={styles.formCard}>
+                                    <Text style={styles.sectionTitleSmall}>Select Payment Mode</Text>
+                                    <View style={styles.paymentModes}>
+                                        {['Wallet', 'Debit Card', 'Credit Card', 'Net Banking'].map((mode) => (
+                                            <TouchableOpacity
+                                                key={mode}
+                                                style={[styles.paymentModeCard, selectedPaymentMode === mode && styles.selectedPaymentModeCard]}
+                                                onPress={() => setSelectedPaymentMode(mode)}
+                                            >
+                                                <Ionicons
+                                                    name={mode === 'Wallet' ? 'wallet' : mode.includes('Card') ? 'card-outline' : 'business-outline'}
+                                                    size={18}
+                                                    color={selectedPaymentMode === mode ? '#0D47A1' : '#64748B'}
+                                                />
+                                                <Text style={[styles.paymentModeText, selectedPaymentMode === mode && styles.selectedPaymentModeText]}>{mode}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    {/* Card Details Form */}
+                                    {isCardMode && (
+                                        <View style={styles.cardFormContainer}>
+                                            <View style={styles.fieldGroup}>
+                                                <Text style={styles.fieldLabel}>Name on Card</Text>
+                                                <View style={styles.inputContainer}>
+                                                    <Ionicons name="person-outline" size={16} color="#94A3B8" />
+                                                    <TextInput style={styles.input} placeholder="Card Holder Name" placeholderTextColor="#94A3B8" value={cardHolder} onChangeText={setCardHolder} autoCapitalize="characters" />
+                                                </View>
+                                            </View>
+                                            <View style={[styles.fieldGroup, { marginTop: 12 }]}>
+                                                <Text style={styles.fieldLabel}>Card Number</Text>
+                                                <View style={styles.inputContainer}>
+                                                    <Ionicons name="card-outline" size={16} color="#94A3B8" />
+                                                    <TextInput style={styles.input} placeholder="0000 0000 0000 0000" placeholderTextColor="#94A3B8" keyboardType="numeric" value={cardNumber} onChangeText={handleCardNumberChange} maxLength={19} />
+                                                </View>
+                                            </View>
+                                            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                                                    <Text style={styles.fieldLabel}>Expiry</Text>
+                                                    <View style={styles.inputContainer}>
+                                                        <TextInput style={[styles.input, { marginLeft: 0 }]} placeholder="MM/YY" placeholderTextColor="#94A3B8" keyboardType="numeric" value={expiryDate} onChangeText={handleExpiryChange} maxLength={5} />
+                                                    </View>
+                                                </View>
+                                                <View style={[styles.fieldGroup, { flex: 1 }]}>
+                                                    <Text style={styles.fieldLabel}>CVV</Text>
+                                                    <View style={styles.inputContainer}>
+                                                        <TextInput style={[styles.input, { marginLeft: 0 }]} placeholder="123" placeholderTextColor="#94A3B8" keyboardType="numeric" secureTextEntry value={cvv} onChangeText={setCvv} maxLength={3} />
+                                                    </View>
+                                                </View>
+                                            </View>
                                         </View>
+                                    )}
+                                </View>
+
+                                <TouchableOpacity style={styles.confirmRow} onPress={() => setIsConfirmed(!isConfirmed)}>
+                                    <Ionicons name={isConfirmed ? "checkbox" : "square-outline"} size={20} color="#0D47A1" />
+                                    <Text style={styles.confirmText}>I confirm that the account and billing details are correct and authorize this payment.</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity onPress={handlePayment} disabled={!isConfirmed || !isCardPaymentReady()} style={{ marginBottom: 40 }}>
+                                    <LinearGradient
+                                        colors={!isConfirmed || !isCardPaymentReady() ? ["#E0E0E0", "#E0E0E0"] : ["#0D47A1", "#1565C0"]}
+                                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                        style={styles.actionButton}
+                                    >
+                                        <Text style={styles.actionButtonText}>
+                                            Pay ₹{billDetails.billAmount}
+                                        </Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </Animated.View>
+                        )}
+                    </ScrollView>
+                </KeyboardAvoidingView>
+
+                {/* Provider Selection Modal */}
+                <Modal visible={showProviderModal} transparent animationType="slide" onRequestClose={() => setShowProviderModal(false)}>
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Select Broadband Provider</Text>
+                                <TouchableOpacity onPress={() => setShowProviderModal(false)}><Ionicons name="close" size={24} color="#666" /></TouchableOpacity>
+                            </View>
+                            <View style={styles.modalSearch}>
+                                <Ionicons name="search" size={20} color="#666" />
+                                <TextInput
+                                    style={styles.modalSearchInput}
+                                    placeholder="Search Provider..."
+                                    value={providerSearchQuery}
+                                    onChangeText={setProviderSearchQuery}
+                                />
+                            </View>
+                            <ScrollView style={styles.optionsList}>
+                                {allProviders.filter(b => b.toLowerCase().includes(providerSearchQuery.toLowerCase())).map((name, index) => (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={styles.optionItem}
+                                        onPress={() => handleProviderModalSelect(name)}
+                                    >
+                                        <Text style={styles.optionText}>{name}</Text>
+                                        {selectedProvider?.name === name && <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />}
                                     </TouchableOpacity>
                                 ))}
-                            </View>
-
-                            {/* ─── PROMO CODE ─────────────────────────── */}
-                            <View style={s.promoCard}>
-                                <Text style={s.promoHint}>Have a promo code?</Text>
-                                <View style={s.promoRow}>
-                                    <View style={s.promoInputWrap}>
-                                        <MaterialCommunityIcons name="ticket-percent-outline" size={17} color="#9CA3AF" />
-                                        <TextInput
-                                            style={s.promoInput}
-                                            placeholder='Enter code (try BROAD50)'
-                                            placeholderTextColor="#9CA3AF"
-                                            value={promoCode}
-                                            onChangeText={setPromoCode}
-                                            autoCapitalize="characters"
-                                            editable={!promoApplied}
-                                        />
-                                    </View>
-                                    <TouchableOpacity
-                                        style={[s.applyBtn, promoApplied && s.applyBtnGreen]}
-                                        onPress={handleApplyPromo}
-                                        disabled={promoApplied}
-                                    >
-                                        <Text style={s.applyTxt}>{promoApplied ? '✓ Applied' : 'Apply'}</Text>
-                                    </TouchableOpacity>
-                                </View>
-                                {promoApplied && (
-                                    <Text style={s.promoSaved}>🎉 ₹50 saved with BROAD50!</Text>
-                                )}
-                            </View>
-
-                            {/* spacer */}
-                            <View style={{ height: 100 }} />
-                        </>
-                    )}
-                </ScrollView>
-
-                {/* ─── STICKY PAY BAR ──────────────────────────── */}
-                {bill && !fetchError && (
-                    <View style={s.stickyBar}>
-                        <View>
-                            <Text style={s.stickyLabel}>Total Payable</Text>
-                            <View style={s.stickyAmtRow}>
-                                <Text style={s.stickyAmt}>₹{totalPayable}</Text>
-                                {promoApplied && (
-                                    <Text style={s.stickyStrike}>₹{bill.billAmount}</Text>
-                                )}
-                            </View>
+                            </ScrollView>
                         </View>
-                        <TouchableOpacity style={s.payNowBtn} onPress={handlePay} activeOpacity={0.88}>
-                            <LinearGradient
-                                colors={['#1D4ED8', '#2563EB']}
-                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                                style={s.payNowGrad}
-                            >
-                                <Ionicons name="flash" size={18} color="#fff" />
-                                <Text style={s.payNowTxt}>Pay Now</Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
                     </View>
-                )}
+                </Modal>
             </SafeAreaView>
-
-            {/* ─── PROVIDER MODAL ──────────────────────────── */}
-            <Modal
-                visible={showProviderModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowProviderModal(false)}
-            >
-                <View style={s.modalOverlay}>
-                    <View style={s.modalSheet}>
-                        <View style={s.sheetHandle} />
-                        <Text style={s.sheetTitle}>Select Broadband Provider</Text>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {PROVIDERS.map((p) => (
-                                <TouchableOpacity
-                                    key={p.id}
-                                    style={[s.sheetRow, selectedProvider?.id === p.id && s.sheetRowActive]}
-                                    onPress={() => { setSelectedProvider(p); setShowProviderModal(false); }}
-                                >
-                                    <View style={[s.sheetDot, { backgroundColor: p.color + '22' }]}>
-                                        <Text style={[s.sheetDotTxt, { color: p.color }]}>{p.short}</Text>
-                                    </View>
-                                    <Text style={[s.sheetRowTxt, selectedProvider?.id === p.id && s.sheetRowTxtActive]}>
-                                        {p.name}
-                                    </Text>
-                                    {selectedProvider?.id === p.id && (
-                                        <Ionicons name="checkmark-circle" size={22} color="#1D4ED8" />
-                                    )}
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
-
-            {/* ─── CIRCLE MODAL ────────────────────────────── */}
-            <Modal
-                visible={showCircleModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowCircleModal(false)}
-            >
-                <View style={s.modalOverlay}>
-                    <View style={s.modalSheet}>
-                        <View style={s.sheetHandle} />
-                        <Text style={s.sheetTitle}>Select Circle / State</Text>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {CIRCLES.map((c) => (
-                                <TouchableOpacity
-                                    key={c}
-                                    style={[s.sheetRow, selectedCircle === c && s.sheetRowActive]}
-                                    onPress={() => { setSelectedCircle(c); setShowCircleModal(false); }}
-                                >
-                                    <Ionicons name="location" size={16} color={selectedCircle === c ? '#1D4ED8' : '#9CA3AF'} />
-                                    <Text style={[s.sheetRowTxt, selectedCircle === c && s.sheetRowTxtActive]}>{c}</Text>
-                                    {selectedCircle === c && (
-                                        <Ionicons name="checkmark" size={18} color="#1D4ED8" />
-                                    )}
-                                </TouchableOpacity>
-                            ))}
-                        </ScrollView>
-                    </View>
-                </View>
-            </Modal>
         </View>
     );
 }
 
-// ── STYLES ──────────────────────────────────────────────────────
-const s = StyleSheet.create({
-    root: { flex: 1, backgroundColor: '#F8FAFF' },
-    safe: { flex: 1 },
-
-    // Header
+const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: "#F5F7FA" },
+    safeArea: { flex: 1 },
     header: {
-        flexDirection: 'row', alignItems: 'center',
-        paddingHorizontal: 16, paddingTop: 52, paddingBottom: 14,
-        backgroundColor: '#fff',
-        borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
-    },
-    backBtn: {
-        width: 36, height: 36, borderRadius: 18,
-        backgroundColor: '#F1F5F9',
-        alignItems: 'center', justifyContent: 'center',
-    },
-    headerMid: { flex: 1, alignItems: 'center' },
-    headerTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
-    headerSub: { fontSize: 11, color: '#6B7280', marginTop: 1 },
-
-    scroll: { padding: 16, paddingBottom: 8 },
-
-    // Banner
-    banner: {
-        flexDirection: 'row', alignItems: 'center', gap: 14,
-        borderRadius: 20, padding: 18, marginBottom: 16,
-        shadowColor: '#3B82F6', shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12, shadowRadius: 16, elevation: 5,
-    },
-    bannerIconWrap: {
-        width: 56, height: 56, borderRadius: 28,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        alignItems: 'center', justifyContent: 'center',
-    },
-    bannerText: { flex: 1 },
-    bannerTitle: { fontSize: 16, fontWeight: '800', color: '#1E3A8A', marginBottom: 3 },
-    bannerSub: { fontSize: 12, color: '#3B82F6', fontWeight: '500' },
-
-    // Card
-    card: {
-        backgroundColor: '#fff', borderRadius: 20, padding: 18,
-        marginBottom: 16,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07, shadowRadius: 12, elevation: 3,
-    },
-    cardTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 16 },
-
-    fieldLabel: {
-        fontSize: 12, fontWeight: '600', color: '#6B7280',
-        marginTop: 12, marginBottom: 7, letterSpacing: 0.3,
-    },
-
-    // Dropdown row
-    dropRow: {
-        flexDirection: 'row', alignItems: 'center', gap: 10,
-        backgroundColor: '#F8FAFF', borderRadius: 12,
-        borderWidth: 1.5, borderColor: '#E2E8F0',
-        paddingHorizontal: 14, height: 52,
-    },
-    dropText: { flex: 1, fontSize: 14, color: '#374151', fontWeight: '500' },
-    dropPlaceholder: { color: '#9CA3AF', fontWeight: '400' },
-    providerDot: {
-        width: 30, height: 30, borderRadius: 15,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    providerDotText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-
-    // Input
-    inputWrap: {
-        flexDirection: 'row', alignItems: 'center', gap: 10,
-        backgroundColor: '#F8FAFF', borderRadius: 12,
-        borderWidth: 1.5, borderColor: '#E2E8F0',
-        paddingHorizontal: 14, height: 52,
-    },
-    textField: { flex: 1, fontSize: 15, color: '#111827', fontWeight: '500' },
-    helperText: { fontSize: 11, color: '#9CA3AF', marginTop: 5, marginLeft: 2 },
-    errorTxt: { fontSize: 11, color: '#DC2626', marginTop: 5, marginLeft: 2 },
-
-    dialChip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-    flagTxt: { fontSize: 18 },
-    dialTxt: { fontSize: 13, fontWeight: '700', color: '#374151' },
-    divV: { width: 1, height: 24, backgroundColor: '#E2E8F0' },
-
-    // Toggles
-    toggleRow: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-        paddingVertical: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', marginTop: 6,
+        paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20,
+        backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0'
     },
-    toggleLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    toggleLabel: { fontSize: 14, color: '#374151', fontWeight: '500' },
+    backButton: { padding: 5 },
+    headerCenter: { flex: 1, alignItems: "center" },
+    headerTitle: { fontSize: 18, fontWeight: "bold", color: "#1A1A1A" },
+    headerSubtitle: { fontSize: 11, color: "#666", marginTop: 2 },
+    placeholder: { width: 34 },
+    scrollContent: { padding: 20 },
+    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 16 },
+    sectionTitleSmall: { fontSize: 14, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 12 },
 
-    // Fetch button
-    fetchBtn: { borderRadius: 16, overflow: 'hidden', marginBottom: 8 },
-    fetchBtnDim: { opacity: 0.55 },
-    fetchGrad: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        gap: 9, height: 54,
+    // Grid
+    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 },
+    gridItem: {
+        width: '31%', alignItems: 'center', marginBottom: 15, paddingVertical: 12,
+        backgroundColor: '#FFFFFF', borderRadius: 16, elevation: 1,
+        borderWidth: 1, borderColor: 'transparent'
     },
-    fetchTxt: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    selectedGridItem: { borderColor: '#0D47A1', backgroundColor: '#F0F7FF' },
+    iconCircle: {
+        width: 48, height: 48, borderRadius: 24,
+        backgroundColor: '#F1F8FE', justifyContent: 'center', alignItems: 'center', marginBottom: 8
+    },
+    selectedIconCircle: { backgroundColor: '#0D47A1' },
+    gridLabel: { fontSize: 10, fontWeight: '600', color: '#1A1A1A', textAlign: 'center' },
 
-    // Error card
-    errorCard: {
-        backgroundColor: '#FEF2F2', borderRadius: 16, padding: 24,
-        alignItems: 'center', marginBottom: 16,
-        borderWidth: 1, borderColor: '#FECACA',
+    // Browse
+    browseContainer: { alignItems: 'center', marginBottom: 20 },
+    browseButton: {
+        flexDirection: 'row', alignItems: 'center', backgroundColor: '#E3F2FD',
+        paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20,
+        borderWidth: 1, borderColor: '#BBDEFB', gap: 6
     },
-    errorIconWrap: {
-        width: 64, height: 64, borderRadius: 32,
-        backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-    },
-    errorCardTitle: { fontSize: 17, fontWeight: '700', color: '#991B1B', marginBottom: 6 },
-    errorCardSub: { fontSize: 13, color: '#B91C1C', textAlign: 'center', marginBottom: 16 },
-    editBtn: {
-        backgroundColor: '#DC2626', borderRadius: 12,
-        paddingHorizontal: 28, paddingVertical: 11,
-    },
-    editBtnTxt: { color: '#fff', fontWeight: '700', fontSize: 14 },
+    browseText: { fontSize: 13, fontWeight: '700', color: '#0D47A1' },
 
-    // Bill card
-    billCard: {
-        backgroundColor: '#fff', borderRadius: 20, padding: 18, marginBottom: 16,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07, shadowRadius: 12, elevation: 3,
+    // Form
+    formCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, marginBottom: 20, elevation: 1 },
+    fieldGroup: { width: '100%' },
+    fieldLabel: { fontSize: 12, fontWeight: "700", color: "#64748B", marginBottom: 8 },
+    inputContainer: {
+        flexDirection: "row", alignItems: "center", backgroundColor: "#F8FAFC",
+        borderRadius: 12, paddingHorizontal: 15, height: 52,
+        borderWidth: 1, borderColor: "#E2E8F0"
     },
-    billCardHeader: {
-        flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14,
-    },
-    billCardTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
-    billRow: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-        paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
-    },
-    billRowLast: { borderBottomWidth: 0 },
-    billKey: { fontSize: 13, color: '#6B7280', flex: 1 },
-    billVal: { fontSize: 13, fontWeight: '600', color: '#111827', flex: 1, textAlign: 'right' },
-    billAddr: { fontSize: 12, lineHeight: 18 },
-    dueTxt: { color: '#DC2626' },
-    billAmtTxt: { fontSize: 20, fontWeight: '800', color: '#059669', textAlign: 'right' },
+    input: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1E293B', fontWeight: '500' },
+    helperText: { fontSize: 11, color: '#94A3B8', marginTop: 6 },
+    actionButton: { height: 56, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+    actionButtonText: { fontSize: 16, fontWeight: "bold", color: "#FFFFFF" },
 
-    urgencyBanner: {
-        flexDirection: 'row', alignItems: 'center', gap: 7,
-        backgroundColor: '#FFFBEB', borderRadius: 10, padding: 11, marginTop: 14,
-    },
-    urgencyTxt: { flex: 1, fontSize: 12, color: '#92400E', fontWeight: '500', lineHeight: 17 },
+    // Detail Summary
+    detailRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    detailLabel: { fontSize: 13, color: '#64748B' },
+    detailValue: { fontSize: 13, fontWeight: '600', color: '#1E293B' },
 
-    // Breakdown
-    accordionHeader: {
-        flexDirection: 'row', alignItems: 'center', gap: 7,
-        marginTop: 14, paddingTop: 12,
-        borderTopWidth: 1, borderTopColor: '#F1F5F9',
+    // Broadband Card
+    broadbandCard: {
+        width: '100%', height: 200, borderRadius: 20, padding: 25,
+        marginBottom: 20, elevation: 5, justifyContent: 'space-between'
     },
-    accordionTxt: { flex: 1, fontSize: 13, color: '#6B7280', fontWeight: '500' },
-    breakdownBox: {
-        backgroundColor: '#F8FAFF', borderRadius: 12,
-        padding: 14, marginTop: 10, gap: 10,
-    },
-    bdRow: { flexDirection: 'row', justifyContent: 'space-between' },
-    bdKey: { fontSize: 13, color: '#6B7280' },
-    bdVal: { fontSize: 13, fontWeight: '600', color: '#374151' },
-    lateFeeRed: { color: '#DC2626' },
-    bdDivider: { height: 1, backgroundColor: '#E5E7EB', marginVertical: 4 },
-    bdTotal: { fontSize: 14, fontWeight: '800', color: '#111827' },
+    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    cardProviderName: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
+    cardAccountContainer: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    cardCustomerName: { color: '#FFFFFF', fontSize: 20, fontWeight: '700', letterSpacing: 1 },
+    cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+    cardLabel: { color: '#BBDEFB', fontSize: 9, fontWeight: 'bold', marginBottom: 4 },
+    cardValue: { color: '#FFFFFF', fontSize: 12, fontWeight: '600', letterSpacing: 0.5 },
 
-    // Section label
-    sectionLabel: {
-        fontSize: 15, fontWeight: '700', color: '#111827',
-        marginBottom: 12, marginLeft: 2,
+    // Balance Banner
+    balanceBanner: {
+        flexDirection: 'row', backgroundColor: '#FFFFFF', borderRadius: 16,
+        padding: 16, marginBottom: 20, elevation: 1, alignItems: 'center'
     },
+    balanceItem: { flex: 1, alignItems: 'center' },
+    balanceDivider: { width: 1, height: 40, backgroundColor: '#E2E8F0' },
+    balanceLabel: { fontSize: 11, color: '#64748B', marginBottom: 6 },
+    balanceValue: { fontSize: 18, fontWeight: 'bold', color: '#4CAF50' },
 
-    // Payment methods
-    payCard: {
-        backgroundColor: '#fff', borderRadius: 20, overflow: 'hidden', marginBottom: 16,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07, shadowRadius: 12, elevation: 3,
+    // Payment Modes
+    paymentModes: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    paymentModeCard: {
+        flex: 1, minWidth: '45%', flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+        paddingVertical: 10, borderRadius: 10, backgroundColor: '#F8FAFC',
+        borderWidth: 1, borderColor: '#E2E8F0', gap: 6
     },
-    payRow: {
-        flexDirection: 'row', alignItems: 'center', gap: 14,
-        paddingHorizontal: 16, paddingVertical: 14,
-        borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
-    },
-    payRowActive: { backgroundColor: '#F8FAFF' },
-    payRowLast: { borderBottomWidth: 0 },
-    payIcon: {
-        width: 42, height: 42, borderRadius: 12,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    payLabel: { flex: 1, fontSize: 14, fontWeight: '600', color: '#111827' },
-    radio: {
-        width: 20, height: 20, borderRadius: 10,
-        borderWidth: 2, borderColor: '#D1D5DB',
-        alignItems: 'center', justifyContent: 'center',
-    },
-    radioFill: { width: 10, height: 10, borderRadius: 5 },
+    selectedPaymentModeCard: { borderColor: '#0D47A1', backgroundColor: '#F0F7FF' },
+    paymentModeText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+    selectedPaymentModeText: { color: '#0D47A1' },
 
-    // Promo
-    promoCard: {
-        backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 16,
-        shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.07, shadowRadius: 12, elevation: 3,
-    },
-    promoHint: { fontSize: 12, color: '#6B7280', fontWeight: '500', marginBottom: 10 },
-    promoRow: { flexDirection: 'row', gap: 10 },
-    promoInputWrap: {
-        flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-        backgroundColor: '#F8FAFF', borderRadius: 10,
-        borderWidth: 1.5, borderColor: '#E2E8F0',
-        paddingHorizontal: 12, height: 44,
-    },
-    promoInput: { flex: 1, fontSize: 13, color: '#111827' },
-    applyBtn: {
-        backgroundColor: '#1D4ED8', borderRadius: 10,
-        paddingHorizontal: 18, justifyContent: 'center', height: 44,
-    },
-    applyBtnGreen: { backgroundColor: '#059669' },
-    applyTxt: { color: '#fff', fontWeight: '700', fontSize: 13 },
-    promoSaved: { fontSize: 12, color: '#059669', fontWeight: '600', marginTop: 8 },
+    // Card Form
+    cardFormContainer: { marginTop: 15, padding: 16, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
 
-    // Sticky bar
-    stickyBar: {
-        flexDirection: 'row', alignItems: 'center',
-        paddingHorizontal: 16, paddingVertical: 12,
-        backgroundColor: '#fff',
-        borderTopWidth: 1, borderTopColor: '#F1F5F9',
-        shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.08, shadowRadius: 12, elevation: 12,
-    },
-    stickyLabel: { fontSize: 11, color: '#6B7280', fontWeight: '500', flex: 1 },
-    stickyAmtRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 2 },
-    stickyAmt: { fontSize: 22, fontWeight: '800', color: '#111827' },
-    stickyStrike: { fontSize: 14, color: '#9CA3AF', textDecorationLine: 'line-through', marginTop: 3 },
-    payNowBtn: { borderRadius: 14, overflow: 'hidden' },
-    payNowGrad: {
-        flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-        gap: 7, paddingHorizontal: 28, height: 52,
-    },
-    payNowTxt: { color: '#fff', fontWeight: '800', fontSize: 15 },
+    // Confirm
+    confirmRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 25 },
+    confirmText: { fontSize: 11, color: '#64748B', flex: 1 },
 
-    // Modals
-    modalOverlay: {
-        flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end',
-    },
-    modalSheet: {
-        backgroundColor: '#fff',
-        borderTopLeftRadius: 24, borderTopRightRadius: 24,
-        maxHeight: '75%', paddingBottom: 30,
-    },
-    sheetHandle: {
-        width: 40, height: 4, borderRadius: 2, backgroundColor: '#E5E7EB',
-        alignSelf: 'center', marginTop: 12, marginBottom: 14,
-    },
-    sheetTitle: {
-        fontSize: 16, fontWeight: '700', color: '#111827',
-        paddingHorizontal: 20, marginBottom: 8,
-    },
-    sheetRow: {
-        flexDirection: 'row', alignItems: 'center', gap: 14,
-        paddingVertical: 13, paddingHorizontal: 20,
-        borderBottomWidth: 1, borderBottomColor: '#F8FAFF',
-    },
-    sheetRowActive: { backgroundColor: '#EFF6FF' },
-    sheetDot: {
-        width: 36, height: 36, borderRadius: 18,
-        alignItems: 'center', justifyContent: 'center',
-    },
-    sheetDotTxt: { fontSize: 11, fontWeight: '800' },
-    sheetRowTxt: { flex: 1, fontSize: 14, color: '#374151' },
-    sheetRowTxtActive: { color: '#1D4ED8', fontWeight: '600' },
+    // Modal
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '80%', paddingTop: 20 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
+    modalSearch: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 12, margin: 20, paddingHorizontal: 15, paddingVertical: 10 },
+    modalSearchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1A1A1A' },
+    optionsList: { paddingHorizontal: 20 },
+    optionItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    optionText: { fontSize: 15, color: '#1A1A1A' },
 });

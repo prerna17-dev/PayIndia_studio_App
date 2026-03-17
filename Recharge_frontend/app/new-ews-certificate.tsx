@@ -4,7 +4,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
 import {
     Alert,
     BackHandler,
@@ -22,7 +21,6 @@ interface DocumentType {
     name: string;
     size?: number;
     uri: string;
-    mimeType?: string;
 }
 
 interface FormDataType {
@@ -164,8 +162,7 @@ export default function NewEWSCertificateScreen() {
                 const newFiles = result.assets.map(asset => ({
                     name: asset.name,
                     size: asset.size,
-                    uri: asset.uri,
-                    mimeType: asset.mimeType
+                    uri: asset.uri
                 }));
 
                 // Check size for each
@@ -256,122 +253,18 @@ export default function NewEWSCertificateScreen() {
                 setCurrentStep(3);
             }
         } else {
-            const submitApplication = async () => {
-                setIsSubmitting(true);
-                try {
-                    const formDataObj = new FormData();
+            if (!formData.finalConfirmation) {
+                Alert.alert("Confirmation", "Please confirm that all details are accurate");
+                return;
+            }
 
-                    // Applicant Details
-                    formDataObj.append('full_name', formData.fullName);
-                    formDataObj.append('aadhaar_number', formData.aadhaarNumber);
-                    formDataObj.append('dob', formData.dob);
-                    formDataObj.append('gender', formData.gender);
-                    formDataObj.append('mobile_number', formData.mobileNumber);
-                    formDataObj.append('email', formData.email || "");
-                    formDataObj.append('category', formData.category);
-
-                    // Family Details
-                    formDataObj.append('father_name', formData.fatherName);
-                    formDataObj.append('mother_name', formData.motherName);
-                    formDataObj.append('spouse_name', formData.spouseName || "");
-                    formDataObj.append('family_members_count', formData.familyMembersCount);
-                    formDataObj.append('family_occupation', formData.familyOccupation);
-
-                    // Income Details
-                    formDataObj.append('income_salary', formData.incomeSalary);
-                    formDataObj.append('income_agri', formData.incomeAgri);
-                    formDataObj.append('income_business', formData.incomeBusiness);
-                    formDataObj.append('income_other', formData.incomeOther);
-                    formDataObj.append('total_annual_income', formData.totalAnnualIncome.toString());
-
-                    // Asset Details
-                    formDataObj.append('flat_size', formData.flatSize);
-                    formDataObj.append('plot_size', formData.plotSize);
-                    formDataObj.append('location_type', formData.locationType);
-                    formDataObj.append('agri_land_details', formData.agriLandDetails || "");
-                    formDataObj.append('ownership_status', formData.ownershipStatus);
-
-                    // Documents
-                    if (documents.incomeCert) {
-                        formDataObj.append('income_cert', {
-                            uri: documents.incomeCert.uri,
-                            name: documents.incomeCert.name,
-                            type: documents.incomeCert.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.idProof) {
-                        formDataObj.append('id_proof', {
-                            uri: documents.idProof.uri,
-                            name: documents.idProof.name,
-                            type: documents.idProof.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.residenceProof) {
-                        formDataObj.append('residence_proof', {
-                            uri: documents.residenceProof.uri,
-                            name: documents.residenceProof.name,
-                            type: documents.residenceProof.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.selfDeclaration) {
-                        formDataObj.append('self_declaration', {
-                            uri: documents.selfDeclaration.uri,
-                            name: documents.selfDeclaration.name,
-                            type: documents.selfDeclaration.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.photo) {
-                        formDataObj.append('photo', {
-                            uri: documents.photo.uri,
-                            name: documents.photo.name,
-                            type: documents.photo.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-                    if (documents.casteCert) {
-                        formDataObj.append('caste_cert', {
-                            uri: documents.casteCert.uri,
-                            name: documents.casteCert.name,
-                            type: documents.casteCert.mimeType || 'application/octet-stream',
-                        } as any);
-                    }
-
-                    // Multi-file fields
-                    if (documents.proofOfIncome.length > 0) {
-                        documents.proofOfIncome.forEach((doc, index) => {
-                            formDataObj.append('proof_of_income', {
-                                uri: doc.uri,
-                                name: doc.name,
-                                type: doc.mimeType || 'application/octet-stream',
-                            } as any);
-                        });
-                    }
-                    if (documents.propertyDocs.length > 0) {
-                        documents.propertyDocs.forEach((doc, index) => {
-                            formDataObj.append('property_docs', {
-                                uri: doc.uri,
-                                name: doc.name,
-                                type: doc.mimeType || 'application/octet-stream',
-                            } as any);
-                        });
-                    }
-
-                    const response = await api.post('/certificate/ews/apply', formDataObj);
-
-                    if (response.data.success) {
-                        setApplicationId(response.data.data.reference_id);
-                        setIsSubmitted(true);
-                    } else {
-                        Alert.alert("Error", response.data.message || "Submission failed");
-                    }
-                } catch (error: any) {
-                    console.error("EWS application error:", error);
-                    Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
-                } finally {
-                    setIsSubmitting(false);
-                }
-            };
-
-            submitApplication();
+            setIsSubmitting(true);
+            setTimeout(() => {
+                const refId = "EWS" + Math.random().toString(36).substr(2, 9).toUpperCase();
+                setApplicationId(refId);
+                setIsSubmitting(false);
+                setIsSubmitted(true);
+            }, 2000);
         }
     };
 

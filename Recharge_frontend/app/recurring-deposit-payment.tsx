@@ -203,7 +203,7 @@ export default function RecurringDepositPaymentScreen() {
                 pathname: "/wallet" as any,
                 params: {
                     amount: paymentAmount,
-                    billType: "rd",
+                    billType: "Recurring Deposit Payment",
                     borrowerName: rdDetails?.accountHolderName,
                     loanAccountNumber: rdDetails?.accountNumber,
                     lenderName: selectedBank,

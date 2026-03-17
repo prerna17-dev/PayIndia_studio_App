@@ -5,7 +5,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import api from "../services/api";
 import {
     ActivityIndicator,
     Alert,
@@ -25,7 +24,6 @@ interface UploadedDoc {
     name: string;
     size?: number;
     uri: string;
-    mimeType?: string;
 }
 
 export default function NewPANScreen() {
@@ -87,7 +85,6 @@ export default function NewPANScreen() {
                     name: result.assets[0].name,
                     size: result.assets[0].size,
                     uri: result.assets[0].uri,
-                    mimeType: result.assets[0].mimeType,
                 };
 
                 if (type === "aadhaar") setAadhaarDoc(doc);
@@ -118,7 +115,6 @@ export default function NewPANScreen() {
             setPhoto({
                 name: "photo.jpg",
                 uri: result.assets[0].uri,
-                mimeType: result.assets[0].mimeType || 'image/jpeg',
             });
         }
     };
@@ -158,71 +154,14 @@ export default function NewPANScreen() {
 
     const canProceedStep2 = !!(aadhaarDoc && addressProof && dobProof && photo);
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         setIsSubmitting(true);
-        try {
-            const formDataObj = new FormData();
-
-            // Personal Details
-            formDataObj.append('full_name', fullName);
-            formDataObj.append('father_name', fatherName);
-            formDataObj.append('mother_name', motherName);
-            formDataObj.append('date_of_birth', dob);
-            formDataObj.append('mobile_number', mobile);
-            formDataObj.append('email_address', email);
-
-            // Address & Aadhaar
-            formDataObj.append('aadhar_number', aadhaarNumber.replace(/\s/g, ""));
-            formDataObj.append('full_address', address);
-            formDataObj.append('city', city);
-            formDataObj.append('district', district);
-            formDataObj.append('state', state);
-            formDataObj.append('pincode', pincode);
-
-            // Documents
-            if (aadhaarDoc) {
-                formDataObj.append('aadhar_card', {
-                    uri: aadhaarDoc.uri,
-                    name: aadhaarDoc.name,
-                    type: aadhaarDoc.mimeType || 'application/octet-stream',
-                } as any);
-            }
-            if (addressProof) {
-                formDataObj.append('address_proof', {
-                    uri: addressProof.uri,
-                    name: addressProof.name,
-                    type: addressProof.mimeType || 'application/octet-stream',
-                } as any);
-            }
-            if (dobProof) {
-                formDataObj.append('dob_proof', {
-                    uri: dobProof.uri,
-                    name: dobProof.name,
-                    type: dobProof.mimeType || 'application/octet-stream',
-                } as any);
-            }
-            if (photo) {
-                formDataObj.append('passport_photo', {
-                    uri: photo.uri,
-                    name: photo.name,
-                    type: photo.mimeType || 'image/jpeg',
-                } as any);
-            }
-
-            const response = await api.post('/pan/apply', formDataObj);
-
-            if (response.data.success) {
-                setApplicationId(response.data.data.applicationId.toString());
-                setIsSubmitted(true);
-            } else {
-                Alert.alert("Error", response.data.message || "Submission failed");
-            }
-        } catch (error: any) {
-            console.error("PAN application error:", error);
-            Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
-        } finally {
+        setTimeout(() => {
+            const refId = "PAN" + Math.random().toString(36).substr(2, 9).toUpperCase();
+            setApplicationId(refId);
             setIsSubmitting(false);
-        }
+            setIsSubmitted(true);
+        }, 2000);
     };
 
     const handleBack = () => {
@@ -557,7 +496,7 @@ export default function NewPANScreen() {
                                         style={[styles.docUploadCard, aadhaarDoc && styles.docUploadCardActive]}
                                         onPress={() => pickDocument("aadhaar")}
                                     >
-                                        <View style={[styles.docIconCircle, aadhaarDoc && { backgroundColor: '#2196F3' }]}>
+                                        <View style={styles.docIconCircle}>
                                             <MaterialCommunityIcons name="card-account-details" size={24} color={aadhaarDoc ? "#FFF" : "#2196F3"} />
                                         </View>
                                         <View style={styles.docTextContent}>
@@ -576,7 +515,7 @@ export default function NewPANScreen() {
                                         style={[styles.docUploadCard, addressProof && styles.docUploadCardActive]}
                                         onPress={() => pickDocument("address")}
                                     >
-                                        <View style={[styles.docIconCircle, { backgroundColor: addressProof ? '#43A047' : '#E8F5E9' }]}>
+                                        <View style={[styles.docIconCircle, { backgroundColor: '#E8F5E9' }]}>
                                             <MaterialCommunityIcons name="home-map-marker" size={24} color={addressProof ? "#FFF" : "#43A047"} />
                                         </View>
                                         <View style={styles.docTextContent}>
@@ -595,7 +534,7 @@ export default function NewPANScreen() {
                                         style={[styles.docUploadCard, dobProof && styles.docUploadCardActive]}
                                         onPress={() => pickDocument("dob")}
                                     >
-                                        <View style={[styles.docIconCircle, { backgroundColor: dobProof ? '#FFB300' : '#FFF8E1' }]}>
+                                        <View style={[styles.docIconCircle, { backgroundColor: '#FFF8E1' }]}>
                                             <MaterialCommunityIcons name="calendar-check" size={24} color={dobProof ? "#FFF" : "#FFB300"} />
                                         </View>
                                         <View style={styles.docTextContent}>
@@ -614,7 +553,7 @@ export default function NewPANScreen() {
                                         style={[styles.docUploadCard, photo && styles.docUploadCardActive]}
                                         onPress={pickPhoto}
                                     >
-                                        <View style={[styles.docIconCircle, { backgroundColor: photo ? '#E53935' : '#FFEBEE' }]}>
+                                        <View style={[styles.docIconCircle, { backgroundColor: '#FFEBEE' }]}>
                                             <MaterialCommunityIcons name="account-box" size={24} color={photo ? "#FFF" : "#E53935"} />
                                         </View>
                                         <View style={styles.docTextContent}>
@@ -1091,18 +1030,18 @@ const styles = StyleSheet.create({
         color: '#FFF',
     },
     // Success Screen
-    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: '#FFF' },
+    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#FFF' },
     successIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F8E9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
     successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 10 },
     successSubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 30, paddingHorizontal: 20 },
     idCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#E2E8F0' },
     idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
     idValue: { fontSize: 24, fontWeight: '800', color: '#0D47A1' },
-    successActions: { flexDirection: 'row', gap: 15, marginBottom: 30 },
+    successActions: { flexDirection: 'row', gap: 20, marginBottom: 40 },
     actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
     actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
-    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
-    btnGrad: { paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
-    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+    mainBtn: { borderRadius: 16, overflow: 'hidden', width: '100%' },
+    btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
+    mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
 });

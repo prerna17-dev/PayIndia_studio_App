@@ -159,7 +159,7 @@ const OTTSubscriptionsScreen = () => {
                 pathname: "/wallet" as any,
                 params: {
                     amount: planDetails?.total.toString(),
-                    billType: "ott",
+                    billType: "Ott Subscriptions",
                     borrowerName: planDetails?.subscriberName,
                     loanAccountNumber: accountIdentifier,
                     lenderName: selectedPlatform,

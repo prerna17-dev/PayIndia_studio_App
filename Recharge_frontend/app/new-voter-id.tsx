@@ -3,7 +3,6 @@ import * as DocumentPicker from "expo-document-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import api from "../services/api";
 import React, { useEffect, useState } from "react";
 import {
     Alert,
@@ -122,13 +121,8 @@ export default function NewVoterIDScreen() {
 
                 setDocuments((prev) => ({
                     ...prev,
-                    [docType]: {
-                        ...file,
-                        mimeType: file.mimeType
-                    },
+                    [docType]: file,
                 }));
-
-                Alert.alert("Success", "Document uploaded successfully");
             }
         } catch (error) {
             Alert.alert("Error", "Failed to upload document");
@@ -165,7 +159,7 @@ export default function NewVoterIDScreen() {
         }
     };
 
-    const handleContinue = async () => {
+    const handleContinue = () => {
         if (currentStep === 1) {
             if (
                 !formData.fullName ||
@@ -199,69 +193,13 @@ export default function NewVoterIDScreen() {
             setCurrentStep(3);
         } else {
             setIsSubmitting(true);
-            try {
-                const formDataToSend = new FormData();
-
-                // Personal Details
-                formDataToSend.append("full_name", formData.fullName);
-                formDataToSend.append("date_of_birth", formData.dob);
-                formDataToSend.append("gender", formData.gender);
-                formDataToSend.append("aadhar_number", formData.aadhaarNo);
-                formDataToSend.append("mobile_number", formData.mobile);
-
-                // Address Details
-                formDataToSend.append("house_no", formData.houseNo);
-                formDataToSend.append("assembly_constituency", formData.assembly);
-                formDataToSend.append("city", formData.city);
-                formDataToSend.append("district", formData.district);
-                formDataToSend.append("state", formData.state);
-                formDataToSend.append("pincode", formData.pincode);
-
-                // Documents
-                if (documents.aadhaarCard) {
-                    formDataToSend.append("aadhar_card", {
-                        uri: documents.aadhaarCard.uri,
-                        name: documents.aadhaarCard.name,
-                        type: documents.aadhaarCard.mimeType || "application/octet-stream",
-                    } as any);
-                    // Use Aadhaar as DOB proof if needed
-                    formDataToSend.append("dob_proof", {
-                        uri: documents.aadhaarCard.uri,
-                        name: documents.aadhaarCard.name,
-                        type: documents.aadhaarCard.mimeType || "application/octet-stream",
-                    } as any);
-                }
-                if (documents.addressProof) {
-                    formDataToSend.append("address_proof", {
-                        uri: documents.addressProof.uri,
-                        name: documents.addressProof.name,
-                        type: documents.addressProof.mimeType || "application/octet-stream",
-                    } as any);
-                }
-                if (documents.photo) {
-                    formDataToSend.append("passport_photo", {
-                        uri: documents.photo.uri,
-                        name: documents.photo.name,
-                        type: documents.photo.mimeType || "application/octet-stream",
-                    } as any);
-                }
-
-                const response = await api.post("/certificate/voter/apply", formDataToSend, {
-                    headers: { "Content-Type": "multipart/form-data" },
-                });
-
-                if (response.data.success) {
-                    setApplicationId(response.data.data.applicationId?.toString() || "VOT" + Date.now());
-                    setIsSubmitted(true);
-                } else {
-                    Alert.alert("Error", response.data.message || "Submission failed");
-                }
-            } catch (error: any) {
-                console.error("Voter submission error:", error);
-                Alert.alert("Error", error.response?.data?.message || "Failed to submit. Please try again.");
-            } finally {
+            // Simulate API call
+            setTimeout(() => {
+                const refId = "VOT" + Math.random().toString(36).substr(2, 9).toUpperCase();
+                setApplicationId(refId);
                 setIsSubmitting(false);
-            }
+                setIsSubmitted(true);
+            }, 2000);
         }
     };
 
@@ -421,6 +359,19 @@ export default function NewVoterIDScreen() {
                                             <Text style={[styles.genderText, formData.gender === g && styles.genderTextActive]}>{g}</Text>
                                         </TouchableOpacity>
                                     ))}
+                                </View>
+
+                                <Text style={styles.inputLabel}>Mobile Number *</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="phone-portrait-outline" size={18} color="#94A3B8" />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="10-digit mobile number"
+                                        keyboardType="number-pad"
+                                        maxLength={10}
+                                        value={formData.mobile}
+                                        onChangeText={(text) => setFormData({ ...formData, mobile: text })}
+                                    />
                                 </View>
 
                                 <Text style={styles.inputLabel}>Aadhaar Number *</Text>
@@ -1218,7 +1169,21 @@ const styles = StyleSheet.create({
         fontWeight: '600',
         textAlign: 'center',
     },
-    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
-    btnGrad: { paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
-    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+    mainBtn: {
+        width: '100%',
+        borderRadius: 16,
+        overflow: 'hidden',
+    },
+    btnGrad: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        gap: 10,
+    },
+    mainBtnText: {
+        color: "#FFF",
+        fontSize: 16,
+        fontWeight: "800",
+    },
 });

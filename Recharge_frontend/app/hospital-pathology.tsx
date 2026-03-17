@@ -206,7 +206,7 @@ const HospitalPathologyScreen = () => {
                 pathname: "/wallet" as any,
                 params: {
                     amount: billDetails?.totalPayable.toString(),
-                    billType: "medical",
+                    billType: "Hospital Pathology",
                     borrowerName: billDetails?.patientName,
                     loanAccountNumber: uhid || billDetails?.billNumber,
                     lenderName: selectedProvider,
