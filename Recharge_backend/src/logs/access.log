@@ -1096,3 +1096,5 @@
 2026-03-17T10:01:10.591Z | GET /api/user/profile | 304 | 6ms | ::ffff:192.168.1.30
 2026-03-17T10:03:50.941Z | GET /api/wallet/balance | 200 | 17ms | ::ffff:192.168.1.38
 2026-03-17T10:03:51.115Z | GET /api/wallet/transactions | 200 | 21ms | ::ffff:192.168.1.38
+2026-03-17T10:12:08.167Z | GET /api/user/profile | 200 | 11ms | ::ffff:192.168.1.38
+2026-03-17T10:12:12.955Z | GET /api/user/profile | 304 | 6ms | ::ffff:192.168.1.38
