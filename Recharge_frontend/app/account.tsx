@@ -46,15 +46,25 @@ export default function AccountScreen() {
     }
   };
 
-  const handleLogout = () => {
-    setShowLogoutModal(false);
-    setShowLogoutSuccess(true);
+  const handleLogout = async () => {
+    try {
+      // Clear storage
+      await AsyncStorage.removeItem("userToken");
+      await AsyncStorage.removeItem("userData");
 
-    // Redirect after a short delay
-    setTimeout(() => {
-      setShowLogoutSuccess(false);
+      setShowLogoutModal(false);
+      setShowLogoutSuccess(true);
+
+      // Redirect after a short delay
+      setTimeout(() => {
+        setShowLogoutSuccess(false);
+        router.replace("/auth/login");
+      }, 1500);
+    } catch (error) {
+      console.error("Error during logout:", error);
+      // fallback redirect if storage fails
       router.replace("/auth/login");
-    }, 1500);
+    }
   };
 
   // Handle hardware back button - go to home screen

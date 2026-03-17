@@ -64,9 +64,9 @@ export default function MobileRechargeScreen() {
         // Simulate API call to fetch operator based on number
         setTimeout(() => {
             let detected = null;
-            
+
             const numStr = number.toLowerCase();
-            
+
             // User requested explicit check logic:
             // "if jio then jio , if vi then vi, if number is airtel hen airtel if number is bsnl then bsnl"
             // We use standard Indian prefixes out of necessity to simulate "fetching" since
@@ -78,7 +78,7 @@ export default function MobileRechargeScreen() {
             } else if (numStr.startsWith('77') || numStr.startsWith('94')) {
                 detected = allOperators.find(op => op.id === 'bsnl');
             } else {
-                detected = allOperators.find(op => op.id === 'jio'); 
+                detected = allOperators.find(op => op.id === 'jio');
             }
 
             if (detected) {

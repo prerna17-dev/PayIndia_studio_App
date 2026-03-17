@@ -23,6 +23,13 @@ export const API_ENDPOINTS = {
 
     // Profile
     USER_PROFILE: `${API_BASE_URL}/api/user/profile`,
+    USER_TRANSACTIONS: `${API_BASE_URL}/api/user/transactions`,
+
+    // Wallet
+    WALLET_BALANCE: `${API_BASE_URL}/api/wallet/balance`,
+    WALLET_ADD: `${API_BASE_URL}/api/wallet/add`,
+    WALLET_WITHDRAW: `${API_BASE_URL}/api/wallet/withdraw`,
+    WALLET_TRANSACTIONS: `${API_BASE_URL}/api/wallet/transactions`,
 
     // Recharge
     RECHARGE_OPERATORS: `${API_BASE_URL}/api/recharge/operators`,
@@ -34,4 +41,10 @@ export const API_ENDPOINTS = {
     FETCH_BILL: `${API_BASE_URL}/api/bill/fetch`,
     PAY_BILL: `${API_BASE_URL}/api/bill/pay`,
     BILL_STATUS: `${API_BASE_URL}/api/bill/status`,
+
+    // Aadhaar
+    AADHAAR_ENROLL: `${API_BASE_URL}/api/aadhar/enroll`,
+    AADHAAR_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/aadhar/correction/send-otp`,
+    AADHAAR_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/aadhar/correction/verify-otp`,
+    AADHAAR_CORRECTION_SUBMIT: `${API_BASE_URL}/api/aadhar/correction/submit`,
 };

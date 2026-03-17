@@ -1,35 +1,150 @@
 [
   {
-    "name": "Bus Source City (Standard)",
-    "url": "https://sit.paysprint.in/service-api/api/v1/service/bus/ticket/getsourcecity",
+    "path": "recharge/recharge/browseplan",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/recharge/browseplan",
     "status": 500,
-    "data": null,
-    "error": "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n    <title>404 Page Not Founds</title>\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"asset/css/_default/login.css\">\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css\">\r\n    <link href='https://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>\r\n</head>\r\n<body>\r\n<div class=\"welcome_screen\" style=\"padding:0 0 0 30%;width:100%;background:#151922;background-size:cover;height:100%\">\r\n    <div class=\"content_blk\">\r\n        <img src=\"asset/images/_default/404.png\">\r\n    </div>    \r\n</div>\r\n<!--<div class=\"login_screen\">\r\n    <div class=\"form_blk\">\r\n        <div class=\"support_blk\">\r\n            <h1>404 Page Not Found</h1>\r\n\t\t<p>The page you requested was not found.</p>        </div>\r\n\t\t<a href=\""
+    "type": "HTML",
+    "info": "404 Page Not Founds"
   },
   {
-    "name": "Bus Source City (With Travel)",
-    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/bus/ticket/getsourcecity",
+    "path": "recharge/recharge/browse_plan",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/recharge/browse_plan",
     "status": 500,
-    "data": null,
-    "error": "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n    <title>404 Page Not Founds</title>\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"asset/css/_default/login.css\">\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css\">\r\n    <link href='https://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>\r\n</head>\r\n<body>\r\n<div class=\"welcome_screen\" style=\"padding:0 0 0 30%;width:100%;background:#151922;background-size:cover;height:100%\">\r\n    <div class=\"content_blk\">\r\n        <img src=\"asset/images/_default/404.png\">\r\n    </div>    \r\n</div>\r\n<!--<div class=\"login_screen\">\r\n    <div class=\"form_blk\">\r\n        <div class=\"support_blk\">\r\n            <h1>404 Page Not Found</h1>\r\n\t\t<p>The page you requested was not found.</p>        </div>\r\n\t\t<a href=\""
+    "type": "HTML",
+    "info": "404 Page Not Founds"
   },
   {
-    "name": "Merchant Status Check (Air)",
-    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/air/merchant/status_check",
+    "path": "recharge/hlr/browseplan",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/hlr/browseplan",
+    "status": 500,
+    "type": "HTML",
+    "info": "404 Page Not Founds"
+  },
+  {
+    "path": "recharge/hlr/browse_plan",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/hlr/browse_plan",
+    "status": 500,
+    "type": "HTML",
+    "info": "404 Page Not Founds"
+  },
+  {
+    "path": "recharge/plans/browseplan",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/plans/browseplan",
+    "status": 500,
+    "type": "HTML",
+    "info": "404 Page Not Founds"
+  },
+  {
+    "path": "recharge/recharge/getplans",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/recharge/getplans",
+    "status": 500,
+    "type": "HTML",
+    "info": "404 Page Not Founds"
+  },
+  {
+    "path": "recharge/recharge/get_plans",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/recharge/get_plans",
+    "status": 500,
+    "type": "HTML",
+    "info": "404 Page Not Founds"
+  },
+  {
+    "path": "recharge/hlr/index",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/hlr/index",
+    "status": 500,
+    "type": "HTML",
+    "info": "404 Page Not Founds"
+  },
+  {
+    "path": "recharge/recharge/index",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/recharge/index",
+    "status": 500,
+    "type": "HTML",
+    "info": "404 Page Not Founds"
+  },
+  {
+    "path": "recharge/hlr/recharge/browseplan",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/hlr/recharge/browseplan",
+    "status": 500,
+    "type": "HTML",
+    "info": "404 Page Not Founds"
+  },
+  {
+    "path": "recharge/recharge/getoperator",
+    "url": "https://sit.paysprint.in/service-api/api/v1/service/recharge/recharge/getoperator",
     "status": 200,
-    "data": {
+    "type": "JSON",
+    "info": {
+      "responsecode": 1,
       "status": true,
-      "response_code": 1,
-      "message": "Merchant status fetched successfully.",
-      "merchant_status": "UNREGISTERED"
-    },
-    "error": null
-  },
-  {
-    "name": "Merchant Status Check (Bus)",
-    "url": "https://sit.paysprint.in/service-api/api/v1/service/travel/bus/merchant/status_check",
-    "status": 500,
-    "data": null,
-    "error": "<!DOCTYPE html>\r\n<html lang=\"en\">\r\n<head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">\r\n    <title>404 Page Not Founds</title>\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"asset/css/_default/login.css\">\r\n    <link rel=\"stylesheet\" type=\"text/css\" href=\"https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css\">\r\n    <link href='https://fonts.googleapis.com/css?family=Montserrat:400,700' rel='stylesheet' type='text/css'>\r\n</head>\r\n<body>\r\n<div class=\"welcome_screen\" style=\"padding:0 0 0 30%;width:100%;background:#151922;background-size:cover;height:100%\">\r\n    <div class=\"content_blk\">\r\n        <img src=\"asset/images/_default/404.png\">\r\n    </div>    \r\n</div>\r\n<!--<div class=\"login_screen\">\r\n    <div class=\"form_blk\">\r\n        <div class=\"support_blk\">\r\n            <h1>404 Page Not Found</h1>\r\n\t\t<p>The page you requested was not found.</p>        </div>\r\n\t\t<a href=\""
+      "data": [
+        {
+          "id": "11",
+          "name": "Airtel",
+          "category": "Prepaid"
+        },
+        {
+          "id": "12",
+          "name": "Airtel Digital TV",
+          "category": "DTH"
+        },
+        {
+          "id": "13",
+          "name": "BSNL",
+          "category": "Prepaid"
+        },
+        {
+          "id": "14",
+          "name": "Dish TV",
+          "category": "DTH"
+        },
+        {
+          "id": "4",
+          "name": "Idea",
+          "category": "Prepaid"
+        },
+        {
+          "id": "18",
+          "name": "Jio",
+          "category": "Prepaid"
+        },
+        {
+          "id": "35",
+          "name": "MTNL",
+          "category": "Prepaid"
+        },
+        {
+          "id": "33",
+          "name": "MTNL Delhi",
+          "category": "Prepaid"
+        },
+        {
+          "id": "34",
+          "name": "MTNL Mumbai",
+          "category": "Prepaid"
+        },
+        {
+          "id": "27",
+          "name": "Sun Direct",
+          "category": "DTH"
+        },
+        {
+          "id": "8",
+          "name": "Tata Sky",
+          "category": "DTH"
+        },
+        {
+          "id": "10",
+          "name": "Videocon D2H",
+          "category": "DTH"
+        },
+        {
+          "id": "22",
+          "name": "Vodafone",
+          "category": "Prepaid"
+        }
+      ],
+      "message": "Operator List Fetched"
+    }
   }
 ]

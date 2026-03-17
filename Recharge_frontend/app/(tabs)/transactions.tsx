@@ -30,7 +30,7 @@ interface Transaction {
   created_at: string;
 }
 
-import { API_BASE_URL } from "../../constants/api";
+import { API_ENDPOINTS } from "../../constants/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function HistoryScreen() {
@@ -44,14 +44,14 @@ export default function HistoryScreen() {
   const fetchTransactions = async () => {
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
+      const response = await fetch(API_ENDPOINTS.USER_TRANSACTIONS, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      const data = await response.json();
-      if (response.ok) {
-        setTransactions(data);
+      const result = await response.json();
+      if (response.ok && result.success) {
+        setTransactions(result.data);
       }
     } catch (error) {
       console.error("Error fetching transactions:", error);
@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 60, // Increased padding
+    paddingTop: 45, // Reduced padding
     paddingBottom: 15,
     zIndex: 1,
   },
