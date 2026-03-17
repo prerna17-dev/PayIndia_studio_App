@@ -18,9 +18,6 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import { API_ENDPOINTS } from "../constants/api";
 
 type UpdateType = "name" | "dob" | "gender" | "address" | "mobile";
 
@@ -120,77 +117,29 @@ export default function AadhaarUpdateScreen() {
         setNewDob(formatted);
     };
 
-    const handleSendOtp = async () => {
+    const handleSendOtp = () => {
         if (mobileNumber.length !== 10) return Alert.alert("Error", "Enter valid 10-digit mobile");
-        if (!aadhaarNumber || aadhaarNumber.replace(/\s/g, "").length !== 12) {
-            return Alert.alert("Error", "Enter valid 12-digit Aadhaar number");
-        }
-
-        try {
-            const token = await AsyncStorage.getItem("userToken");
-            const response = await axios.post(API_ENDPOINTS.AADHAAR_CORRECTION_OTP_SEND, {
-                mobile_number: mobileNumber,
-                aadhar_number: aadhaarNumber.replace(/\s/g, ""),
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            if (response.data.success) {
-                setIsOtpSent(true);
-                Alert.alert("Success", "OTP sent to registered mobile");
-            } else {
-                Alert.alert("Error", response.data.message || "Failed to send OTP");
-            }
-        } catch (error: any) {
-            console.error("Send OTP Error:", error);
-            Alert.alert("Error", error.response?.data?.message || "Something went wrong");
-        }
+        setIsOtpSent(true);
+        Alert.alert("Success", "OTP sent to registered mobile");
     };
 
-    const handleVerifyOtp = async () => {
+    const handleVerifyOtp = () => {
         if (otp.length !== 6) return Alert.alert("Error", "Enter 6-digit OTP");
         setIsVerifying(true);
-        try {
-            const token = await AsyncStorage.getItem("userToken");
-            const response = await axios.post(API_ENDPOINTS.AADHAAR_CORRECTION_OTP_VERIFY, {
-                mobile_number: mobileNumber,
-                otp_code: otp,
-            }, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-
-            if (response.data.success) {
-                setStep(2);
-            } else {
-                Alert.alert("Error", response.data.message || "Invalid OTP");
-            }
-        } catch (error: any) {
-            console.error("Verify OTP Error:", error);
-            Alert.alert("Error", error.response?.data?.message || "Verification failed");
-        } finally {
+        setTimeout(() => {
             setIsVerifying(false);
-        }
+            setStep(2);
+        }, 1200);
     };
 
     const handleFileUpload = async (docId: string) => {
         try {
-            const result = await DocumentPicker.getDocumentAsync({
-                type: ["application/pdf", "image/*"],
-                copyToCacheDirectory: true,
-            });
+            const result = await DocumentPicker.getDocumentAsync({ type: ["application/pdf", "image/*"] });
             if (!result.canceled && result.assets?.[0]) {
                 const asset = result.assets[0];
                 if (asset.size && asset.size > 5 * 1024 * 1024) return Alert.alert("Too Large", "Max file size is 5MB");
                 const sizeInMb = asset.size ? (asset.size / (1024 * 1024)).toFixed(1) : "0.5";
-                setUploadedDocs(prev => ({
-                    ...prev,
-                    [docId]: {
-                        name: asset.name,
-                        size: `${sizeInMb} MB`,
-                        uri: asset.uri,
-                        mimeType: asset.mimeType,
-                    } as any
-                }));
+                setUploadedDocs(prev => ({ ...prev, [docId]: { name: asset.name, size: `${sizeInMb} MB`, uri: asset.uri } }));
             }
         } catch (err) { Alert.alert("Error", "Failed to upload document"); }
     };
@@ -220,59 +169,14 @@ export default function AadhaarUpdateScreen() {
         setStep(3);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = () => {
         setIsSubmitting(true);
-        try {
-            const token = await AsyncStorage.getItem("userToken");
-            const formDataObj = new FormData();
-
-            formDataObj.append("aadhar_number", aadhaarNumber.replace(/\s/g, ""));
-            formDataObj.append("mobile_number", mobileNumber);
-            formDataObj.append("corrected_name", newName);
-            formDataObj.append("corrected_dob", newDob);
-            formDataObj.append("correction_type", selectedType || "");
-
-            // Map documents to backend field names
-            // Backend expects: identity_proof, identity_proof_2, address_proof, address_proof_2, dob_proof, photo
-            const docMapping: Record<string, string> = {
-                nameProof1: "identity_proof",
-                nameProof2: "identity_proof_2",
-                dobProof: "dob_proof",
-                genderProof: "identity_proof", // Using identity_proof for gender change certificate
-                addressProof1: "address_proof",
-                addressProof2: "address_proof_2",
-                mobileProof: "identity_proof",
-            };
-
-            Object.keys(uploadedDocs).forEach(docId => {
-                const backendField = docMapping[docId] || "identity_proof";
-                const file: any = uploadedDocs[docId];
-                formDataObj.append(backendField, {
-                    uri: file.uri,
-                    name: file.name,
-                    type: file.mimeType || "application/octet-stream",
-                } as any);
-            });
-
-            const response = await axios.post(API_ENDPOINTS.AADHAAR_CORRECTION_SUBMIT, formDataObj, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                    Authorization: `Bearer ${token}`,
-                },
-            });
-
-            if (response.data.success) {
-                setApplicationId(response.data.data.correctionId.toString());
-                setIsSubmitted(true);
-            } else {
-                Alert.alert("Error", response.data.message || "Submission failed");
-            }
-        } catch (error: any) {
-            console.error("Submit Correction Error:", error);
-            Alert.alert("Error", error.response?.data?.message || "Something went wrong during submission");
-        } finally {
+        setTimeout(() => {
+            const refId = "UPD" + Math.random().toString(36).substr(2, 9).toUpperCase();
+            setApplicationId(refId);
             setIsSubmitting(false);
-        }
+            setIsSubmitted(true);
+        }, 2000);
     };
 
     const renderDocumentUploads = () => {
@@ -669,7 +573,7 @@ const s = StyleSheet.create({
     verifyBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 16, borderRadius: 12, justifyContent: 'center', height: 48 },
     verifyBtnText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
 
-    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
+    mainBtn: { borderRadius: 16, overflow: 'hidden' },
     btnDisabled: { opacity: 0.6 },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
     mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
@@ -711,15 +615,15 @@ const s = StyleSheet.create({
     warningText: { flex: 1, fontSize: 12, color: '#856404', lineHeight: 18, fontWeight: '600' },
 
     // Success Screen
-    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#FFF' },
-    successIconCircle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-    successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B' },
-    successSubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginTop: 8, lineHeight: 20 },
-    idCard: { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 24, width: '100%', alignItems: 'center', marginVertical: 32, borderWidth: 1, borderColor: '#E2E8F0' },
-    idLabel: { fontSize: 12, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-    idValue: { fontSize: 28, fontWeight: '800', color: '#0D47A1', marginTop: 4 },
-    successActions: { flexDirection: 'row', gap: 20, marginBottom: 40 },
-    actionBtn: { alignItems: 'center', gap: 8 },
-    actionIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
-    actionText: { fontSize: 12, fontWeight: '600', color: '#475569', textAlign: 'center' },
+    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: '#FFF' },
+    successIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F8E9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+    successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 10 },
+    successSubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 30, paddingHorizontal: 20 },
+    idCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#E2E8F0' },
+    idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
+    idValue: { fontSize: 24, fontWeight: '800', color: '#0D47A1' },
+    successActions: { flexDirection: 'row', gap: 15, marginBottom: 30 },
+    actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+    actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+    actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
 });

@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 45, // Reduced padding
+    paddingTop: 60, // Increased padding
     paddingBottom: 15,
     zIndex: 1,
   },
@@ -690,19 +690,19 @@ const styles = StyleSheet.create({
   highlightBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F1F8FE",
+    backgroundColor: "#FFF9E6",
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 10,
     marginBottom: 15,
     gap: 10,
     borderWidth: 1,
-    borderColor: "#E3F2FD",
+    borderColor: "#BBDEFB",
   },
 
   highlightText: {
     fontSize: 13,
-    color: "#0D47A1",
+    color: "#5D4E37",
     fontWeight: "500",
     flex: 1,
   },
