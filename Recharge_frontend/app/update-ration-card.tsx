@@ -8,6 +8,8 @@ import {
     ActivityIndicator,
     Alert,
     BackHandler,
+    KeyboardAvoidingView,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -24,10 +26,89 @@ interface UpdateType {
     icon: any;
 }
 
+// ----------- Detail field configs per update type ----------------------------
+const UPDATE_DETAIL_CONFIG: Record<string, { label: string; fields: { key: string; placeholder: string; label: string; keyboardType?: any; maxLength?: number }[] }> = {
+    add: {
+        label: "Add Member",
+        fields: [
+            { key: "name", label: "Full Name *", placeholder: "Enter member's full name" },
+            { key: "aadhaar", label: "Aadhaar Number *", placeholder: "12-digit Aadhaar", keyboardType: "number-pad", maxLength: 12 },
+            { key: "relation", label: "Relation with Head *", placeholder: "e.g. Son, Daughter, Wife" },
+            { key: "dob", label: "Date of Birth *", placeholder: "DD/MM/YYYY" },
+        ],
+    },
+    remove: {
+        label: "Remove Member",
+        fields: [
+            { key: "name", label: "Member's Full Name *", placeholder: "Name as on ration card" },
+            { key: "memberAadhaar", label: "Member's Aadhaar Number", placeholder: "12-digit Aadhaar", keyboardType: "number-pad", maxLength: 12 },
+            { key: "reason", label: "Reason for Removal *", placeholder: "e.g. Death, Migration, Marriage" },
+        ],
+    },
+    address: {
+        label: "Address Change",
+        fields: [
+            { key: "fullAddress", label: "New Full Address *", placeholder: "House No., Street, Locality, City" },
+            { key: "district", label: "District *", placeholder: "Enter district" },
+            { key: "pincode", label: "Pincode *", placeholder: "6-digit pincode", keyboardType: "number-pad", maxLength: 6 },
+        ],
+    },
+    head: {
+        label: "Change Head of Family",
+        fields: [
+            { key: "name", label: "New Head's Full Name *", placeholder: "Enter full name" },
+            { key: "aadhaar", label: "New Head's Aadhaar *", placeholder: "12-digit Aadhaar", keyboardType: "number-pad", maxLength: 12 },
+            { key: "relation", label: "Relation with Current Head *", placeholder: "e.g. Son, Sister, Spouse" },
+        ],
+    },
+    name: {
+        label: "Name Correction",
+        fields: [
+            { key: "memberName", label: "Member to Correct *", placeholder: "Name as on ration card" },
+            { key: "currentName", label: "Incorrect / Current Name *", placeholder: "As it appears now" },
+            { key: "correctedName", label: "Correct Name *", placeholder: "As it should be" },
+        ],
+    },
+    mobile: {
+        label: "Mobile Number Update",
+        fields: [
+            { key: "oldNumber", label: "Current Registered Mobile", placeholder: "Old 10-digit number", keyboardType: "number-pad", maxLength: 10 },
+            { key: "number", label: "New Mobile Number *", placeholder: "New 10-digit number", keyboardType: "phone-pad", maxLength: 10 },
+        ],
+    },
+};
+
+// ----------- Document configs per update type --------------------------------
+const UPDATE_DOCUMENT_CONFIG: Record<string, { key: string; label: string; required: boolean }[]> = {
+    add: [
+        { key: "add_aadhaar", label: "New Member's Aadhaar Card *", required: true },
+        { key: "add_birthCert", label: "Birth Certificate (if < 5 years)", required: false },
+    ],
+    remove: [
+        { key: "remove_proof", label: "Removal Proof (Death Cert / Transfer Doc) *", required: true },
+    ],
+    address: [
+        { key: "address_proof", label: "New Address Proof (Electricity Bill / Lease Deed) *", required: true },
+    ],
+    head: [
+        { key: "head_aadhaar", label: "New Head's Aadhaar Card *", required: true },
+        { key: "head_proof", label: "Relationship Proof *", required: true },
+    ],
+    name: [
+        { key: "name_aadhaar", label: "Aadhaar / PAN with Correct Name *", required: true },
+        { key: "name_gazette", label: "Gazette Notification (if applicable)", required: false },
+    ],
+    mobile: [
+        { key: "mobile_aadhaar", label: "Aadhaar Card of Head *", required: true },
+    ],
+};
+
+// Common doc always required
+const COMMON_DOC = { key: "existingCard", label: "Existing Ration Card Copy *", required: true };
+
 export default function UpdateRationCardScreen() {
     const router = useRouter();
 
-    // State
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
@@ -46,9 +127,20 @@ export default function UpdateRationCardScreen() {
         { id: "mobile", label: "Mobile Update", selected: false, icon: "phone" },
     ]);
 
-    const [documents, setDocuments] = useState<any>({});
+    // updateDetails: { [typeId]: { [fieldKey]: value } }
+    const [updateDetails, setUpdateDetails] = useState<Record<string, Record<string, string>>>({
+        add: {},
+        remove: {},
+        address: {},
+        head: {},
+        name: {},
+        mobile: {},
+    });
 
-    // Handle back
+    const [documents, setDocuments] = useState<Record<string, any>>({});
+
+    const selectedTypes = updateTypes.filter(t => t.selected);
+
     const handleBack = () => {
         if (currentStep > 1) {
             setCurrentStep(currentStep - 1);
@@ -59,10 +151,7 @@ export default function UpdateRationCardScreen() {
 
     useEffect(() => {
         const backAction = () => {
-            if (isSubmitted) {
-                router.back();
-                return true;
-            }
+            if (isSubmitted) { router.back(); return true; }
             handleBack();
             return true;
         };
@@ -74,11 +163,26 @@ export default function UpdateRationCardScreen() {
         setUpdateTypes(updateTypes.map(t => t.id === id ? { ...t, selected: !t.selected } : t));
     };
 
+    const setDetailField = (typeId: string, fieldKey: string, value: string) => {
+        setUpdateDetails(prev => ({
+            ...prev,
+            [typeId]: { ...prev[typeId], [fieldKey]: value },
+        }));
+    };
+
+    // Auto-format DOB as DD/MM/YYYY
+    const formatDOB = (raw: string): string => {
+        const digits = raw.replace(/\D/g, "").slice(0, 8);
+        if (digits.length <= 2) return digits;
+        if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+        return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    };
+
     const handleFileUpload = async (key: string) => {
         try {
             const result = await DocumentPicker.getDocumentAsync({ type: ["application/pdf", "image/*"] });
             if (!result.canceled && result.assets[0]) {
-                setDocuments({ ...documents, [key]: result.assets[0] });
+                setDocuments(prev => ({ ...prev, [key]: result.assets[0] }));
             }
         } catch (e) { Alert.alert("Error", "Upload failed"); }
     };
@@ -93,12 +197,42 @@ export default function UpdateRationCardScreen() {
 
     const handleContinue = () => {
         if (currentStep === 1) {
+            // Step 1: verify + select at least one
             if (!isVerified) { Alert.alert("Verification", "Please verify your details first"); return; }
-            if (!updateTypes.some(t => t.selected)) { Alert.alert("Select", "Choose at least one update type"); return; }
+            if (!selectedTypes.length) { Alert.alert("Select", "Choose at least one update type"); return; }
             setCurrentStep(2);
+
         } else if (currentStep === 2) {
-            if (!documents.existingCard) { Alert.alert("Required", "Please upload existing Ration Card copy"); return; }
+            // Step 2: validate detail fields for each selected type
+            for (const type of selectedTypes) {
+                const config = UPDATE_DETAIL_CONFIG[type.id];
+                const details = updateDetails[type.id] || {};
+                for (const field of config.fields) {
+                    if (field.label.endsWith("*") && !details[field.key]?.trim()) {
+                        Alert.alert("Required", `Please fill "${field.label.replace(" *", "")}" for ${config.label}`);
+                        return;
+                    }
+                }
+            }
             setCurrentStep(3);
+
+        } else if (currentStep === 3) {
+            // Step 3: validate required documents
+            if (!documents[COMMON_DOC.key]) {
+                Alert.alert("Required", `Please upload: ${COMMON_DOC.label.replace(" *", "")}`);
+                return;
+            }
+            for (const type of selectedTypes) {
+                const docList = UPDATE_DOCUMENT_CONFIG[type.id] || [];
+                for (const doc of docList) {
+                    if (doc.required && !documents[doc.key]) {
+                        Alert.alert("Required", `Please upload: ${doc.label.replace(" *", "")} (for ${UPDATE_DETAIL_CONFIG[type.id].label})`);
+                        return;
+                    }
+                }
+            }
+            setCurrentStep(4);
+
         } else {
             handleSubmit();
         }
@@ -114,6 +248,7 @@ export default function UpdateRationCardScreen() {
         }, 2000);
     };
 
+    // ----------------------------- Success Screen ----------------------------
     if (isSubmitted) {
         return (
             <View style={styles.container}>
@@ -124,12 +259,10 @@ export default function UpdateRationCardScreen() {
                     </View>
                     <Text style={styles.successTitle}>Update Requested!</Text>
                     <Text style={styles.successSubtitle}>Your Ration Card correction request has been submitted successfully.</Text>
-
                     <View style={styles.idCard}>
                         <Text style={styles.idLabel}>Reference ID</Text>
                         <Text style={styles.idValue}>{applicationId}</Text>
                     </View>
-
                     <View style={styles.successActions}>
                         <TouchableOpacity style={styles.actionBtn}>
                             <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
@@ -137,7 +270,6 @@ export default function UpdateRationCardScreen() {
                             </View>
                             <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
                         </TouchableOpacity>
-
                         <TouchableOpacity style={styles.actionBtn}>
                             <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}>
                                 <Ionicons name="time-outline" size={24} color="#2E7D32" />
@@ -145,7 +277,6 @@ export default function UpdateRationCardScreen() {
                             <Text style={styles.actionText}>Track{"\n"}Status</Text>
                         </TouchableOpacity>
                     </View>
-
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
@@ -157,6 +288,9 @@ export default function UpdateRationCardScreen() {
         );
     }
 
+    const STEP_LABELS = ["Verify", "Details", "Upload", "Confirm"];
+
+    // ----------------------------- Main Screen --------------------------------
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
@@ -164,7 +298,7 @@ export default function UpdateRationCardScreen() {
             <SafeAreaView style={styles.safeArea}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : router.back()}>
+                    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                         <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
@@ -176,22 +310,35 @@ export default function UpdateRationCardScreen() {
 
                 {/* Progress Indicators */}
                 <View style={styles.stepContainer}>
-                    {[1, 2, 3].map((i) => (
+                    {[1, 2, 3, 4].map((i) => (
                         <React.Fragment key={i}>
                             <View style={styles.stepItem}>
                                 <View style={[styles.stepCircle, currentStep >= i && styles.stepCircleActive, currentStep > i && styles.stepCircleDone]}>
-                                    {currentStep > i ? <Ionicons name="checkmark" size={16} color="#FFF" /> : <Text style={[styles.stepNum, currentStep >= i && styles.stepNumActive]}>{i}</Text>}
+                                    {currentStep > i
+                                        ? <Ionicons name="checkmark" size={16} color="#FFF" />
+                                        : <Text style={[styles.stepNum, currentStep >= i && styles.stepNumActive]}>{i}</Text>}
                                 </View>
                                 <Text style={[styles.stepLabelText, currentStep >= i && styles.stepLabelActive]}>
-                                    {i === 1 ? "Verify" : i === 2 ? "Update" : "Confirm"}
+                                    {STEP_LABELS[i - 1]}
                                 </Text>
                             </View>
-                            {i < 3 && <View style={[styles.stepLine, currentStep > i && styles.stepLineDone]} />}
+                            {i < 4 && <View style={[styles.stepLine, currentStep > i && styles.stepLineDone]} />}
                         </React.Fragment>
                     ))}
                 </View>
 
-                <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={{ flex: 1 }}
+                    keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
+                >
+                <ScrollView
+                    contentContainerStyle={styles.scroll}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+
+                    {/* ====== STEP 1: Verify & Select Types ====== */}
                     {currentStep === 1 && (
                         <View>
                             {!isVerified ? (
@@ -223,7 +370,13 @@ export default function UpdateRationCardScreen() {
                                         <Ionicons name="checkmark-circle" size={18} color="#2E7D32" />
                                         <Text style={styles.verifiedText}>Verified: {rationCardNumber}</Text>
                                     </View>
-                                    <Text style={styles.sectionTitle}>Select Update Types</Text>
+                                    <View style={styles.sectionHeader}>
+                                        <View style={styles.iconBadge}><MaterialCommunityIcons name="format-list-checks" size={20} color="#0D47A1" /></View>
+                                        <View>
+                                            <Text style={styles.sectionTitle}>Select Update Types</Text>
+                                            <Text style={styles.sectionSub}>Choose one or more updates to request</Text>
+                                        </View>
+                                    </View>
                                     <View style={styles.typeGrid}>
                                         {updateTypes.map(type => (
                                             <TouchableOpacity key={type.id} style={[styles.typeItem, type.selected && styles.typeSelected]} onPress={() => toggleUpdateType(type.id)}>
@@ -240,72 +393,198 @@ export default function UpdateRationCardScreen() {
                         </View>
                     )}
 
+                    {/* ====== STEP 2: Details for each selected type ====== */}
                     {currentStep === 2 && (
                         <View>
                             <View style={styles.sectionHeader}>
-                                <View style={styles.iconBadge}><Ionicons name="cloud-upload" size={20} color="#0D47A1" /></View>
+                                <View style={styles.iconBadge}><Ionicons name="create-outline" size={20} color="#0D47A1" /></View>
                                 <View>
-                                    <Text style={styles.sectionTitle}>Required Proofs</Text>
-                                    <Text style={styles.sectionSub}>Documents for chosen updates</Text>
+                                    <Text style={styles.sectionTitle}>Update Details</Text>
+                                    <Text style={styles.sectionSub}>Fill details for each selected update</Text>
                                 </View>
                             </View>
 
-                            <View style={styles.formCard}>
-                                <Text style={styles.uploadLabel}>Existing Ration Card Copy *</Text>
-                                <TouchableOpacity style={styles.uploadBtn} onPress={() => handleFileUpload("existingCard")}>
-                                    <Text style={styles.uploadBtnText}>{documents.existingCard ? documents.existingCard.name : "Select File"}</Text>
-                                </TouchableOpacity>
-
-                                {updateTypes.find(t => t.id === 'address' && t.selected) && (
-                                    <>
-                                        <Text style={styles.uploadLabel}>New Address Proof *</Text>
-                                        <TouchableOpacity style={styles.uploadBtn} onPress={() => handleFileUpload("addressProof")}>
-                                            <Text style={styles.uploadBtnText}>{documents.addressProof ? documents.addressProof.name : "Select File"}</Text>
-                                        </TouchableOpacity>
-                                    </>
-                                )}
-                            </View>
+                            {selectedTypes.map((type, idx) => {
+                                const config = UPDATE_DETAIL_CONFIG[type.id];
+                                const details = updateDetails[type.id] || {};
+                                return (
+                                    <View key={type.id} style={[styles.typeSection, idx > 0 && { marginTop: 20 }]}>
+                                        {/* Type heading badge */}
+                                        <View style={styles.typeSectionHeader}>
+                                            <View style={styles.typeSectionIconBox}>
+                                                <MaterialCommunityIcons name={type.icon} size={18} color="#0D47A1" />
+                                            </View>
+                                            <Text style={styles.typeSectionTitle}>{config.label}</Text>
+                                        </View>
+                                        <View style={styles.formCard}>
+                                            {config.fields.map(field => (
+                                                <View key={field.key}>
+                                                    <Text style={styles.inputLabel}>{field.label}</Text>
+                                                    <View style={styles.inputContainer}>
+                                                        <TextInput
+                                                            style={styles.input}
+                                                            placeholder={field.placeholder}
+                                                            keyboardType={field.key === "dob" ? "number-pad" : (field.keyboardType || "default")}
+                                                            maxLength={field.key === "dob" ? 10 : field.maxLength}
+                                                            value={details[field.key] || ""}
+                                                            onChangeText={val =>
+                                                                setDetailField(
+                                                                    type.id,
+                                                                    field.key,
+                                                                    field.key === "dob" ? formatDOB(val) : val
+                                                                )
+                                                            }
+                                                        />
+                                                    </View>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </View>
+                                );
+                            })}
                         </View>
                     )}
 
+                    {/* ====== STEP 3: Documents for each selected type ====== */}
                     {currentStep === 3 && (
+                        <View>
+                            <View style={styles.sectionHeader}>
+                                <View style={styles.iconBadge}><Ionicons name="cloud-upload-outline" size={20} color="#0D47A1" /></View>
+                                <View>
+                                    <Text style={styles.sectionTitle}>Upload Documents</Text>
+                                    <Text style={styles.sectionSub}>Required proofs for your updates</Text>
+                                </View>
+                            </View>
+
+                            {/* Common doc always required */}
+                            <View style={styles.docSection}>
+                                <View style={styles.docSectionHeader}>
+                                    <View style={styles.docSectionIconBox}>
+                                        <Ionicons name="document-text-outline" size={18} color="#0D47A1" />
+                                    </View>
+                                    <Text style={styles.docSectionTitle}>Common Document</Text>
+                                </View>
+                                <View style={styles.formCard}>
+                                    <Text style={styles.uploadLabel}>{COMMON_DOC.label}</Text>
+                                    <TouchableOpacity style={[styles.uploadBtn, documents[COMMON_DOC.key] && styles.uploadBtnDone]} onPress={() => handleFileUpload(COMMON_DOC.key)}>
+                                        <Ionicons name={documents[COMMON_DOC.key] ? "checkmark-circle" : "attach-outline"} size={18} color={documents[COMMON_DOC.key] ? "#2E7D32" : "#0D47A1"} />
+                                        <Text style={[styles.uploadBtnText, documents[COMMON_DOC.key] && styles.uploadBtnTextDone]}>
+                                            {documents[COMMON_DOC.key] ? documents[COMMON_DOC.key].name : "Tap to Select File"}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {/* Per-type docs */}
+                            {selectedTypes.map((type, idx) => {
+                                const docList = UPDATE_DOCUMENT_CONFIG[type.id] || [];
+                                const config = UPDATE_DETAIL_CONFIG[type.id];
+                                return (
+                                    <View key={type.id} style={[styles.docSection, { marginTop: 20 }]}>
+                                        <View style={styles.docSectionHeader}>
+                                            <View style={styles.docSectionIconBox}>
+                                                <MaterialCommunityIcons name={type.icon} size={18} color="#0D47A1" />
+                                            </View>
+                                            <Text style={styles.docSectionTitle}>{config.label}</Text>
+                                        </View>
+                                        <View style={styles.formCard}>
+                                            {docList.map(doc => (
+                                                <View key={doc.key}>
+                                                    <Text style={styles.uploadLabel}>{doc.label}</Text>
+                                                    <TouchableOpacity
+                                                        style={[styles.uploadBtn, documents[doc.key] && styles.uploadBtnDone]}
+                                                        onPress={() => handleFileUpload(doc.key)}
+                                                    >
+                                                        <Ionicons
+                                                            name={documents[doc.key] ? "checkmark-circle" : "attach-outline"}
+                                                            size={18}
+                                                            color={documents[doc.key] ? "#2E7D32" : "#0D47A1"}
+                                                        />
+                                                        <Text style={[styles.uploadBtnText, documents[doc.key] && styles.uploadBtnTextDone]}>
+                                                            {documents[doc.key] ? documents[doc.key].name : "Tap to Select File"}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            ))}
+                                        </View>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    )}
+
+                    {/* ====== STEP 4: Review & Confirm ====== */}
+                    {currentStep === 4 && (
                         <View>
                             <View style={styles.sectionHeader}>
                                 <View style={styles.iconBadge}><Ionicons name="list" size={20} color="#0D47A1" /></View>
                                 <View>
-                                    <Text style={styles.sectionTitle}>Review Updates</Text>
-                                    <Text style={styles.sectionSub}>Confirm your changes</Text>
+                                    <Text style={styles.sectionTitle}>Review & Confirm</Text>
+                                    <Text style={styles.sectionSub}>Verify all details before submitting</Text>
                                 </View>
                             </View>
 
                             <View style={styles.reviewCard}>
                                 <Text style={styles.reviewLabelMain}>Ration Card: {rationCardNumber}</Text>
                                 <View style={styles.divider} />
-                                <Text style={styles.modifyTitle}>MODIFICATIONS SELECTED:</Text>
-                                {updateTypes.filter(t => t.selected).map(t => (
-                                    <View key={t.id} style={styles.updateRow}>
-                                        <Ionicons name="radio-button-on" size={14} color="#0D47A1" />
-                                        <Text style={styles.updateLabelText}>{t.label}</Text>
+
+                                {selectedTypes.map((type) => {
+                                    const config = UPDATE_DETAIL_CONFIG[type.id];
+                                    const details = updateDetails[type.id] || {};
+                                    return (
+                                        <View key={type.id} style={styles.reviewTypeBlock}>
+                                            <View style={styles.reviewTypeHeader}>
+                                                <MaterialCommunityIcons name={type.icon} size={16} color="#0D47A1" />
+                                                <Text style={styles.reviewTypeName}>{config.label}</Text>
+                                            </View>
+                                            {config.fields.map(field => {
+                                                const val = details[field.key];
+                                                return val ? (
+                                                    <View key={field.key} style={styles.reviewRow}>
+                                                        <Text style={styles.reviewKey}>{field.label.replace(" *", "")}:</Text>
+                                                        <Text style={styles.reviewVal}>{val}</Text>
+                                                    </View>
+                                                ) : null;
+                                            })}
+                                            <View style={styles.divider} />
+                                        </View>
+                                    );
+                                })}
+
+                                <Text style={styles.modifyTitle}>DOCUMENTS UPLOADED:</Text>
+                                {Object.keys(documents).map(key => (
+                                    <View key={key} style={styles.updateRow}>
+                                        <Ionicons name="document-attach" size={14} color="#0D47A1" />
+                                        <Text style={styles.updateLabelText}>{documents[key]?.name}</Text>
                                     </View>
                                 ))}
                             </View>
+
                             <View style={styles.declarationBox}>
                                 <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
-                                <Text style={styles.declText}>I confirm that all requested changes are accurate and verified by me.</Text>
+                                <Text style={styles.declText}>I confirm that all provided information and uploaded documents are accurate and true to the best of my knowledge.</Text>
                             </View>
                         </View>
                     )}
+
                 </ScrollView>
+                </KeyboardAvoidingView>
 
                 <View style={styles.bottomBar}>
-                    <TouchableOpacity style={[styles.continueButton, !isVerified && styles.btnDisabled]} disabled={!isVerified} onPress={handleContinue}>
+                    <TouchableOpacity
+                        style={[styles.continueButton, !isVerified && currentStep === 1 && styles.btnDisabled]}
+                        disabled={!isVerified && currentStep === 1}
+                        onPress={handleContinue}
+                    >
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.buttonGradient}>
                             {isSubmitting ? (
                                 <ActivityIndicator color="#FFF" />
                             ) : (
                                 <>
-                                    <Text style={styles.buttonText}>{currentStep === 3 ? "Process Request" : "Continue"}</Text>
-                                    <Ionicons name="arrow-forward" size={18} color="#FFF" />
+                                    <Text style={styles.buttonText}>
+                                        {currentStep === 4 ? "Submit Request" : "Continue"}
+                                    </Text>
+                                    <Ionicons name={currentStep === 4 ? "send" : "arrow-forward"} size={18} color="#FFF" />
                                 </>
                             )}
                         </LinearGradient>
@@ -338,7 +617,7 @@ const styles = StyleSheet.create({
     stepLine: { flex: 1, height: 2, backgroundColor: '#E2E8F0', marginHorizontal: -15, marginTop: -15 },
     stepLineDone: { backgroundColor: '#0D47A1' },
 
-    scroll: { padding: 20 },
+    scroll: { padding: 20, paddingBottom: 40 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
     iconBadge: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#E3F2FD', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
     sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
@@ -362,16 +641,37 @@ const styles = StyleSheet.create({
     typeLabel: { flex: 1, fontSize: 15, color: "#475569", fontWeight: '600' },
     typeLabelActive: { color: "#0D47A1", fontWeight: "800" },
 
-    uploadLabel: { fontSize: 13, fontWeight: "700", marginBottom: 8, color: "#475569", marginTop: 12 },
-    uploadBtn: { backgroundColor: "#F8FAFC", borderRadius: 14, padding: 12, alignItems: "center", borderStyle: "dashed", borderWidth: 1.5, borderColor: "#0D47A1", marginBottom: 15 },
-    uploadBtnText: { color: "#0D47A1", fontSize: 13, fontWeight: "800" },
+    // Per-type section headers (Step 2)
+    typeSection: {},
+    typeSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10, paddingHorizontal: 4 },
+    typeSectionIconBox: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#E3F2FD', alignItems: 'center', justifyContent: 'center' },
+    typeSectionTitle: { fontSize: 14, fontWeight: '800', color: '#0D47A1' },
 
+    // Per-type doc section headers (Step 3)
+    docSection: {},
+    docSectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10, paddingHorizontal: 4 },
+    docSectionIconBox: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#E3F2FD', alignItems: 'center', justifyContent: 'center' },
+    docSectionTitle: { fontSize: 14, fontWeight: '800', color: '#0D47A1' },
+
+    uploadLabel: { fontSize: 13, fontWeight: "700", marginBottom: 8, color: "#475569", marginTop: 12 },
+    uploadBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: "#F8FAFC", borderRadius: 14, padding: 14, borderStyle: "dashed", borderWidth: 1.5, borderColor: "#0D47A1", marginBottom: 8 },
+    uploadBtnDone: { borderStyle: 'solid', borderColor: '#2E7D32', backgroundColor: '#F0FDF4' },
+    uploadBtnText: { color: "#0D47A1", fontSize: 13, fontWeight: "800", flex: 1 },
+    uploadBtnTextDone: { color: "#2E7D32" },
+
+    // Review styles (Step 4)
     reviewCard: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, elevation: 4, shadowColor: '#64748B', shadowRadius: 12 },
     reviewLabelMain: { fontSize: 16, fontWeight: "800", color: "#1E293B" },
     divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 12 },
-    modifyTitle: { fontSize: 12, fontWeight: '800', color: '#0D47A1', marginBottom: 12, letterSpacing: 1 },
+    reviewTypeBlock: { marginBottom: 4 },
+    reviewTypeHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+    reviewTypeName: { fontSize: 14, fontWeight: '800', color: '#0D47A1' },
+    reviewRow: { flexDirection: 'row', gap: 8, marginBottom: 6, flexWrap: 'wrap' },
+    reviewKey: { fontSize: 12, color: '#94A3B8', fontWeight: '600', minWidth: 100 },
+    reviewVal: { fontSize: 12, color: '#1E293B', fontWeight: '700', flex: 1 },
+    modifyTitle: { fontSize: 12, fontWeight: '800', color: '#0D47A1', marginBottom: 10, letterSpacing: 1, marginTop: 4 },
     updateRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 },
-    updateLabelText: { color: '#475569', fontSize: 14, fontWeight: '600' },
+    updateLabelText: { color: '#475569', fontSize: 12, fontWeight: '600', flex: 1 },
     declarationBox: { flexDirection: 'row', backgroundColor: '#F0FDF4', borderRadius: 16, padding: 16, marginTop: 20, gap: 12, borderWidth: 1, borderColor: '#DCFCE7' },
     declText: { flex: 1, fontSize: 12, color: '#166534', lineHeight: 18, fontWeight: '600' },
 

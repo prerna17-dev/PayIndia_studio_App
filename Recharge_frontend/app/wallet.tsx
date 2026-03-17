@@ -51,7 +51,7 @@ export default function WalletScreen() {
   const fetchTransactions = async () => {
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(API_ENDPOINTS.WALLET_TRANSACTIONS, {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -67,12 +67,12 @@ export default function WalletScreen() {
     setIsFetchingBalance(true);
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(API_ENDPOINTS.WALLET_BALANCE, {
+      const response = await fetch(`${API_ENDPOINTS.USER_PROFILE}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (response.ok) {
-        setBalance(data.balance?.toString() || "0.00");
+        setBalance(data.wallet_balance || "0.00");
         fetchTransactions(); // Fetch transactions whenever balance is updated
       }
     } catch (error) {
@@ -127,7 +127,7 @@ export default function WalletScreen() {
     setIsProcessing(true);
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(API_ENDPOINTS.WALLET_ADD, {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +167,7 @@ export default function WalletScreen() {
     setIsProcessing(true);
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(API_ENDPOINTS.WALLET_WITHDRAW, {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/withdraw`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -838,7 +838,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 45, // Reduced padding
+    paddingTop: 60, // Increased padding
     paddingBottom: 15,
     zIndex: 1,
   },

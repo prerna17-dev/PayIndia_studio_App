@@ -68,7 +68,9 @@ export default function MoreSevaScreen() {
                                 Check the status of your Aadhaar, PAN, and other certificates
                                 instantly.
                             </Text>
-                            <TouchableOpacity style={styles.trackNowButton}>
+                            <TouchableOpacity style={styles.trackNowButton}
+                                onPress={() => router.push("/track-status")}
+                            >
                                 <Text style={styles.trackNowButtonText}>Track Status</Text>
                             </TouchableOpacity>
                             <Text style={styles.trackingFootnote}>

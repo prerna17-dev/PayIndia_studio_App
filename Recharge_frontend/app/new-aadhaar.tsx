@@ -14,11 +14,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
-import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -224,84 +220,14 @@ export default function NewAadhaarScreen() {
             }
             setCurrentStep(3);
         } else {
-            const submitData = async () => {
-                setIsSubmitting(true);
-                try {
-                    const token = await AsyncStorage.getItem("userToken");
-                    const formDataObj = new FormData();
-
-                    // Map personal details
-                    formDataObj.append("full_name", formData.fullName);
-                    formDataObj.append("date_of_birth", useYearOnly ? formData.yob : formData.dob);
-                    formDataObj.append("gender", formData.gender);
-                    formDataObj.append("house_no_street", formData.houseNo);
-                    formDataObj.append("area_village_locality", formData.area);
-                    formDataObj.append("city_taluka", formData.city);
-                    formDataObj.append("district", formData.district);
-                    formDataObj.append("state", formData.state);
-                    formDataObj.append("pincode", formData.pincode);
-                    formDataObj.append("mobile_number", formData.mobile);
-
-                    // Minor fields if applicable
-                    if (isMinor) {
-                        formDataObj.append("parent_name", formData.parentName);
-                        formDataObj.append("parent_aadhaar", formData.parentAadhaar);
-                        formDataObj.append("relationship", formData.relationship);
-                    }
-
-                    // Append documents
-                    if (documents.birthCertificate) {
-                        formDataObj.append("birth_certificate", {
-                            uri: documents.birthCertificate.uri,
-                            name: documents.birthCertificate.name,
-                            type: documents.birthCertificate.mimeType || "application/octet-stream",
-                        } as any);
-                    }
-                    if (documents.schoolCertificate) {
-                        formDataObj.append("school_certificate", {
-                            uri: documents.schoolCertificate.uri,
-                            name: documents.schoolCertificate.name,
-                            type: documents.schoolCertificate.mimeType || "application/octet-stream",
-                        } as any);
-                    }
-                    if (documents.addressProof) {
-                        formDataObj.append("address_proof", {
-                            uri: documents.addressProof.uri,
-                            name: documents.addressProof.name,
-                            type: documents.addressProof.mimeType || "application/octet-stream",
-                        } as any);
-                    }
-                    if (isMinor && documents.parentAadhaar) {
-                        formDataObj.append("parent_aadhaar", {
-                            uri: documents.parentAadhaar.uri,
-                            name: documents.parentAadhaar.name,
-                            type: documents.parentAadhaar.mimeType || "application/octet-stream",
-                        } as any);
-                    }
-
-                    const response = await axios.post(API_ENDPOINTS.AADHAAR_ENROLL, formDataObj, {
-                        headers: {
-                            "Content-Type": "multipart/form-data",
-                            Authorization: `Bearer ${token}`,
-                        },
-                    });
-
-                    if (response.data.success) {
-                        setApplicationId(response.data.data.enrollmentId);
-                        setIsSubmitted(true);
-                    } else {
-                        Alert.alert("Error", response.data.message || "Something went wrong");
-                    }
-                } catch (error: any) {
-                    console.error("Aadhar Submission Error:", error);
-                    const errorMsg = error.response?.data?.message || "Failed to submit application. Please check your connection.";
-                    Alert.alert("Error", errorMsg);
-                } finally {
-                    setIsSubmitting(false);
-                }
-            };
-
-            submitData();
+            setIsSubmitting(true);
+            // Simulate API call
+            setTimeout(() => {
+                const enrollmentId = "UID" + Math.random().toString(36).substr(2, 9).toUpperCase();
+                setApplicationId(enrollmentId);
+                setIsSubmitting(false);
+                setIsSubmitted(true);
+            }, 2000);
         }
     };
 

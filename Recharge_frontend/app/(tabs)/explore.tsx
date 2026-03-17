@@ -356,7 +356,6 @@ export default function HomeScreen({
                           : `${API_BASE_URL}${userData.profile_image}`
                       }}
                       style={styles.profileThumbnail}
-                      resizeMode="cover"
                     />
                   ) : (
                     <Ionicons name="person" size={22} color="#1976D2" />
@@ -1089,6 +1088,16 @@ export default function HomeScreen({
               </LinearGradient>
             </View>
 
+            {/* Quick Social Links */}
+            <View style={{ marginBottom: 24, paddingHorizontal: 20 }}>
+              <View style={{ flexDirection: "row", justifyContent: "center", gap: 15 }}>
+                {(["logo-twitter", "logo-instagram", "logo-facebook", "paper-plane"] as const).map((icon, idx) => (
+                  <TouchableOpacity key={idx} activeOpacity={0.7} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "#F8FAFC", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "#E2E8F0", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 }}>
+                    <Ionicons name={icon} size={20} color="#64748B" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
             {/* 24/7 Support & Security "Trust Strip" */}
             <View style={{ marginHorizontal: 20, marginBottom: 24, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 16 }}>
@@ -1258,9 +1267,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileThumbnail: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   notificationDot: {
     position: "absolute",

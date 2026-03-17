@@ -110,7 +110,7 @@ export default function RechargePaymentScreen() {
 
                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
                     <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.scrollContent}>
-
+                        
                         {/* Summary Card */}
                         <View style={styles.summaryCard}>
                             <View style={styles.summaryHeader}>
@@ -147,7 +147,7 @@ export default function RechargePaymentScreen() {
                         {/* Payment Selection */}
                         <View style={styles.formCard}>
                             <Text style={styles.sectionTitle}>Payment Details</Text>
-
+                            
                             <Text style={styles.fieldLabel}>Select Payment Mode</Text>
                             <View style={styles.paymentModes}>
                                 {['Wallet', 'Debit Card', 'Credit Card', 'UPI / Net Banking'].map((mode) => (
@@ -226,7 +226,7 @@ export default function RechargePaymentScreen() {
                         <View style={styles.successCard}>
                             <View style={styles.successIcon}><Ionicons name="checkmark" size={50} color="#FFFFFF" /></View>
                             <Text style={styles.successTitle}>Recharge Successful</Text>
-
+                            
                             <View style={styles.receipt}>
                                 <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Transaction ID</Text><Text style={styles.receiptValue}>TX-REC-{Math.floor(Math.random() * 900000) + 100000}</Text></View>
                                 <View style={styles.receiptRow}><Text style={styles.receiptLabel}>Mobile No.</Text><Text style={styles.receiptValue}>+91 {params.number}</Text></View>
@@ -237,7 +237,7 @@ export default function RechargePaymentScreen() {
                                 <TouchableOpacity style={styles.receiptAction}><Ionicons name="download-outline" size={20} color="#0D47A1" /><Text style={styles.receiptActionText}>Download</Text></TouchableOpacity>
                                 <TouchableOpacity style={styles.receiptAction}><Ionicons name="share-social-outline" size={20} color="#0D47A1" /><Text style={styles.receiptActionText}>Share</Text></TouchableOpacity>
                             </View>
-
+                            
                             <TouchableOpacity style={styles.backHomeButton} onPress={() => {
                                 setShowPaymentSuccess(false);
                                 router.push('/(tabs)/explore');
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     placeholder: { width: 34 },
     scrollContent: { padding: 20, paddingBottom: 50 },
     sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 16 },
-
+    
     summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 },
     summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15 },
     summaryTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
@@ -274,31 +274,31 @@ const styles = StyleSheet.create({
     amountBanner: { flexDirection: 'row', backgroundColor: '#F1F8FE', borderRadius: 12, padding: 15, marginTop: 10, justifyContent: 'center' },
     bannerLabel: { fontSize: 11, color: '#64748B', textAlign: 'center', marginBottom: 4 },
     bannerValue: { fontSize: 22, fontWeight: 'bold', color: '#0D47A1', textAlign: 'center' },
-
+    
     formCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 24, elevation: 2 },
     fieldGroup: { marginBottom: 15 },
     fieldLabel: { fontSize: 12, fontWeight: "bold", color: "#475569", marginBottom: 6 },
     inputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#F5F7FA", borderRadius: 10, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: "#E0E0E0" },
     input: { flex: 1, marginLeft: 8, fontSize: 14, color: '#333', fontWeight: '500' },
-
+    
     paymentModes: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10, marginBottom: 10 },
     paymentModeCard: { flex: 1, minWidth: '45%', flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', gap: 8 },
     selectedPaymentModeCard: { borderColor: '#0D47A1', backgroundColor: '#F0F7FF' },
     paymentModeText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
     selectedPaymentModeText: { color: '#0D47A1' },
-
+    
     cardFormContainer: { marginTop: 10, padding: 15, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
     row: { flexDirection: 'row' },
-
+    
     declarationRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 24 },
     declarationText: { flex: 1, fontSize: 11, color: '#64748B', lineHeight: 16 },
-
+    
     footerButtons: { flexDirection: 'row', gap: 15, marginBottom: 20 },
     cancelButton: { flex: 0.4, height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#E2E8F0' },
     cancelButtonText: { fontSize: 16, fontWeight: 'bold', color: '#64748B' },
     payButton: { height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
     actionButtonText: { fontSize: 16, fontWeight: "bold", color: "#FFFFFF" },
-
+    
     successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
     successCard: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '100%', padding: 30, alignItems: 'center' },
     successIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#4CAF50', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },

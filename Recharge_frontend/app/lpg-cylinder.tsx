@@ -1,12 +1,15 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
+    Animated,
+    BackHandler,
+    KeyboardAvoidingView,
     Modal,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -19,7 +22,7 @@ import {
 interface GasProvider {
     id: string;
     name: string;
-    logo: string;
+    icon: string;
     color: string;
 }
 
@@ -29,102 +32,207 @@ interface ConnectionDetails {
     deliveryAddress: string;
     lastBookingDate: string;
     subsidyStatus: string;
-    amountPayable: string;
+    amountPayable: number;
     cylinderType: string;
     nextRefillEligible: string;
 }
 
+const popularProviders: GasProvider[] = [
+    { id: '1', name: 'Indane Gas', icon: 'fire', color: '#FF6B35' },
+    { id: '2', name: 'Bharat Gas', icon: 'gas-cylinder', color: '#0D47A1' },
+    { id: '3', name: 'HP Gas', icon: 'propane-tank', color: '#2E7D32' },
+    { id: '4', name: 'Super Gas', icon: 'gas-burner', color: '#7B1FA2' },
+    { id: '5', name: 'Aavantika', icon: 'propane-tank-outline', color: '#E65100' },
+    { id: '6', name: 'Total Gas', icon: 'barrel-outline', color: '#37474F' },
+];
+
+const allProviders = [
+    'Indane Gas', 'Bharat Gas', 'HP Gas', 'Super Gas',
+    'Aavantika Gas', 'Total Gas', 'GAIL Gas', 'IGL',
+    'MGL - Maharashtra', 'Adani Gas', 'Gujarat Gas',
+    'Hindustan Gas', 'Sabarmati Gas', 'Central UP Gas',
+];
+
+// Per-provider consumer number validation rules
+const PROVIDER_RULES: Record<string, { min: number; max: number; hint: string; placeholder: string; validate: (n: string) => boolean }> = {
+    'Indane Gas': {
+        min: 10, max: 16,
+        hint: 'Indane: 10-digit or 16-digit Consumer No.',
+        placeholder: 'Enter 10 or 16-digit Consumer No.',
+        validate: (n) => n.length === 10 || n.length === 16,
+    },
+    'Bharat Gas': {
+        min: 10, max: 17,
+        hint: 'Bharat Gas: 10 to 17-digit Consumer No.',
+        placeholder: 'Enter 10–17 digit Consumer No.',
+        validate: (n) => n.length >= 10 && n.length <= 17,
+    },
+    'HP Gas': {
+        min: 10, max: 14,
+        hint: 'HP Gas: 10 to 14-digit Consumer No.',
+        placeholder: 'Enter 10–14 digit Consumer No.',
+        validate: (n) => n.length >= 10 && n.length <= 14,
+    },
+};
+
+const DEFAULT_PROVIDER_RULE = {
+    min: 10, max: 17,
+    hint: 'Check your gas book or SMS for LPG ID',
+    placeholder: 'Enter LPG Consumer No.',
+    validate: (n: string) => n.length >= 10,
+};
+
+
 export default function LPGCylinderScreen() {
     const router = useRouter();
 
-    // State
-    const [selectedProvider, setSelectedProvider] = useState<GasProvider | null>(null);
+    // Form states
+    const [selectedProvider, setSelectedProvider] = useState('');
     const [consumerNumber, setConsumerNumber] = useState('');
+    const [mobileNumber, setMobileNumber] = useState('');
+    const [paymentAmount, setPaymentAmount] = useState('');
+    const [isConfirmed, setIsConfirmed] = useState(false);
+
+    // UI states
+    const [providerSearchQuery, setProviderSearchQuery] = useState('');
     const [showProviderModal, setShowProviderModal] = useState(false);
-    const [isFetching, setIsFetching] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
     const [connectionDetails, setConnectionDetails] = useState<ConnectionDetails | null>(null);
-    const [fetchError, setFetchError] = useState(false);
+    const [showPaymentSuccess, setShowPaymentSuccess] = useState(false);
+    const [selectedPaymentMode, setSelectedPaymentMode] = useState('');
 
-    // Gas Providers (will be from API in real app)
-    const gasProviders = [
-        { id: '1', name: 'Indane Gas', logo: '🔥', color: '#FF6B35' },
-        { id: '2', name: 'Bharat Gas', logo: '🔵', color: '#0066CC' },
-        { id: '3', name: 'HP Gas', logo: '🟢', color: '#00A651' },
-    ];
 
-    // Validate Consumer Number
-    const validateConsumerNumber = (number: string) => {
-        return number.length >= 10; // Minimum length validation
-    };
+    // Card states
+    const [cardNumber, setCardNumber] = useState('');
+    const [expiryDate, setExpiryDate] = useState('');
+    const [cvv, setCvv] = useState('');
+    const [cardHolder, setCardHolder] = useState('');
 
-    // Handle Provider Selection
-    const handleProviderSelect = (provider: any) => {
-        setSelectedProvider(provider);
+    // Animation
+    const slideAnim = React.useRef(new Animated.Value(50)).current;
+    const fadeAnim = React.useRef(new Animated.Value(0)).current;
+
+    const handleBack = useCallback(() => {
+        if (connectionDetails) {
+            setConnectionDetails(null);
+            setSelectedPaymentMode('');
+            setIsConfirmed(false);
+            return true;
+        }
+
+        router.back();
+        return true;
+    }, [router, connectionDetails]);
+
+    useFocusEffect(
+        useCallback(() => {
+            const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBack);
+            return () => backHandler.remove();
+        }, [handleBack])
+    );
+
+    const handleProviderSelect = (name: string) => {
+        setSelectedProvider(name);
         setShowProviderModal(false);
-        setConnectionDetails(null); // Reset details when provider changes
-        setFetchError(false);
+        setConnectionDetails(null);
     };
 
-    // Fetch Connection Details
+
+    const handleCardNumberChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = '';
+        for (let i = 0; i < cleaned.length && i < 16; i++) {
+            if (i > 0 && i % 4 === 0) formatted += ' ';
+            formatted += cleaned[i];
+        }
+        setCardNumber(formatted);
+    };
+
+    const handleExpiryChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = cleaned;
+        if (cleaned.length > 2) formatted = `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}`;
+        setExpiryDate(formatted);
+    };
+
+    const validateForm = () => {
+        if (!selectedProvider) return false;
+        const rule = PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE;
+        if (!rule.validate(consumerNumber.trim())) return false;
+        if (mobileNumber.trim().length !== 10) return false;
+        return true;
+    };
+
+
     const handleFetchConnection = async () => {
-        if (!selectedProvider) {
-            Alert.alert('Select Provider', 'Please select your gas provider');
-            return;
-        }
+        if (!validateForm()) return;
 
-        if (!validateConsumerNumber(consumerNumber)) {
-            Alert.alert('Invalid Number', 'Please enter a valid Consumer Number (minimum 10 digits)');
-            return;
-        }
+        setIsLoading(true);
 
-        setIsFetching(true);
-        setFetchError(false);
-
-        // Simulate API call
         setTimeout(() => {
-            // Randomly simulate success/failure for demo
-            const isSuccess = Math.random() > 0.3; // 70% success rate
+            const amount = 853;
+            setConnectionDetails({
+                consumerName: 'Rahul Kumar',
+                mobile: mobileNumber,
+                deliveryAddress: 'Flat 101, Krishna Apartments, Pune - 411001',
+                lastBookingDate: '15 Jan 2026',
+                subsidyStatus: 'Eligible',
+                amountPayable: amount,
+                cylinderType: '14.2 KG',
+                nextRefillEligible: 'Yes',
+            });
+            setPaymentAmount(amount.toString());
 
-            if (isSuccess) {
-                // Mock connection details - in real app, this comes from API
-                setConnectionDetails({
-                    consumerName: 'Rahul Kumar',
-                    mobile: '9876543210',
-                    deliveryAddress: 'Flat 101, Krishna Apartments, Pune - 411001',
-                    lastBookingDate: '15 Jan 2026',
-                    subsidyStatus: 'Eligible',
-                    amountPayable: '₹853',
-                    cylinderType: '14.2 KG',
-                    nextRefillEligible: 'Yes',
-                });
-                setFetchError(false);
-            } else {
-                // Simulate error
-                setFetchError(true);
-                setConnectionDetails(null);
-            }
-
-            setIsFetching(false);
-        }, 2000);
+            Animated.parallel([
+                Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+                Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+            ]).start();
+            setIsLoading(false);
+        }, 1500);
     };
 
-    // Handle Booking
-    const handleBooking = () => {
-        Alert.alert(
-            'Confirm Booking',
-            `Book LPG Cylinder for ${selectedProvider?.name}?\nConsumer: ${consumerNumber}\nAmount: ${connectionDetails?.amountPayable}`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Book & Pay',
-                    onPress: () => {
-                        // Navigate to payment or process booking
-                        Alert.alert('Success', 'Booking confirmed! Payment processing...');
-                    },
+
+
+    const isReadyToPay = () => {
+        if (!isConfirmed || !selectedPaymentMode || !paymentAmount || parseFloat(paymentAmount) <= 0) return false;
+        if (selectedPaymentMode.includes('Card')) {
+            if (cardNumber.replace(/\s/g, '').length !== 16) return false;
+            if (expiryDate.length !== 5) return false;
+            if (cvv.length !== 3) return false;
+            if (cardHolder.trim().length < 3) return false;
+        }
+        return true;
+    };
+
+    const isReady = isReadyToPay();
+
+    const handleProceedToPay = () => {
+        if (!isReady || !paymentAmount) return;
+
+        if (selectedPaymentMode === 'Wallet') {
+            router.replace({
+                pathname: '/wallet' as any,
+                params: {
+                    amount: paymentAmount,
+                    billType: 'LPG Cylinder Booking',
+                    borrowerName: connectionDetails?.consumerName,
+                    loanAccountNumber: consumerNumber,
+                    lenderName: selectedProvider,
                 },
-            ]
-        );
+            });
+            return;
+        }
+
+        setIsLoading(true);
+        setTimeout(() => {
+            setIsLoading(false);
+            setShowPaymentSuccess(true);
+        }, 3000);
     };
+
+    const filteredProviders = allProviders.filter(p =>
+        p.toLowerCase().includes(providerSearchQuery.toLowerCase())
+    );
 
     return (
         <View style={styles.container}>
@@ -134,641 +242,476 @@ export default function LPGCylinderScreen() {
             <SafeAreaView style={styles.safeArea}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <TouchableOpacity style={styles.backButton} onPress={handleBack}>
                         <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
                         <Text style={styles.headerTitle}>LPG Cylinder</Text>
-                        <Text style={styles.headerSubtext}>Book or pay LPG cylinder across India</Text>
+                        <Text style={styles.headerSubtitle}>Book & pay across all providers</Text>
                     </View>
                     <View style={styles.placeholder} />
                 </View>
 
-                <ScrollView
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={styles.scrollContent}
-                >
-                    {/* LPG Banner */}
-                    <View style={styles.bannerContainer}>
-                        <LinearGradient
-                            colors={['#FFF3E0', '#FFE0B2', '#FFCC80']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.banner}
-                        >
-                            <View style={styles.bannerIcon}>
-                                <Text style={styles.bannerEmoji}>🔥</Text>
-                            </View>
-                            <View style={styles.bannerContent}>
-                                <Text style={styles.bannerTitle}>Instant LPG Booking</Text>
-                                <Text style={styles.bannerSubtitle}>All major providers • Secure & Fast</Text>
-                            </View>
-                        </LinearGradient>
-                    </View>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+                    <ScrollView
+                        showsVerticalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                        contentContainerStyle={styles.scrollContent}
+                    >
+                        <View style={styles.content}>
 
-                    {/* Select Gas Provider */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>Gas Provider</Text>
-                        <TouchableOpacity
-                            style={styles.selectCard}
-                            onPress={() => setShowProviderModal(true)}
-                        >
-                            {selectedProvider ? (
-                                <View style={styles.selectedProvider}>
-                                    <Text style={styles.providerEmoji}>{selectedProvider.logo}</Text>
-                                    <Text style={styles.providerName}>{selectedProvider.name}</Text>
-                                </View>
-                            ) : (
-                                <Text style={styles.placeholderText}>Select Provider</Text>
-                            )}
-                            <Ionicons name="chevron-down" size={20} color="#666" />
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Enter Consumer Number */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionLabel}>Consumer Number / LPG ID</Text>
-                        <View style={styles.inputCard}>
-                            <MaterialCommunityIcons name="card-account-details-outline" size={20} color="#999" />
-                            <TextInput
-                                style={styles.input}
-                                placeholder="Enter LPG ID"
-                                placeholderTextColor="#999"
-                                value={consumerNumber}
-                                onChangeText={setConsumerNumber}
-                                keyboardType="number-pad"
-                            />
-                        </View>
-                        <Text style={styles.helperText}>Check your gas book or SMS for LPG ID</Text>
-                        {consumerNumber && !validateConsumerNumber(consumerNumber) && (
-                            <Text style={styles.errorText}>Consumer number must be at least 10 digits</Text>
-                        )}
-                    </View>
-
-                    {/* Fetch Connection Button */}
-                    <View style={styles.section}>
-                        <TouchableOpacity
-                            style={[
-                                styles.fetchButton,
-                                (!selectedProvider || !validateConsumerNumber(consumerNumber)) && styles.fetchButtonDisabled,
-                            ]}
-                            onPress={handleFetchConnection}
-                            disabled={!selectedProvider || !validateConsumerNumber(consumerNumber) || isFetching}
-                        >
-                            {isFetching ? (
-                                <ActivityIndicator color="#FFFFFF" />
-                            ) : (
+                            {!connectionDetails ? (
                                 <>
-                                    <MaterialCommunityIcons name="database-search" size={20} color="#FFFFFF" />
-                                    <Text style={styles.fetchButtonText}>Fetch Connection</Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Error Card - Show if fetch fails */}
-                    {fetchError && (
-                        <View style={styles.errorCard}>
-                            <Ionicons name="alert-circle" size={48} color="#E53935" />
-                            <Text style={styles.errorCardTitle}>Unable to fetch details</Text>
-                            <Text style={styles.errorCardText}>Please verify your LPG ID and try again</Text>
-                            <TouchableOpacity
-                                style={styles.retryButton}
-                                onPress={handleFetchConnection}
-                            >
-                                <Text style={styles.retryButtonText}>Retry</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
-
-                    {/* Connection Details Card - Show after fetch */}
-                    {connectionDetails && selectedProvider && !fetchError && (
-                        <View style={styles.connectionCard}>
-                            {/* Header */}
-                            <View style={styles.connectionHeader}>
-                                <Text style={styles.providerEmoji}>{selectedProvider.logo}</Text>
-                                <Text style={styles.connectionProvider}>{selectedProvider.name}</Text>
-                            </View>
-
-                            {/* Details Grid */}
-                            <View style={styles.detailsGrid}>
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.detailLabel}>Consumer Name</Text>
-                                    <Text style={styles.detailValue}>{connectionDetails.consumerName}</Text>
-                                </View>
-
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.detailLabel}>Registered Mobile</Text>
-                                    <Text style={styles.detailValue}>{connectionDetails.mobile}</Text>
-                                </View>
-
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.detailLabel}>Cylinder Type</Text>
-                                    <Text style={styles.detailValue}>{connectionDetails.cylinderType}</Text>
-                                </View>
-
-                                <View style={styles.detailRowFull}>
-                                    <Text style={styles.detailLabel}>Delivery Address</Text>
-                                    <Text style={styles.detailValueAddress}>{connectionDetails.deliveryAddress}</Text>
-                                </View>
-
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.detailLabel}>Last Booking</Text>
-                                    <Text style={styles.detailValue}>{connectionDetails.lastBookingDate}</Text>
-                                </View>
-
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.detailLabel}>Subsidy Status</Text>
-                                    <View style={styles.subsidyBadge}>
-                                        <Text style={styles.subsidyText}>{connectionDetails.subsidyStatus}</Text>
+                                    {/* Popular Providers Grid */}
+                                    <Text style={styles.sectionTitle}>Popular Providers</Text>
+                                    <View style={styles.grid}>
+                                        {popularProviders.map((item) => (
+                                            <TouchableOpacity
+                                                key={item.id}
+                                                style={[styles.gridItem, selectedProvider === item.name && styles.selectedGridItem]}
+                                                onPress={() => handleProviderSelect(item.name)}
+                                            >
+                                                <View style={[styles.iconCircle, selectedProvider === item.name && styles.selectedIconCircle]}>
+                                                    <MaterialCommunityIcons
+                                                        name={item.icon as any}
+                                                        size={24}
+                                                        color={selectedProvider === item.name ? '#FFFFFF' : '#0D47A1'}
+                                                    />
+                                                </View>
+                                                <Text style={styles.gridLabel}>{item.name}</Text>
+                                            </TouchableOpacity>
+                                        ))}
                                     </View>
-                                </View>
 
-                                <View style={styles.detailRow}>
-                                    <Text style={styles.detailLabel}>Refill Eligible</Text>
-                                    <View style={styles.eligibleBadge}>
-                                        <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
-                                        <Text style={styles.eligibleText}>{connectionDetails.nextRefillEligible}</Text>
+                                    <View style={styles.browseContainer}>
+                                        <TouchableOpacity style={styles.browseButton} onPress={() => setShowProviderModal(true)}>
+                                            <Text style={styles.browseText}>View All LPG Providers</Text>
+                                            <Ionicons name="chevron-forward" size={14} color="#0D47A1" />
+                                        </TouchableOpacity>
                                     </View>
-                                </View>
-                            </View>
 
-                            {/* Amount Payable - Highlighted */}
-                            <View style={styles.amountSection}>
-                                <Text style={styles.amountLabel}>Amount Payable</Text>
-                                <Text style={styles.amountValue}>{connectionDetails.amountPayable}</Text>
-                            </View>
-                        </View>
-                    )}
+                                    {/* Form Card */}
+                                    <View style={styles.formCard}>
+                                        {selectedProvider ? (
+                                            <View style={styles.fieldGroup}>
+                                                <Text style={styles.fieldLabel}>Selected Provider</Text>
+                                                <View style={[styles.inputContainer, styles.readOnlyInput]}>
+                                                    <MaterialCommunityIcons name="gas-cylinder" size={16} color="#94A3B8" />
+                                                    <TextInput
+                                                        style={[styles.input, { color: '#64748B' }]}
+                                                        value={selectedProvider}
+                                                        editable={false}
+                                                    />
+                                                    <TouchableOpacity onPress={() => setSelectedProvider('')}>
+                                                        <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                                                    </TouchableOpacity>
+                                                </View>
+                                            </View>
+                                        ) : null}
 
-                    {/* Bottom Spacing */}
-                    <View style={{ height: 100 }} />
-                </ScrollView>
-
-                {/* Book & Pay Button - Sticky */}
-                {connectionDetails && !fetchError && (
-                    <View style={styles.bottomBar}>
-                        <TouchableOpacity
-                            style={styles.bookButton}
-                            onPress={handleBooking}
-                        >
-                            <LinearGradient
-                                colors={['#4CAF50', '#45A049']}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={styles.bookButtonGradient}
-                            >
-                                <Text style={styles.bookButtonText}>
-                                    Book & Pay {connectionDetails.amountPayable}
-                                </Text>
-                                <Ionicons name="arrow-forward" size={20} color="#FFFFFF" />
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </View>
-                )}
-            </SafeAreaView>
-
-            {/* Provider Selection Modal */}
-            <Modal
-                visible={showProviderModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowProviderModal(false)}
-            >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Gas Provider</Text>
-                            <TouchableOpacity onPress={() => setShowProviderModal(false)}>
-                                <Ionicons name="close" size={24} color="#666" />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView>
-                            {gasProviders.map((provider) => (
-                                <TouchableOpacity
-                                    key={provider.id}
-                                    style={styles.providerOption}
-                                    onPress={() => handleProviderSelect(provider)}
-                                >
-                                    <View style={styles.providerLeft}>
-                                        <View style={[styles.providerLogoCircle, { backgroundColor: provider.color + '20' }]}>
-                                            <Text style={styles.providerLogo}>{provider.logo}</Text>
+                                        <View style={styles.fieldGroup}>
+                                            <Text style={styles.fieldLabel}>Consumer Number / LPG ID *</Text>
+                                            <View style={styles.inputContainer}>
+                                                <MaterialCommunityIcons name="card-account-details-outline" size={16} color="#94A3B8" />
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder={(PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).placeholder}
+                                                    placeholderTextColor="#94A3B8"
+                                                    keyboardType="number-pad"
+                                                    maxLength={(PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).max}
+                                                    value={consumerNumber}
+                                                    onChangeText={setConsumerNumber}
+                                                />
+                                            </View>
+                                            <Text style={styles.helperText}>
+                                                {(PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).hint}
+                                            </Text>
+                                            {consumerNumber.length > 0 && selectedProvider && !( PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).validate(consumerNumber) && (
+                                                <Text style={styles.errorText}>
+                                                    {selectedProvider === 'Indane Gas'
+                                                        ? 'Must be exactly 10 or 16 digits'
+                                                        : `Must be ${ (PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).min }–${ (PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).max } digits`
+                                                    }
+                                                </Text>
+                                            )}
                                         </View>
-                                        <Text style={styles.providerOptionName}>{provider.name}</Text>
+
+                                        <View style={styles.fieldGroup}>
+                                            <Text style={styles.fieldLabel}>Registered Mobile Number *</Text>
+                                            <View style={styles.inputContainer}>
+                                                <Ionicons name="phone-portrait-outline" size={16} color="#94A3B8" />
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="10 digit mobile number"
+                                                    placeholderTextColor="#94A3B8"
+                                                    keyboardType="phone-pad"
+                                                    maxLength={10}
+                                                    value={mobileNumber}
+                                                    onChangeText={setMobileNumber}
+                                                />
+                                            </View>
+                                        </View>
                                     </View>
-                                    {selectedProvider?.id === provider.id && (
-                                        <Ionicons name="checkmark-circle" size={24} color="#4CAF50" />
-                                    )}
+
+                                    <TouchableOpacity
+                                        onPress={handleFetchConnection}
+                                        disabled={!validateForm() || isLoading}
+                                        style={{ marginBottom: 24 }}
+                                    >
+                                        <LinearGradient
+                                            colors={!validateForm() || isLoading ? ['#E0E0E0', '#E0E0E0'] : ['#0D47A1', '#1565C0']}
+                                            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                            style={styles.actionButton}
+                                        >
+                                            {isLoading
+                                                ? <ActivityIndicator color="#FFFFFF" />
+                                                : <Text style={styles.actionButtonText}>Fetch Connection Details</Text>
+                                            }
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                /* Connection Details + Payment */
+                                <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+
+                                    {/* Connection Summary Card */}
+                                    <View style={styles.summaryCard}>
+                                        <View style={styles.summaryHeader}>
+                                            <MaterialCommunityIcons name="gas-cylinder" size={24} color="#0D47A1" />
+                                            <Text style={styles.summaryTitle}>Connection Details</Text>
+                                        </View>
+                                        <View style={styles.divider} />
+
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>Consumer</Text>
+                                            <Text style={styles.summaryValue}>{connectionDetails!.consumerName}</Text>
+                                        </View>
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>LPG ID</Text>
+                                            <Text style={styles.summaryValue}>{consumerNumber}</Text>
+                                        </View>
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>Provider</Text>
+                                            <Text style={styles.summaryValue}>{selectedProvider}</Text>
+                                        </View>
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>Cylinder Type</Text>
+                                            <Text style={styles.summaryValue}>{connectionDetails!.cylinderType}</Text>
+                                        </View>
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>Last Booking</Text>
+                                            <Text style={styles.summaryValue}>{connectionDetails!.lastBookingDate}</Text>
+                                        </View>
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>Subsidy Status</Text>
+                                            <View style={styles.subsidyBadge}>
+                                                <Text style={styles.subsidyText}>{connectionDetails!.subsidyStatus}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>Refill Eligible</Text>
+                                            <View style={styles.eligibleBadge}>
+                                                <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                                                <Text style={styles.eligibleText}>{connectionDetails!.nextRefillEligible}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.summaryRow}>
+                                            <Text style={styles.summaryLabel}>Delivery Address</Text>
+                                            <Text style={[styles.summaryValue, { flex: 1, textAlign: 'right', marginLeft: 12 }]}>{connectionDetails!.deliveryAddress}</Text>
+                                        </View>
+
+                                        <View style={styles.amountBanner}>
+                                            <View>
+                                                <Text style={styles.bannerLabel}>Cylinder Amount</Text>
+                                                <Text style={styles.bannerValue}>₹{connectionDetails!.amountPayable}</Text>
+                                            </View>
+                                            <View style={styles.verticalDivider} />
+                                            <View>
+                                                <Text style={styles.bannerLabel}>Subsidy</Text>
+                                                <Text style={[styles.bannerValue, { color: '#2E7D32' }]}>Eligible</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+
+                                    {/* Payment Section */}
+                                    <View style={styles.formCard}>
+                                        <Text style={styles.sectionTitle}>Payment Details</Text>
+                                        <View style={styles.fieldGroup}>
+                                            <Text style={styles.fieldLabel}>Enter Amount</Text>
+                                            <View style={styles.inputContainer}>
+                                                <Text style={styles.currencyPrefix}>₹</Text>
+                                                <TextInput
+                                                    style={styles.input}
+                                                    keyboardType="numeric"
+                                                    value={paymentAmount}
+                                                    onChangeText={setPaymentAmount}
+                                                />
+                                            </View>
+                                        </View>
+
+                                        <Text style={styles.fieldLabel}>Select Payment Mode</Text>
+                                        <View style={styles.paymentModes}>
+                                            {['Wallet', 'Debit Card', 'Credit Card', 'Net Banking'].map((mode) => (
+                                                <TouchableOpacity
+                                                    key={mode}
+                                                    style={[styles.paymentModeCard, selectedPaymentMode === mode && styles.selectedPaymentModeCard]}
+                                                    onPress={() => setSelectedPaymentMode(mode)}
+                                                >
+                                                    <Ionicons
+                                                        name={mode === 'Wallet' ? 'wallet' : mode === 'Net Banking' ? 'globe-outline' : 'card'}
+                                                        size={20}
+                                                        color={selectedPaymentMode === mode ? '#0D47A1' : '#64748B'}
+                                                    />
+                                                    <Text style={[styles.paymentModeText, selectedPaymentMode === mode && styles.selectedPaymentModeText]}>
+                                                        {mode}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+
+                                        {selectedPaymentMode.includes('Card') && (
+                                            <View style={styles.cardFormContainer}>
+                                                <View style={styles.fieldGroup}>
+                                                    <Text style={styles.fieldLabel}>Name on Card</Text>
+                                                    <View style={styles.inputContainer}>
+                                                        <Ionicons name="person-outline" size={16} color="#94A3B8" />
+                                                        <TextInput style={styles.input} placeholder="Card Holder Name" placeholderTextColor="#94A3B8" value={cardHolder} onChangeText={setCardHolder} autoCapitalize="characters" />
+                                                    </View>
+                                                </View>
+                                                <View style={styles.fieldGroup}>
+                                                    <Text style={styles.fieldLabel}>Card Number</Text>
+                                                    <View style={styles.inputContainer}>
+                                                        <Ionicons name="card-outline" size={16} color="#94A3B8" />
+                                                        <TextInput style={styles.input} placeholder="0000 0000 0000 0000" placeholderTextColor="#94A3B8" keyboardType="numeric" value={cardNumber} onChangeText={handleCardNumberChange} maxLength={19} />
+                                                    </View>
+                                                </View>
+                                                <View style={styles.row}>
+                                                    <View style={[styles.fieldGroup, { flex: 1, marginRight: 10 }]}>
+                                                        <Text style={styles.fieldLabel}>Expiry</Text>
+                                                        <View style={styles.inputContainer}>
+                                                            <TextInput style={styles.input} placeholder="MM/YY" placeholderTextColor="#94A3B8" keyboardType="numeric" value={expiryDate} onChangeText={handleExpiryChange} maxLength={5} />
+                                                        </View>
+                                                    </View>
+                                                    <View style={[styles.fieldGroup, { flex: 1 }]}>
+                                                        <Text style={styles.fieldLabel}>CVV</Text>
+                                                        <View style={styles.inputContainer}>
+                                                            <TextInput style={styles.input} placeholder="123" placeholderTextColor="#94A3B8" keyboardType="numeric" secureTextEntry value={cvv} onChangeText={setCvv} maxLength={3} />
+                                                        </View>
+                                                    </View>
+                                                </View>
+                                            </View>
+                                        )}
+                                    </View>
+
+                                    <TouchableOpacity style={styles.declarationRow} onPress={() => setIsConfirmed(!isConfirmed)}>
+                                        <Ionicons name={isConfirmed ? 'checkbox' : 'square-outline'} size={22} color={isConfirmed ? '#0D47A1' : '#64748B'} />
+                                        <Text style={styles.declarationText}>I confirm that the above details are correct and authorize this LPG cylinder booking and payment.</Text>
+                                    </TouchableOpacity>
+
+                                    <View style={styles.footerButtons}>
+                                        <TouchableOpacity style={styles.cancelButton} onPress={() => { setConnectionDetails(null); setSelectedPaymentMode(''); setIsConfirmed(false); }}>
+                                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={handleProceedToPay} disabled={!isReady || isLoading} style={{ flex: 1 }}>
+                                            <LinearGradient
+                                                colors={!isReady || isLoading ? ['#E0E0E0', '#E0E0E0'] : ['#0D47A1', '#1565C0']}
+                                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                                style={styles.payButton}
+                                            >
+                                                {isLoading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.actionButtonText}>Book & Pay ₹{paymentAmount}</Text>}
+                                            </LinearGradient>
+                                        </TouchableOpacity>
+                                    </View>
+                                </Animated.View>
+                            )}
+                        </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+
+                {/* Provider Selection Modal */}
+                <Modal visible={showProviderModal} transparent animationType="slide" onRequestClose={() => setShowProviderModal(false)}>
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Select Gas Provider</Text>
+                                <TouchableOpacity onPress={() => setShowProviderModal(false)}>
+                                    <Ionicons name="close" size={24} color="#666" />
                                 </TouchableOpacity>
-                            ))}
-                        </ScrollView>
+                            </View>
+                            <View style={styles.modalSearch}>
+                                <Ionicons name="search" size={20} color="#666" />
+                                <TextInput
+                                    style={styles.modalSearchInput}
+                                    placeholder="Search provider..."
+                                    value={providerSearchQuery}
+                                    onChangeText={setProviderSearchQuery}
+                                />
+                            </View>
+                            <ScrollView style={styles.optionsList}>
+                                {filteredProviders.map((name, index) => (
+                                    <TouchableOpacity key={index} style={styles.optionItem} onPress={() => handleProviderSelect(name)}>
+                                        <Text style={styles.optionText}>{name}</Text>
+                                        {selectedProvider === name && <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />}
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        </View>
                     </View>
-                </View>
-            </Modal>
+                </Modal>
+
+                {/* Payment Success Modal */}
+                <Modal visible={showPaymentSuccess} transparent animationType="fade">
+                    <View style={styles.successOverlay}>
+                        <View style={styles.successCard}>
+                            <View style={styles.successIcon}>
+                                <Ionicons name="checkmark" size={50} color="#FFFFFF" />
+                            </View>
+                            <Text style={styles.successTitle}>Booking Confirmed!</Text>
+                            <View style={styles.receipt}>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>Transaction ID</Text>
+                                    <Text style={styles.receiptValue}>TX-LPG-{Math.floor(Math.random() * 900000) + 100000}</Text>
+                                </View>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>Provider</Text>
+                                    <Text style={styles.receiptValue}>{selectedProvider}</Text>
+                                </View>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>LPG ID</Text>
+                                    <Text style={styles.receiptValue}>{consumerNumber}</Text>
+                                </View>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>Amount Paid</Text>
+                                    <Text style={styles.receiptValue}>₹{paymentAmount}</Text>
+                                </View>
+                                <View style={styles.receiptRow}>
+                                    <Text style={styles.receiptLabel}>Date</Text>
+                                    <Text style={styles.receiptValue}>{new Date().toLocaleDateString()}</Text>
+                                </View>
+                            </View>
+                            <View style={styles.successActionRow}>
+                                <TouchableOpacity style={styles.receiptAction}>
+                                    <Ionicons name="download-outline" size={20} color="#0D47A1" />
+                                    <Text style={styles.receiptActionText}>Download</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.receiptAction}>
+                                    <Ionicons name="share-social-outline" size={20} color="#0D47A1" />
+                                    <Text style={styles.receiptActionText}>Share</Text>
+                                </TouchableOpacity>
+                            </View>
+                            <TouchableOpacity
+                                style={styles.backHomeButton}
+                                onPress={() => { setShowPaymentSuccess(false); router.back(); }}
+                            >
+                                <Text style={styles.backHomeText}>Back to Services</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+            </SafeAreaView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#F6F9FC',
-    },
-    safeArea: {
-        flex: 1,
-    },
-    header: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 20,
-        paddingTop: 50,
-        paddingBottom: 15,
-        backgroundColor: '#FFFFFF',
-    },
-    backButton: {
-        padding: 5,
-    },
-    headerCenter: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
-    headerSubtext: {
-        fontSize: 12,
-        color: '#666',
-        marginTop: 2,
-    },
-    placeholder: {
-        width: 34,
-    },
+    container: { flex: 1, backgroundColor: '#F5F7FA' },
+    safeArea: { flex: 1 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' },
+    backButton: { padding: 5 },
+    headerCenter: { flex: 1, alignItems: 'center' },
+    headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
+    headerSubtitle: { fontSize: 11, color: '#666', marginTop: 2 },
+    placeholder: { width: 34 },
 
-    scrollContent: {
-        paddingBottom: 20,
-    },
+    scrollContent: { padding: 20 },
+    content: { paddingVertical: 10 },
 
-    // Banner
-    bannerContainer: {
-        paddingHorizontal: 20,
-        paddingTop: 20,
-        paddingBottom: 15,
-    },
-    banner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 20,
-        borderRadius: 24,
-        gap: 15,
-        shadowColor: '#FF9800',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.15,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    bannerIcon: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    bannerEmoji: {
-        fontSize: 28,
-    },
-    bannerContent: {
-        flex: 1,
-    },
-    bannerTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#E65100',
-        marginBottom: 4,
-    },
-    bannerSubtitle: {
-        fontSize: 13,
-        color: '#F57C00',
-        opacity: 0.9,
-    },
+    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 16 },
+    grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16 },
+    gridItem: { width: '30%', alignItems: 'center', marginBottom: 16, padding: 8, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: 'transparent' },
+    selectedGridItem: { borderColor: '#0D47A1', backgroundColor: '#F0F7FF' },
+    iconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F1F8FE', justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
+    selectedIconCircle: { backgroundColor: '#0D47A1' },
+    gridLabel: { fontSize: 9, fontWeight: '600', color: '#1A1A1A', textAlign: 'center' },
 
-    // Section
-    section: {
-        paddingHorizontal: 20,
-        marginBottom: 20,
-    },
-    sectionLabel: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#1A1A1A',
-        marginBottom: 10,
-    },
+    browseContainer: { alignItems: 'center', marginBottom: 20 },
+    browseButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#BBDEFB', gap: 4 },
+    browseText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
 
-    // Select Card
-    selectCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        padding: 18,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 4,
-    },
-    selectedProvider: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    providerEmoji: {
-        fontSize: 24,
-    },
-    providerName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1A1A1A',
-    },
-    placeholderText: {
-        fontSize: 16,
-        color: '#999',
-    },
+    formCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 24, elevation: 2 },
+    fieldGroup: { marginBottom: 15 },
+    fieldLabel: { fontSize: 12, fontWeight: 'bold', color: '#475569', marginBottom: 6 },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F5F7FA', borderRadius: 10, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: '#E0E0E0' },
+    input: { flex: 1, marginLeft: 8, fontSize: 14, color: '#333', fontWeight: '500' },
+    readOnlyInput: { backgroundColor: '#F1F5F9', borderColor: '#E0E0E0' },
+    helperText: { fontSize: 11, color: '#94A3B8', marginTop: 6 },
+    currencyPrefix: { fontSize: 16, fontWeight: 'bold', color: '#1E293B' },
 
-    // Input Card
-    inputCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        paddingHorizontal: 18,
-        paddingVertical: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 4,
-        gap: 12,
-    },
-    input: {
-        flex: 1,
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1A1A1A',
-    },
-    helperText: {
-        fontSize: 12,
-        color: '#999',
-        marginTop: 8,
-    },
-    errorText: {
-        fontSize: 12,
-        color: '#E53935',
-        marginTop: 8,
-    },
+    actionButton: { paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    actionButtonText: { fontSize: 16, fontWeight: 'bold', color: '#FFFFFF' },
 
-    // Fetch Button
-    fetchButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        backgroundColor: '#2196F3',
-        paddingVertical: 16,
-        borderRadius: 24,
-        shadowColor: '#2196F3',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 12,
-        elevation: 6,
-    },
-    fetchButtonDisabled: {
-        backgroundColor: '#E0E0E0',
-        shadowColor: '#999',
-    },
-    fetchButtonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
+    // Summary card
+    summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#E2E8F0' },
+    summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15 },
+    summaryTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
+    divider: { height: 1, backgroundColor: '#F1F5F9', marginBottom: 15 },
+    summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    summaryLabel: { fontSize: 13, color: '#64748B' },
+    summaryValue: { fontSize: 13, fontWeight: 'bold', color: '#1E293B' },
+    subsidyBadge: { backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
+    subsidyText: { fontSize: 12, fontWeight: '600', color: '#2E7D32' },
+    eligibleBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    eligibleText: { fontSize: 13, fontWeight: '600', color: '#2E7D32' },
+    amountBanner: { flexDirection: 'row', backgroundColor: '#F1F8FE', borderRadius: 12, padding: 15, marginTop: 10, justifyContent: 'space-around' },
+    bannerLabel: { fontSize: 11, color: '#64748B', textAlign: 'center', marginBottom: 4 },
+    bannerValue: { fontSize: 18, fontWeight: 'bold', color: '#0D47A1', textAlign: 'center' },
+    verticalDivider: { width: 1, backgroundColor: '#D1E9FF' },
 
-    // Error Card
-    errorCard: {
-        marginHorizontal: 20,
-        backgroundColor: '#FFEBEE',
-        borderRadius: 20,
-        padding: 30,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: '#FFCDD2',
-        marginBottom: 20,
-    },
-    errorCardTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#C62828',
-        marginTop: 15,
-        marginBottom: 8,
-    },
-    errorCardText: {
-        fontSize: 14,
-        color: '#E53935',
-        textAlign: 'center',
-        marginBottom: 20,
-    },
-    retryButton: {
-        backgroundColor: '#E53935',
-        paddingHorizontal: 30,
-        paddingVertical: 12,
-        borderRadius: 24,
-    },
-    retryButtonText: {
-        fontSize: 15,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
+    // Payment
+    paymentModes: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 10, marginBottom: 10 },
+    paymentModeCard: { flex: 1, minWidth: '45%', flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', gap: 8 },
+    selectedPaymentModeCard: { borderColor: '#0D47A1', backgroundColor: '#F0F7FF' },
+    paymentModeText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+    selectedPaymentModeText: { color: '#0D47A1' },
+    cardFormContainer: { marginTop: 10, padding: 15, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+    row: { flexDirection: 'row' },
 
-    // Connection Details Card
-    connectionCard: {
-        marginHorizontal: 20,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-        elevation: 4,
-    },
-    connectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-        marginBottom: 20,
-        paddingBottom: 15,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    connectionProvider: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
-    detailsGrid: {
-        gap: 14,
-    },
-    detailRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-    },
-    detailRowFull: {
-        gap: 6,
-    },
-    detailLabel: {
-        fontSize: 14,
-        color: '#666',
-    },
-    detailValue: {
-        fontSize: 15,
-        fontWeight: '600',
-        color: '#1A1A1A',
-    },
-    detailValueAddress: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: '#1A1A1A',
-        lineHeight: 20,
-    },
-    subsidyBadge: {
-        backgroundColor: '#E8F5E9',
-        paddingHorizontal: 12,
-        paddingVertical: 4,
-        borderRadius: 8,
-    },
-    subsidyText: {
-        fontSize: 13,
-        fontWeight: '600',
-        color: '#4CAF50',
-    },
-    eligibleBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
-    },
-    eligibleText: {
-        fontSize: 14,
-        fontWeight: '600',
-        color: '#4CAF50',
-    },
+    declarationRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 24 },
+    declarationText: { flex: 1, fontSize: 11, color: '#64748B', lineHeight: 16 },
+    footerButtons: { flexDirection: 'row', gap: 15, marginBottom: 40 },
+    cancelButton: { flex: 0.4, height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#E2E8F0' },
+    cancelButtonText: { fontSize: 16, fontWeight: 'bold', color: '#64748B' },
+    payButton: { height: 56, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 
-    // Amount Section
-    amountSection: {
-        marginTop: 20,
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-        alignItems: 'center',
-    },
-    amountLabel: {
-        fontSize: 14,
-        color: '#666',
-        marginBottom: 8,
-    },
-    amountValue: {
-        fontSize: 32,
-        fontWeight: 'bold',
-        color: '#4CAF50',
-    },
-
-    // Bottom Bar
-    bottomBar: {
-        paddingHorizontal: 20,
-        paddingVertical: 15,
-        backgroundColor: '#FFFFFF',
-        borderTopWidth: 1,
-        borderTopColor: '#F0F0F0',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.08,
-        shadowRadius: 8,
-        elevation: 8,
-    },
-    bookButton: {
-        borderRadius: 24,
-        overflow: 'hidden',
-    },
-    bookButtonGradient: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 10,
-        paddingVertical: 16,
-    },
-    bookButtonText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        color: '#FFFFFF',
-    },
+    // Error card
+    errorCard: { backgroundColor: '#FFEBEE', borderRadius: 20, padding: 30, alignItems: 'center', borderWidth: 1, borderColor: '#FFCDD2', marginBottom: 20 },
+    errorCardTitle: { fontSize: 18, fontWeight: 'bold', color: '#C62828', marginTop: 15, marginBottom: 8 },
+    errorCardText: { fontSize: 14, color: '#E53935', textAlign: 'center', marginBottom: 20 },
 
     // Modal
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        justifyContent: 'flex-end',
-    },
-    modalContent: {
-        backgroundColor: '#FFFFFF',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        maxHeight: '60%',
-        paddingBottom: 20,
-    },
-    modalHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: 20,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    modalTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        color: '#1A1A1A',
-    },
-    providerOption: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: 16,
-        borderBottomWidth: 1,
-        borderBottomColor: '#F0F0F0',
-    },
-    providerLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 15,
-    },
-    providerLogoCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    providerLogo: {
-        fontSize: 24,
-    },
-    providerOptionName: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: '#1A1A1A',
-    },
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '80%', paddingTop: 20 },
+    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
+    modalSearch: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 12, margin: 20, paddingHorizontal: 15, paddingVertical: 10 },
+    modalSearchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1A1A1A' },
+    optionsList: { paddingHorizontal: 20 },
+    optionItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
+    optionText: { fontSize: 15, color: '#1A1A1A' },
+
+    // Success Modal
+    successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    successCard: { backgroundColor: '#FFFFFF', borderRadius: 24, width: '100%', padding: 30, alignItems: 'center' },
+    successIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#4CAF50', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+    successTitle: { fontSize: 22, fontWeight: '800', color: '#1A1A1A', marginBottom: 30, textAlign: 'center' },
+    receipt: { width: '100%', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, marginBottom: 25 },
+    receiptRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+    receiptLabel: { fontSize: 13, color: '#64748B' },
+    receiptValue: { fontSize: 13, fontWeight: 'bold', color: '#1E293B' },
+    successActionRow: { flexDirection: 'row', gap: 20, marginBottom: 30 },
+    receiptAction: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    receiptActionText: { fontSize: 14, fontWeight: 'bold', color: '#0D47A1' },
+    backHomeButton: { width: '100%', height: 56, backgroundColor: '#1E293B', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    backHomeText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+    errorText: { fontSize: 11, color: '#E53935', marginTop: 4, fontWeight: '600' },
 });
