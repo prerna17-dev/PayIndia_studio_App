@@ -136,7 +136,39 @@ exports.addCorrectionDocument = async (correctionId, documentType, filePath) => 
  */
 exports.getAllCorrections = async () => {
     const [rows] = await pool.query(
-        `SELECT uc.*, u.name as user_name FROM service_udyam_correction uc JOIN users u ON uc.user_id = u.user_id ORDER BY uc.created_at DESC`
+        `SELECT c.*, u.name as user_name, u.mobile_number as user_mobile 
+         FROM service_udyam_correction c 
+         JOIN users u ON c.user_id = u.user_id 
+         ORDER BY c.created_at DESC`
     );
     return rows;
+};
+
+/**
+ * Store OTP for Udyam
+ */
+exports.storeOTP = async (mobileNumber, otpCode, purpose) => {
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    await pool.query(
+        `INSERT INTO verification_otps (mobile_number, otp_code, purpose, expires_at) VALUES (?, ?, ?, ?)`,
+        [mobileNumber, otpCode, purpose, expiresAt]
+    );
+};
+
+/**
+ * Verify OTP
+ */
+exports.verifyOTP = async (mobileNumber, otpCode, purpose) => {
+    const [rows] = await pool.query(
+        `SELECT * FROM verification_otps 
+         WHERE mobile_number = ? AND otp_code = ? AND purpose = ? AND is_verified = FALSE AND expires_at > NOW() 
+         ORDER BY created_at DESC LIMIT 1`,
+        [mobileNumber, otpCode, purpose]
+    );
+
+    if (rows.length > 0) {
+        await pool.query(`UPDATE verification_otps SET is_verified = TRUE WHERE otp_id = ?`, [rows[0].otp_id]);
+        return true;
+    }
+    return false;
 };

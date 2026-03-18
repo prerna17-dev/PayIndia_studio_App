@@ -4,6 +4,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { API_ENDPOINTS } from '../constants/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     Alert,
     BackHandler,
@@ -16,7 +19,8 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator
+    ActivityIndicator,
+    Clipboard
 } from 'react-native';
 
 type UpdateType = 'address' | 'bank' | 'activity' | 'employees' | 'turnover';
@@ -55,8 +59,6 @@ const REQUIRED_DOCS: Record<UpdateType, { id: string; label: string }[]> = {
     ],
 };
 
-
-
 export default function UpdateUdyamDetailsScreen() {
     const router = useRouter();
     const [step, setStep] = useState(1);
@@ -64,6 +66,10 @@ export default function UpdateUdyamDetailsScreen() {
     // Step 1
     const [udyamNumber, setUdyamNumber] = useState('');
     const [aadhaar, setAadhaar] = useState('');
+    const [mobile, setMobile] = useState('');
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [otp, setOtp] = useState("");
+    const [isVerified, setIsVerified] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
 
     // Step 2 - single selection
@@ -78,6 +84,7 @@ export default function UpdateUdyamDetailsScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [showCopied, setShowCopied] = useState(false);
 
     useEffect(() => {
         const backAction = () => {
@@ -103,11 +110,67 @@ export default function UpdateUdyamDetailsScreen() {
         setAadhaar(f);
     };
 
-    const handleVerify = () => {
+    const handleSendOtp = async () => {
         if (!udyamNumber.trim()) return Alert.alert('Required', 'Enter Udyam Registration Number');
         if (aadhaar.replace(/\s/g, '').length !== 12) return Alert.alert('Required', 'Enter valid 12-digit Aadhaar');
+        if (mobile.length !== 10) return Alert.alert('Required', 'Enter valid 10-digit mobile');
+
         setIsVerifying(true);
-        setTimeout(() => { setIsVerifying(false); setStep(2); }, 1200);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.UDYAM_SEND_OTP, {
+                mobile_number: mobile,
+                aadhaar_number: aadhaar.replace(/\s/g, ""),
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to registered mobile");
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to send OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred");
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (otp.length !== 6) return Alert.alert("Error", "Enter 6-digit OTP");
+
+        setIsVerifying(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.UDYAM_VERIFY_OTP, {
+                mobile_number: mobile,
+                otp_code: otp,
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsVerified(true);
+                Alert.alert("Success", "Aadhaar verified successfully");
+                setStep(2);
+            } else {
+                Alert.alert("Error", response.data.message || "Invalid or expired OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred");
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
+    const handleVerify = () => {
+        if (isVerified) {
+            setStep(2);
+        } else {
+            handleSendOtp();
+        }
     };
 
     const uploadDoc = async (id: string) => {
@@ -143,14 +206,52 @@ export default function UpdateUdyamDetailsScreen() {
         setStep(3);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const refId = "UDY" + Math.random().toString(36).substr(2, 9).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const formData = new FormData();
+
+            formData.append("udyam_number", udyamNumber);
+            formData.append("aadhaar_number", aadhaar.replace(/\s/g, ""));
+            formData.append("update_type", selectedUpdate || "");
+            formData.append("new_value", getNewData());
+
+            // Appending files
+            Object.keys(docs).forEach(key => {
+                const doc = docs[key];
+                formData.append(key, {
+                    uri: doc.uri,
+                    name: doc.name,
+                    type: doc.mimeType || "application/octet-stream",
+                } as any);
+            });
+
+            const response = await axios.post(API_ENDPOINTS.UDYAM_CORRECTION_SUBMIT, formData, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            if (response.data.success) {
+                // Backend might not return a reference_id for corrections, so we generate one or use correction ID
+                setApplicationId("UDY" + Math.random().toString(36).substr(2, 9).toUpperCase());
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
+    };
+
+    const copyToClipboard = () => {
+        Clipboard.setString(applicationId);
+        setShowCopied(true);
+        setTimeout(() => setShowCopied(false), 3000);
     };
 
     const getNewData = () => {
@@ -212,33 +313,26 @@ export default function UpdateUdyamDetailsScreen() {
                         <Text style={s.successTitle}>Update Requested!</Text>
                         <Text style={s.successSubtitle}>Your Udyam registration update request has been submitted successfully.</Text>
 
-                        <View style={s.idCard}>
+                        <TouchableOpacity style={s.idCard} onPress={copyToClipboard} activeOpacity={0.7}>
                             <Text style={s.idLabel}>Reference ID</Text>
-                            <Text style={s.idValue}>{applicationId}</Text>
-                        </View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                                <Text style={s.idValue}>{applicationId}</Text>
+                                <Ionicons name="copy-outline" size={20} color="#0D47A1" />
+                            </View>
+                        </TouchableOpacity>
 
-                        <View style={s.successActions}>
-                            <TouchableOpacity style={s.actionBtn}>
-                                <View style={[s.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                    <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                                </View>
-                                <Text style={s.actionText}>Download{"\n"}Receipt</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={s.actionBtn}>
-                                <View style={[s.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                    <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                                </View>
-                                <Text style={s.actionText}>Track{"\n"}Status</Text>
-                            </TouchableOpacity>
-                        </View>
-
-                        <TouchableOpacity style={s.mainBtn} onPress={() => router.back()}>
+                        <TouchableOpacity style={s.mainBtn} onPress={() => router.replace("/udyam-services")}>
                             <LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}>
                                 <Text style={s.mainBtnText}>Return to Services</Text>
                                 <Ionicons name="arrow-forward" size={18} color="#FFF" />
                             </LinearGradient>
                         </TouchableOpacity>
+
+                        {showCopied && (
+                            <View style={s.toast}>
+                                <Text style={s.toastText}>Copied to clipboard</Text>
+                            </View>
+                        )}
                     </View>
                 </SafeAreaView>
             </View>
@@ -294,15 +388,64 @@ export default function UpdateUdyamDetailsScreen() {
                                     <View style={s.inputRow}>
                                         <TextInput style={s.field} placeholder="UDYAM-XX-00-0000000" value={udyamNumber} onChangeText={setUdyamNumber} autoCapitalize="characters" />
                                     </View>
-                                    <Text style={s.inputLabel}>Aadhaar Number *</Text>
+                                    <Text style={[s.inputLabel, { marginTop: 16 }]}>Aadhaar Number *</Text>
                                     <View style={s.inputRow}>
-                                        <TextInput style={s.field} placeholder="XXXX XXXX XXXX" value={aadhaar} onChangeText={handleAadhaarChange} keyboardType="numeric" maxLength={14} />
+                                        <TextInput style={s.field} placeholder="XXXX XXXX XXXX" value={aadhaar} onChangeText={handleAadhaarChange} keyboardType="numeric" maxLength={14} editable={!isVerified} />
+                                        {isVerified && <Ionicons name="checkmark-circle" size={18} color="#2E7D32" style={{ marginLeft: 8 }} />}
                                     </View>
+
+                                    <Text style={[s.inputLabel, { marginTop: 16 }]}>Registered Mobile *</Text>
+                                    <View style={s.verifyRow}>
+                                        <View style={[s.inputRow, { flex: 1, marginBottom: 0 }]}>
+                                            <Text style={{ color: '#64748B', marginRight: 5 }}>+91</Text>
+                                            <TextInput
+                                                style={s.field}
+                                                placeholder="10-digit mobile"
+                                                value={mobile}
+                                                onChangeText={v => setMobile(v.replace(/\D/g, '').substring(0, 10))}
+                                                keyboardType="numeric"
+                                                maxLength={10}
+                                                editable={!isVerified}
+                                            />
+                                        </View>
+                                        {!isVerified && (
+                                            <TouchableOpacity
+                                                style={[s.verifyBtn, (mobile.length !== 10 || aadhaar.replace(/\s/g, "").length !== 12 || !udyamNumber.trim()) && { opacity: 0.5 }]}
+                                                onPress={handleSendOtp}
+                                                disabled={isVerifying || mobile.length !== 10 || !udyamNumber.trim()}
+                                            >
+                                                <Text style={s.verifyBtnText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+
+                                    {isOtpSent && !isVerified && (
+                                        <View>
+                                            <Text style={s.inputLabel}>Enter 6-digit OTP *</Text>
+                                            <View style={s.inputRow}>
+                                                <Ionicons name="key-outline" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+                                                <TextInput
+                                                    style={s.field}
+                                                    placeholder="Enter OTP"
+                                                    value={otp}
+                                                    onChangeText={setOtp}
+                                                    keyboardType="numeric"
+                                                    maxLength={6}
+                                                />
+                                                <TouchableOpacity onPress={handleVerifyOtp} disabled={isVerifying || otp.length !== 6}>
+                                                    {isVerifying ? <ActivityIndicator size="small" color="#0D47A1" /> : (
+                                                        <Text style={{ color: '#0D47A1', fontWeight: '700' }}>Verify</Text>
+                                                    )}
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    )}
                                 </View>
 
-                                <TouchableOpacity style={s.mainBtn} onPress={handleVerify} disabled={isVerifying}>
+                                <TouchableOpacity style={[s.mainBtn, !isVerified && s.btnDisabled]} onPress={() => setStep(2)} disabled={!isVerified}>
                                     <LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}>
-                                        {isVerifying ? <ActivityIndicator color="#FFF" /> : <><Text style={s.btnText}>Verify & Proceed</Text><Ionicons name="arrow-forward" size={18} color="#FFF" /></>}
+                                        <Text style={s.btnText}>Proceed to Update</Text>
+                                        <Ionicons name="arrow-forward" size={18} color="#FFF" />
                                     </LinearGradient>
                                 </TouchableOpacity>
                             </View>
@@ -498,11 +641,11 @@ const s = StyleSheet.create({
     cardHeaderTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B', marginBottom: 12 },
 
     inputLabel: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8, marginTop: 12 },
-    inputRow: { backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, height: 48, justifyContent: 'center' },
+    inputRow: { backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, height: 48, flexDirection: 'row', alignItems: 'center' },
     field: { flex: 1, fontSize: 14, color: '#1E293B' },
     helperText: { fontSize: 11, color: '#94A3B8', marginTop: 6 },
 
-    mainBtn: { borderRadius: 16, overflow: 'hidden', marginTop: 10 },
+    mainBtn: { borderRadius: 16, overflow: 'hidden', width: '100%' },
     btnDisabled: { opacity: 0.6 },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
     btnText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
@@ -547,5 +690,36 @@ const s = StyleSheet.create({
     actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
     actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
-    mainBtnText: { color: '#FFF', fontSize: 15, fontWeight: '800' },
+    mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+    toast: {
+        position: 'absolute',
+        bottom: 120,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 25,
+        alignSelf: 'center',
+    },
+    toastText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    verifyRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 8,
+    },
+    verifyBtn: {
+        backgroundColor: '#E3F2FD',
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        justifyContent: 'center',
+        height: 48,
+    },
+    verifyBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#0D47A1',
+    },
 });

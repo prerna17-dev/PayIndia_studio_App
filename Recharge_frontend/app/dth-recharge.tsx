@@ -45,7 +45,7 @@ export default function DTHRechargeScreen() {
     const [operatorSearchQuery, setOperatorSearchQuery] = useState("");
     const [showOperatorModal, setShowOperatorModal] = useState(false);
     const [isFetching, setIsFetching] = useState(false);
-    
+
     // Details Flow State
     const [accountDetails, setAccountDetails] = useState<any>(null);
     const [customAmount, setCustomAmount] = useState('');
@@ -346,17 +346,17 @@ const styles = StyleSheet.create({
     placeholder: { width: 34 },
     scrollContent: { padding: 20 },
     content: { paddingVertical: 10 },
-    
+
     formCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 24, elevation: 2 },
     fieldGroup: { marginBottom: 15 },
     fieldLabel: { fontSize: 12, fontWeight: "bold", color: "#475569", marginBottom: 6 },
     inputContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#F5F7FA", borderRadius: 10, paddingHorizontal: 12, height: 44, borderWidth: 1, borderColor: "#E0E0E0" },
     input: { flex: 1, marginLeft: 8, fontSize: 14, color: '#333', fontWeight: '500' },
     readOnlyInput: { backgroundColor: '#F1F5F9', borderColor: '#E0E0E0' },
-    
+
     actionButton: { paddingVertical: 16, borderRadius: 12, alignItems: "center", justifyContent: "center" },
     actionButtonText: { fontSize: 16, fontWeight: "bold", color: "#FFFFFF" },
-    
+
     sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1A1A1A', marginBottom: 16 },
     grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16, gap: 10 },
     gridItem: { flex: 1, minWidth: '30%', alignItems: 'center', marginBottom: 5, padding: 12, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0' },
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     iconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F1F8FE', justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
     selectedIconCircle: { backgroundColor: '#0D47A1' },
     gridLabel: { fontSize: 10, fontWeight: '600', color: '#1A1A1A', textAlign: 'center' },
-    
+
     summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 },
     summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15 },
     summaryTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },

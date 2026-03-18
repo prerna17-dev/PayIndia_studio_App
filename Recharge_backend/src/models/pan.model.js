@@ -184,14 +184,27 @@ exports.createCorrection = async (data) => {
         mobile_number,
         corrected_name,
         corrected_dob,
+        corrected_father_name,
+        corrected_contact,
+        corrected_address,
         correction_type,
     } = data;
 
     const [result] = await pool.query(
         `INSERT INTO pan_corrections 
-     (user_id, pan_number, mobile_number, corrected_name, corrected_dob, correction_type) 
-     VALUES (?, ?, ?, ?, ?, ?)`,
-        [user_id, pan_number, mobile_number, corrected_name, corrected_dob, correction_type]
+     (user_id, pan_number, mobile_number, corrected_name, corrected_dob, corrected_father_name, corrected_contact, corrected_address, correction_type) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            user_id,
+            pan_number,
+            mobile_number,
+            corrected_name,
+            corrected_dob,
+            corrected_father_name,
+            corrected_contact,
+            corrected_address,
+            correction_type,
+        ]
     );
     return result.insertId;
 };

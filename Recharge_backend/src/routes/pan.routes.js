@@ -69,6 +69,13 @@ const panCorrectionUpload = uploadCorrection.fields([
     { name: "identity_proof", maxCount: 1 },
     { name: "proof_of_dob", maxCount: 1 },
     { name: "photo_sign", maxCount: 1 },
+    { name: "father_proof", maxCount: 1 },
+    { name: "father_declare", maxCount: 1 },
+    { name: "contact_proof", maxCount: 1 },
+    { name: "address_proof", maxCount: 1 },
+    { name: "address_id", maxCount: 1 },
+    { name: "photo_passport", maxCount: 1 },
+    { name: "photo_id", maxCount: 1 },
 ]);
 
 // User: Send and Verify OTP for Correction

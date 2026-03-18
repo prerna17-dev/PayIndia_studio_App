@@ -226,3 +226,42 @@ STACK: Error: Table 'payindia_studio.aadhar_corrections' doesn't exist
     at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
     at WriteStream.emit (node:events:520:35)
 ----------------------------------
+
+[2026-03-18T05:42:27.220Z]
+METHOD: POST
+URL: /api/pan/correction/submit
+MESSAGE: Unknown column 'corrected_father_name' in 'field list'
+STACK: Error: Unknown column 'corrected_father_name' in 'field list'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\pan.model.js:193:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\pan.controller.js:260:45)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-18T06:35:09.458Z]
+METHOD: POST
+URL: /api/business/udyam/correction/submit
+MESSAGE: Cannot read properties of undefined (reading 'path')
+STACK: TypeError: Cannot read properties of undefined (reading 'path')
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\udyam.controller.js:176:107
+    at Array.forEach (<anonymous>)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\udyam.controller.js:174:28)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+----------------------------------
+
+[2026-03-18T06:35:13.984Z]
+METHOD: POST
+URL: /api/business/udyam/correction/submit
+MESSAGE: Cannot read properties of undefined (reading 'path')
+STACK: TypeError: Cannot read properties of undefined (reading 'path')
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\udyam.controller.js:176:107
+    at Array.forEach (<anonymous>)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\udyam.controller.js:174:28)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+----------------------------------

@@ -18,6 +18,9 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface UploadedFile {
     name: string;
@@ -53,8 +56,6 @@ const REQUIRED_DOCS: Record<CorrectionType, { id: string; label: string }[]> = {
     ],
 };
 
-
-
 const CORRECTION_TYPES = [
     { id: 'name' as CorrectionType, label: 'Full Name', icon: 'account' },
     { id: 'dob' as CorrectionType, label: 'Date of Birth', icon: 'calendar' },
@@ -75,7 +76,7 @@ export default function PANCorrectionScreen() {
     const [isOtpSent, setIsOtpSent] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
 
-    // Step 2 - single selection only
+    // Step 2
     const [selectedType, setSelectedType] = useState<CorrectionType | null>(null);
     const [newName, setNewName] = useState("");
     const [newDob, setNewDob] = useState("");
@@ -86,6 +87,7 @@ export default function PANCorrectionScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [showCopied, setShowCopied] = useState(false);
 
     useEffect(() => {
         const backAction = () => {
@@ -101,7 +103,7 @@ export default function PANCorrectionScreen() {
         const cleaned = text.replace(/\D/g, "");
         let formatted = cleaned;
         if (cleaned.length > 2) {
-            formatted = cleaned.slice(0, 2) + "/" + cleaned.slice(2);
+            formatted = cleaned.slice(0, 2) + "/" + cleaned.slice(2, 4);
         }
         if (cleaned.length > 4) {
             formatted = formatted.slice(0, 5) + "/" + cleaned.slice(4, 8);
@@ -109,22 +111,55 @@ export default function PANCorrectionScreen() {
         return formatted;
     };
 
-    // Reset docs when type changes
     useEffect(() => {
         setUploadedDocs({});
         setNewName(""); setNewDob(""); setNewFatherName(""); setNewContact(""); setNewAddress("");
     }, [selectedType]);
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async () => {
         if (panNumber.length !== 10 || mobileNumber.length !== 10) return Alert.alert("Error", "Enter valid PAN and Mobile number");
-        setIsOtpSent(true);
-        Alert.alert("OTP Sent", "Verification code sent to your mobile");
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.PAN_CORRECTION_OTP_SEND, {
+                mobile_number: mobileNumber,
+                pan_number: panNumber,
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("OTP Sent", "Verification code sent to your mobile");
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to send OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred while sending OTP");
+        }
     };
 
-    const handleVerifyOtp = () => {
+    const handleVerifyOtp = async () => {
         if (otp.length !== 6) return Alert.alert("Error", "Enter 6-digit OTP");
         setIsVerifying(true);
-        setTimeout(() => { setIsVerifying(false); setStep(2); }, 1200);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.PAN_CORRECTION_OTP_VERIFY, {
+                mobile_number: mobileNumber,
+                otp_code: otp,
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setStep(2);
+            } else {
+                Alert.alert("Error", response.data.message || "Invalid OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred while verifying OTP");
+        } finally {
+            setIsVerifying(false);
+        }
     };
 
     const handleFileUpload = async (docId: string) => {
@@ -145,7 +180,6 @@ export default function PANCorrectionScreen() {
 
     const validateStep2 = () => {
         if (!selectedType) return Alert.alert("Required", "Select a correction type");
-
         if (selectedType === 'name' && !newName) return Alert.alert("Required", "Enter corrected name");
         if (selectedType === 'dob' && !newDob) return Alert.alert("Required", "Enter corrected date of birth");
         if (selectedType === 'father' && !newFatherName) return Alert.alert("Required", "Enter corrected father's name");
@@ -155,18 +189,67 @@ export default function PANCorrectionScreen() {
         if (missingDocs.length > 0) {
             return Alert.alert("Required", `Please upload:\n${missingDocs.map(d => "• " + d.label).join("\n")}`);
         }
-
         setStep(3);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const refId = "PAN" + Math.random().toString(36).substr(2, 9).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const formData = new FormData();
+            formData.append("pan_number", panNumber);
+            formData.append("mobile_number", mobileNumber);
+            formData.append("correction_type", selectedType || "");
+
+            if (selectedType === 'name') formData.append("corrected_name", newName);
+            if (selectedType === 'dob') formData.append("corrected_date", newDob);
+            if (selectedType === 'father') formData.append("corrected_father_name", newFatherName);
+            if (selectedType === 'contact') formData.append("corrected_contact", newContact);
+            if (selectedType === 'address') formData.append("corrected_address", newAddress);
+
+            Object.keys(uploadedDocs).forEach(docId => {
+                const doc = uploadedDocs[docId];
+                let fieldName = "";
+                if (selectedType === 'name') {
+                    if (docId === "nameProof") fieldName = "proof_of_name";
+                    else if (docId === "nameId") fieldName = "identity_proof";
+                } else if (selectedType === 'dob') fieldName = "proof_of_dob";
+                else if (selectedType === 'father') {
+                    if (docId === "fatherProof") fieldName = "father_proof";
+                    else if (docId === "fatherDeclare") fieldName = "father_declare";
+                } else if (selectedType === 'contact') fieldName = "contact_proof";
+                else if (selectedType === 'address') {
+                    if (docId === "addressProof") fieldName = "address_proof";
+                    else if (docId === "addressId") fieldName = "address_id";
+                } else if (selectedType === 'photo') {
+                    if (docId === "photoPassport") fieldName = "photo_passport";
+                    else if (docId === "photoId") fieldName = "photo_id";
+                }
+
+                if (fieldName) {
+                    formData.append(fieldName, {
+                        uri: Platform.OS === "ios" ? doc.uri.replace("file://", "") : doc.uri,
+                        name: doc.name,
+                        type: doc.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+                    } as any);
+                }
+            });
+
+            const response = await axios.post(API_ENDPOINTS.PAN_CORRECTION_SUBMIT, formData, {
+                headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${token}` },
+            });
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.correctionId.toString());
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to submit correction");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An unexpected error occurred");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
     };
 
     const getNewValue = () => {
@@ -203,17 +286,11 @@ export default function PANCorrectionScreen() {
                                             <Text style={s.fileName} numberOfLines={1}>{uploaded.name}</Text>
                                             <Text style={s.fileSize}>{uploaded.size}</Text>
                                         </View>
-                                        <TouchableOpacity onPress={() => removeDoc(doc.id)}>
-                                            <Ionicons name="trash-outline" size={20} color="#D32F2F" />
-                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => removeDoc(doc.id)}><Ionicons name="trash-outline" size={20} color="#D32F2F" /></TouchableOpacity>
                                     </View>
                                 </View>
                             ) : (
-                                <TouchableOpacity style={s.uploadBox} onPress={() => handleFileUpload(doc.id)}>
-                                    <Ionicons name="cloud-upload-outline" size={26} color="#0D47A1" />
-                                    <Text style={s.uploadText}>Tap to Upload</Text>
-                                    <Text style={s.uploadSub}>PDF or Image (Max 5MB)</Text>
-                                </TouchableOpacity>
+                                <TouchableOpacity style={s.uploadBox} onPress={() => handleFileUpload(doc.id)}><Ionicons name="cloud-upload-outline" size={26} color="#0D47A1" /><Text style={s.uploadText}>Tap to Upload</Text><Text style={s.uploadSub}>PDF or Image (Max 5MB)</Text></TouchableOpacity>
                             )}
                         </View>
                     );
@@ -227,38 +304,27 @@ export default function PANCorrectionScreen() {
             <View style={s.root}>
                 <Stack.Screen options={{ headerShown: false }} />
                 <SafeAreaView style={s.successContainer}>
-                    <View style={s.successIconCircle}>
-                        <Ionicons name="checkmark-done-circle" size={80} color="#2E7D32" />
-                    </View>
+                    <View style={s.successIconCircle}><Ionicons name="checkmark-done-circle" size={80} color="#2E7D32" /></View>
                     <Text style={s.successTitle}>Request Submitted!</Text>
                     <Text style={s.successSubtitle}>Your PAN correction request has been received successfully.</Text>
-
-                    <View style={s.idCard}>
-                        <Text style={s.idLabel}>Reference ID</Text>
-                        <Text style={s.idValue}>{applicationId}</Text>
-                    </View>
-
-                    <View style={s.successActions}>
-                        <TouchableOpacity style={s.actionBtn}>
-                            <View style={[s.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
+                    <TouchableOpacity style={s.idCard} onPress={() => {
+                        import('react-native').then(({ Clipboard }) => {
+                            Clipboard.setString(`PAN${applicationId.padStart(4, '0')}`);
+                            setShowCopied(true);
+                            setTimeout(() => setShowCopied(false), 3000);
+                        });
+                    }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <View style={{ alignItems: 'center', flex: 1 }}>
+                                <Text style={s.idLabel}>Reference ID</Text>
+                                <Text style={s.idValue}>PAN{applicationId.padStart(4, '0')}</Text>
                             </View>
-                            <Text style={s.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={s.actionBtn}>
-                            <View style={[s.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={s.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
-
+                            <Ionicons name="copy-outline" size={24} color="#0D47A1" />
+                        </View>
+                    </TouchableOpacity>
+                    {showCopied && <View style={s.toast}><Text style={s.toastText}>Copied to clipboard</Text></View>}
                     <TouchableOpacity style={s.mainBtn} onPress={() => router.back()}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}>
-                            <Text style={s.mainBtnText}>Return to Services</Text>
-                            <Ionicons name="arrow-forward" size={18} color="#FFF" />
-                        </LinearGradient>
+                        <LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}><Text style={s.mainBtnText}>Return to Services</Text><Ionicons name="arrow-forward" size={18} color="#FFF" /></LinearGradient>
                     </TouchableOpacity>
                 </SafeAreaView>
             </View>
@@ -270,29 +336,18 @@ export default function PANCorrectionScreen() {
             <Stack.Screen options={{ headerShown: false }} />
             <StatusBar style="dark" />
             <SafeAreaView style={s.safe}>
-                {/* Header - plain back arrow, no circle */}
                 <View style={s.header}>
-                    <TouchableOpacity style={s.backBtn} onPress={() => step > 1 ? setStep(step - 1) : router.back()}>
-                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
-                    </TouchableOpacity>
-                    <View style={s.headerContent}>
-                        <Text style={s.headerTitle}>PAN Correction</Text>
-                        <Text style={s.headerSubtitle}>Official PAN data update</Text>
-                    </View>
+                    <TouchableOpacity style={s.backBtn} onPress={() => step > 1 ? setStep(step - 1) : router.back()}><Ionicons name="arrow-back" size={24} color="#1A1A1A" /></TouchableOpacity>
+                    <View style={s.headerContent}><Text style={s.headerTitle}>PAN Correction</Text><Text style={s.headerSubtitle}>Official PAN data update</Text></View>
                     <View style={{ width: 40 }} />
                 </View>
 
-                {/* Step Indicator */}
                 <View style={s.stepContainer}>
                     {[1, 2, 3].map((i) => (
                         <React.Fragment key={i}>
                             <View style={s.stepItem}>
-                                <View style={[s.stepCircle, step >= i && s.stepCircleActive, step > i && s.stepCircleDone]}>
-                                    {step > i ? <Ionicons name="checkmark" size={16} color="#FFF" /> : <Text style={[s.stepNum, step >= i && s.stepNumActive]}>{i}</Text>}
-                                </View>
-                                <Text style={[s.stepLabel, step >= i && s.stepLabelActive]}>
-                                    {i === 1 ? "Verify" : i === 2 ? "Correct" : "Confirm"}
-                                </Text>
+                                <View style={[s.stepCircle, step >= i && s.stepCircleActive, step > i && s.stepCircleDone]}>{step > i ? <Ionicons name="checkmark" size={16} color="#FFF" /> : <Text style={[s.stepNum, step >= i && s.stepNumActive]}>{i}</Text>}</View>
+                                <Text style={[s.stepLabel, step >= i && s.stepLabelActive]}>{i === 1 ? "Verify" : i === 2 ? "Correct" : "Confirm"}</Text>
                             </View>
                             {i < 3 && <View style={[s.stepLine, step > i && s.stepLineDone]} />}
                         </React.Fragment>
@@ -301,194 +356,35 @@ export default function PANCorrectionScreen() {
 
                 <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
-
-                        {/* STEP 1 */}
                         {step === 1 && (
                             <View>
-                                <View style={s.sectionHeader}>
-                                    <View style={s.iconBadge}><Ionicons name="shield-checkmark" size={20} color="#0D47A1" /></View>
-                                    <View>
-                                        <Text style={s.sectionTitle}>Verification Details</Text>
-                                        <Text style={s.sectionSub}>Verify your existing PAN records</Text>
-                                    </View>
-                                </View>
-
+                                <View style={s.sectionHeader}><View style={s.iconBadge}><Ionicons name="shield-checkmark" size={20} color="#0D47A1" /></View><View><Text style={s.sectionTitle}>Verification Details</Text><Text style={s.sectionSub}>Verify your existing PAN records</Text></View></View>
                                 <View style={s.card}>
                                     <Text style={s.inputLabel}>PAN Number *</Text>
-                                    <View style={s.inputRow}>
-                                        <MaterialCommunityIcons name="card-account-details-outline" size={20} color="#64748B" />
-                                        <TextInput style={s.field} placeholder="ABCDE1234F" autoCapitalize="characters" maxLength={10} value={panNumber} onChangeText={setPanNumber} />
-                                    </View>
-
+                                    <View style={s.inputRow}><MaterialCommunityIcons name="card-account-details-outline" size={20} color="#64748B" /><TextInput style={s.field} placeholder="ABCDE1234F" autoCapitalize="characters" maxLength={10} value={panNumber} onChangeText={setPanNumber} /></View>
                                     <Text style={[s.inputLabel, { marginTop: 16 }]}>Registered Mobile *</Text>
-                                    <View style={s.otpRow}>
-                                        <View style={[s.inputRow, { flex: 1 }]}>
-                                            <Ionicons name="phone-portrait-outline" size={20} color="#64748B" />
-                                            <TextInput style={s.field} placeholder="10-digit mobile" keyboardType="numeric" maxLength={10} value={mobileNumber} onChangeText={setMobileNumber} />
-                                        </View>
-                                        <TouchableOpacity style={s.verifyBtn} onPress={handleSendOtp} disabled={mobileNumber.length !== 10 || panNumber.length !== 10}>
-                                            <Text style={s.verifyBtnText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    {isOtpSent && (
-                                        <View style={{ marginTop: 16 }}>
-                                            <Text style={s.inputLabel}>Enter OTP *</Text>
-                                            <View style={s.inputRow}>
-                                                <Ionicons name="key-outline" size={20} color="#64748B" />
-                                                <TextInput style={s.field} placeholder="6 digit code" keyboardType="numeric" maxLength={6} value={otp} onChangeText={setOtp} />
-                                            </View>
-                                        </View>
-                                    )}
+                                    <View style={s.otpRow}><View style={[s.inputRow, { flex: 1 }]}><Ionicons name="phone-portrait-outline" size={20} color="#64748B" /><TextInput style={s.field} placeholder="10-digit mobile" keyboardType="numeric" maxLength={10} value={mobileNumber} onChangeText={setMobileNumber} /></View><TouchableOpacity style={s.verifyBtn} onPress={handleSendOtp} disabled={mobileNumber.length !== 10 || panNumber.length !== 10}><Text style={s.verifyBtnText}>{isOtpSent ? "Resend" : "Send OTP"}</Text></TouchableOpacity></View>
+                                    {isOtpSent && <View style={{ marginTop: 16 }}><Text style={s.inputLabel}>Enter OTP *</Text><View style={s.inputRow}><Ionicons name="key-outline" size={20} color="#64748B" /><TextInput style={s.field} placeholder="6 digit code" keyboardType="numeric" maxLength={6} value={otp} onChangeText={setOtp} /></View></View>}
                                 </View>
-
-                                <TouchableOpacity style={[s.mainBtn, (!isOtpSent || otp.length !== 6) && s.btnDisabled]} disabled={!isOtpSent || otp.length !== 6 || isVerifying} onPress={handleVerifyOtp}>
-                                    <LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}>
-                                        {isVerifying ? <ActivityIndicator color="#FFF" /> : <><Text style={s.mainBtnText}>Verify & Proceed</Text><Ionicons name="arrow-forward" size={20} color="#FFF" /></>}
-                                    </LinearGradient>
-                                </TouchableOpacity>
+                                <TouchableOpacity style={[s.mainBtn, (!isOtpSent || otp.length !== 6) && s.btnDisabled]} disabled={!isOtpSent || otp.length !== 6 || isVerifying} onPress={handleVerifyOtp}><LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}>{isVerifying ? <ActivityIndicator color="#FFF" /> : <><Text style={s.mainBtnText}>Verify & Proceed</Text><Ionicons name="arrow-forward" size={20} color="#FFF" /></>}</LinearGradient></TouchableOpacity>
                             </View>
                         )}
-
-                        {/* STEP 2 */}
                         {step === 2 && (
                             <View>
-                                <View style={s.sectionHeader}>
-                                    <View style={[s.iconBadge, { backgroundColor: '#E0F2F1' }]}><Ionicons name="create" size={20} color="#007961" /></View>
-                                    <View>
-                                        <Text style={s.sectionTitle}>Correction Area</Text>
-                                        <Text style={s.sectionSub}>Select one field to correct</Text>
-                                    </View>
-                                </View>
-
-                                {/* Single-select grid */}
-                                <View style={s.typeGrid}>
-                                    {CORRECTION_TYPES.map((type) => (
-                                        <TouchableOpacity
-                                            key={type.id}
-                                            style={[s.typeCard, selectedType === type.id && s.typeCardActive]}
-                                            onPress={() => setSelectedType(type.id)}
-                                        >
-                                            <MaterialCommunityIcons name={type.icon as any} size={28} color={selectedType === type.id ? "#FFF" : "#64748B"} />
-                                            <Text style={[s.typeCardLabel, selectedType === type.id && s.typeCardLabelActive]}>{type.label}</Text>
-                                            {selectedType === type.id && (
-                                                <View style={s.selectedBadge}><Ionicons name="checkmark" size={10} color="#0D47A1" /></View>
-                                            )}
-                                        </TouchableOpacity>
-                                    ))}
-                                </View>
-
-                                {selectedType && (
-                                    <View>
-                                        {/* Input form */}
-                                        <View style={s.card}>
-                                            <Text style={s.formHeader}>Enter Corrected Details</Text>
-
-                                            {selectedType === 'name' && (
-                                                <View>
-                                                    <Text style={s.inputLabel}>Corrected Full Name *</Text>
-                                                    <View style={s.inputRow}><TextInput style={s.field} placeholder="Full name as per proof" value={newName} onChangeText={setNewName} /></View>
-                                                </View>
-                                            )}
-
-                                            {selectedType === 'dob' && (
-                                                <View>
-                                                    <Text style={s.inputLabel}>Corrected Date of Birth *</Text>
-                                                    <View style={s.inputRow}><TextInput style={s.field} placeholder="DD/MM/YYYY" value={newDob} onChangeText={(text) => setNewDob(formatDob(text))} keyboardType="numeric" maxLength={10} /></View>
-                                                </View>
-                                            )}
-
-                                            {selectedType === 'father' && (
-                                                <View>
-                                                    <Text style={s.inputLabel}>Corrected Father's Name *</Text>
-                                                    <View style={s.inputRow}><TextInput style={s.field} placeholder="Father's full legal name" value={newFatherName} onChangeText={setNewFatherName} /></View>
-                                                </View>
-                                            )}
-
-                                            {selectedType === 'contact' && (
-                                                <View>
-                                                    <Text style={s.inputLabel}>Updated Mobile Number *</Text>
-                                                    <View style={s.inputRow}><TextInput style={s.field} placeholder="10-digit mobile" value={newContact} onChangeText={setNewContact} keyboardType="numeric" maxLength={10} /></View>
-                                                </View>
-                                            )}
-
-                                            {selectedType === 'address' && (
-                                                <View>
-                                                    <Text style={s.inputLabel}>New Address *</Text>
-                                                    <View style={[s.inputRow, { height: 80, alignItems: 'flex-start', paddingTop: 10 }]}>
-                                                        <TextInput style={[s.field, { textAlignVertical: 'top' }]} placeholder="House No, Street, City, State - PIN" value={newAddress} onChangeText={setNewAddress} multiline />
-                                                    </View>
-                                                </View>
-                                            )}
-
-                                            {selectedType === 'photo' && (
-                                                <View style={s.photoNotice}>
-                                                    <Ionicons name="camera-outline" size={22} color="#7B1FA2" />
-                                                    <Text style={s.photoNoticeText}>Upload a recent passport-size photograph with white background. Signature should be clear on plain white paper.</Text>
-                                                </View>
-                                            )}
-
-                                            {/* Document Uploads */}
-                                            {renderDocumentUploads()}
-                                        </View>
-                                    </View>
-                                )}
-
-                                <TouchableOpacity style={[s.mainBtn, !selectedType && s.btnDisabled]} disabled={!selectedType} onPress={validateStep2}>
-                                    <LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}>
-                                        <Text style={s.mainBtnText}>Continue</Text>
-                                        <Ionicons name="arrow-forward" size={20} color="#FFF" />
-                                    </LinearGradient>
-                                </TouchableOpacity>
+                                <View style={s.sectionHeader}><View style={[s.iconBadge, { backgroundColor: '#E0F2F1' }]}><Ionicons name="create" size={20} color="#007961" /></View><View><Text style={s.sectionTitle}>Correction Area</Text><Text style={s.sectionSub}>Select one field to correct</Text></View></View>
+                                <View style={s.typeGrid}>{CORRECTION_TYPES.map((type) => (<TouchableOpacity key={type.id} style={[s.typeCard, selectedType === type.id && s.typeCardActive]} onPress={() => setSelectedType(type.id)}><MaterialCommunityIcons name={type.icon as any} size={28} color={selectedType === type.id ? "#FFF" : "#64748B"} /><Text style={[s.typeCardLabel, selectedType === type.id && s.typeCardLabelActive]}>{type.label}</Text>{selectedType === type.id && (<View style={s.selectedBadge}><Ionicons name="checkmark" size={10} color="#0D47A1" /></View>)}</TouchableOpacity>))}</View>
+                                {selectedType && (<View><View style={s.card}><Text style={s.formHeader}>Enter Corrected Details</Text>{selectedType === 'name' && (<View><Text style={s.inputLabel}>Corrected Full Name *</Text><View style={s.inputRow}><TextInput style={s.field} placeholder="Full name as per proof" value={newName} onChangeText={setNewName} /></View></View>)}{selectedType === 'dob' && (<View><Text style={s.inputLabel}>Corrected Date of Birth *</Text><View style={s.inputRow}><TextInput style={s.field} placeholder="DD/MM/YYYY" value={newDob} onChangeText={(text) => setNewDob(formatDob(text))} keyboardType="numeric" maxLength={10} /></View></View>)}{selectedType === 'father' && (<View><Text style={s.inputLabel}>Corrected Father's Name *</Text><View style={s.inputRow}><TextInput style={s.field} placeholder="Father's full legal name" value={newFatherName} onChangeText={setNewFatherName} /></View></View>)}{selectedType === 'contact' && (<View><Text style={s.inputLabel}>Updated Mobile Number *</Text><View style={s.inputRow}><TextInput style={s.field} placeholder="10-digit mobile" value={newContact} onChangeText={setNewContact} keyboardType="numeric" maxLength={10} /></View></View>)}{selectedType === 'address' && (<View><Text style={s.inputLabel}>New Address *</Text><View style={[s.inputRow, { height: 80, alignItems: 'flex-start', paddingTop: 10 }]}><TextInput style={[s.field, { textAlignVertical: 'top' }]} placeholder="House No, Street, City, State - PIN" value={newAddress} onChangeText={setNewAddress} multiline /></View></View>)}{selectedType === 'photo' && (<View style={s.photoNotice}><Ionicons name="camera-outline" size={22} color="#7B1FA2" /><Text style={s.photoNoticeText}>Upload a recent passport-size photograph with white background. Signature should be clear on plain white paper.</Text></View>)}{renderDocumentUploads()}</View></View>)}
+                                <TouchableOpacity style={[s.mainBtn, !selectedType && s.btnDisabled]} disabled={!selectedType} onPress={validateStep2}><LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}><Text style={s.mainBtnText}>Continue</Text><Ionicons name="arrow-forward" size={20} color="#FFF" /></LinearGradient></TouchableOpacity>
                             </View>
                         )}
-
-                        {/* STEP 3 */}
                         {step === 3 && (
                             <View>
-                                <View style={s.sectionHeader}>
-                                    <View style={[s.iconBadge, { backgroundColor: '#F3E5F5' }]}><Ionicons name="eye" size={20} color="#7B1FA2" /></View>
-                                    <View>
-                                        <Text style={s.sectionTitle}>Review Application</Text>
-                                        <Text style={s.sectionSub}>Verify your correction request</Text>
-                                    </View>
-                                </View>
-
-                                <View style={s.card}>
-                                    <View style={s.reviewRow}>
-                                        <Text style={s.reviewLabel}>PAN Number</Text>
-                                        <Text style={s.reviewVal}>{panNumber}</Text>
-                                    </View>
-                                    <View style={s.divider} />
-                                    <View style={s.reviewRow}>
-                                        <Text style={s.reviewLabel}>Correction Field</Text>
-                                        <Text style={s.reviewVal}>{CORRECTION_TYPES.find(t => t.id === selectedType)?.label}</Text>
-                                    </View>
-                                    <View style={s.divider} />
-                                    <View style={s.reviewRow}>
-                                        <Text style={s.reviewLabel}>New Value</Text>
-                                        <Text style={[s.reviewVal, { color: '#2E7D32' }]}>{getNewValue()}</Text>
-                                    </View>
-                                    <View style={s.divider} />
-                                    <View style={s.reviewRow}>
-                                        <Text style={s.reviewLabel}>Documents</Text>
-                                        <Text style={s.reviewVal}>{Object.keys(uploadedDocs).length} Uploaded</Text>
-                                    </View>
-                                </View>
-
-                                <View style={s.infoBox}>
-                                    <Ionicons name="information-circle-outline" size={20} color="#0D47A1" />
-                                    <Text style={s.infoText}>Standard processing time is 15-20 working days. Updated PAN card will be delivered by post.</Text>
-                                </View>
-
-                                <TouchableOpacity style={s.mainBtn} onPress={handleSubmit} disabled={isSubmitting}>
-                                    <LinearGradient colors={['#2E7D32', '#388E3C']} style={s.btnGrad}>
-                                        {isSubmitting ? <ActivityIndicator color="#FFF" /> : <><Text style={s.mainBtnText}>Submit Correction Request</Text><Ionicons name="checkmark-done" size={20} color="#FFF" /></>}
-                                    </LinearGradient>
-                                </TouchableOpacity>
+                                <View style={s.sectionHeader}><View style={[s.iconBadge, { backgroundColor: '#F3E5F5' }]}><Ionicons name="eye" size={20} color="#7B1FA2" /></View><View><Text style={s.sectionTitle}>Review Application</Text><Text style={s.sectionSub}>Verify your correction request</Text></View></View>
+                                <View style={s.card}><View style={s.reviewRow}><Text style={s.reviewLabel}>PAN Number</Text><Text style={s.reviewVal}>{panNumber}</Text></View><View style={s.divider} /><View style={s.reviewRow}><Text style={s.reviewLabel}>Correction Field</Text><Text style={s.reviewVal}>{CORRECTION_TYPES.find(t => t.id === selectedType)?.label}</Text></View><View style={s.divider} /><View style={s.reviewRow}><Text style={s.reviewLabel}>New Value</Text><Text style={[s.reviewVal, { color: '#2E7D32' }]}>{getNewValue()}</Text></View><View style={s.divider} /><View style={s.reviewRow}><Text style={s.reviewLabel}>Documents</Text><Text style={s.reviewVal}>{Object.keys(uploadedDocs).length} Uploaded</Text></View></View>
+                                <View style={s.infoBox}><Ionicons name="information-circle-outline" size={20} color="#0D47A1" /><Text style={s.infoText}>Standard processing time is 15-20 working days. Updated PAN card will be delivered by post.</Text></View>
+                                <TouchableOpacity style={s.mainBtn} onPress={handleSubmit} disabled={isSubmitting}><LinearGradient colors={['#2E7D32', '#388E3C']} style={s.btnGrad}>{isSubmitting ? <ActivityIndicator color="#FFF" /> : <><Text style={s.mainBtnText}>Submit Correction Request</Text><Ionicons name="checkmark-done" size={20} color="#FFF" /></>}</LinearGradient></TouchableOpacity>
                             </View>
                         )}
-
                         <View style={{ height: 40 }} />
                     </ScrollView>
                 </KeyboardAvoidingView>
@@ -500,13 +396,11 @@ export default function PANCorrectionScreen() {
 const s = StyleSheet.create({
     root: { flex: 1, backgroundColor: "#F8FAFC" },
     safe: { flex: 1 },
-    // Header - no circle
     header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 50, paddingBottom: 20, backgroundColor: "#FFF" },
     backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     headerContent: { flex: 1, alignItems: 'center' },
     headerTitle: { fontSize: 18, fontWeight: "800", color: "#1E293B" },
     headerSubtitle: { fontSize: 12, color: "#64748B", marginTop: 2 },
-
     stepContainer: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 40, paddingVertical: 20, backgroundColor: '#FFF' },
     stepItem: { alignItems: 'center', zIndex: 2 },
     stepCircle: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#FFF', borderWidth: 2, borderColor: '#E2E8F0', alignItems: 'center', justifyContent: 'center' },
@@ -518,13 +412,11 @@ const s = StyleSheet.create({
     stepLabelActive: { color: '#0D47A1' },
     stepLine: { flex: 1, height: 2, backgroundColor: '#E2E8F0', marginHorizontal: -10, marginTop: -15 },
     stepLineDone: { backgroundColor: '#2E7D32' },
-
     scroll: { padding: 20 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 20, gap: 12 },
     iconBadge: { width: 42, height: 42, borderRadius: 12, backgroundColor: '#E3F2FD', alignItems: 'center', justifyContent: 'center' },
     sectionTitle: { fontSize: 16, fontWeight: '800', color: '#1E293B' },
     sectionSub: { fontSize: 12, color: '#64748B' },
-
     card: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, shadowColor: '#64748B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 10, elevation: 4, marginBottom: 24 },
     inputLabel: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8 },
     inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, height: 48, gap: 10 },
@@ -532,23 +424,17 @@ const s = StyleSheet.create({
     otpRow: { flexDirection: 'row', gap: 10 },
     verifyBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 16, borderRadius: 12, justifyContent: 'center', height: 48 },
     verifyBtnText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
-
-    mainBtn: { borderRadius: 16, overflow: 'hidden', width: '100%' },
+    mainBtn: { borderRadius: 16, overflow: 'hidden', width: '100%', marginTop: 20 },
     btnDisabled: { opacity: 0.6 },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
     mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
-
-    // Single-select grid (radio style)
     typeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
     typeCard: { width: '31%', aspectRatio: 1, backgroundColor: '#FFF', borderRadius: 16, alignItems: 'center', justifyContent: 'center', padding: 8, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 5, borderWidth: 2, borderColor: 'transparent' },
     typeCardActive: { backgroundColor: '#0D47A1', borderColor: '#0D47A1' },
     typeCardLabel: { fontSize: 11, color: '#64748B', marginTop: 8, textAlign: 'center', fontWeight: '600' },
     typeCardLabelActive: { color: '#FFF' },
     selectedBadge: { position: 'absolute', top: 8, right: 8, width: 16, height: 16, borderRadius: 8, backgroundColor: '#FFF', alignItems: 'center', justifyContent: 'center' },
-
     formHeader: { fontSize: 15, fontWeight: '800', color: '#1E293B', marginBottom: 16 },
-
-    // Documents
     docSectionTitle: { fontSize: 14, fontWeight: '800', color: '#1E293B', marginBottom: 12 },
     docCard: { backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12 },
     docLabelRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 10 },
@@ -560,18 +446,14 @@ const s = StyleSheet.create({
     uploadBox: { borderWidth: 2, borderStyle: 'dashed', borderColor: '#CBD5E1', borderRadius: 12, padding: 16, alignItems: 'center', backgroundColor: '#F8FAFC' },
     uploadText: { fontSize: 13, fontWeight: '700', color: '#0D47A1', marginTop: 6 },
     uploadSub: { fontSize: 10, color: '#94A3B8', marginTop: 2 },
-
     photoNotice: { flexDirection: 'row', backgroundColor: '#F3E5F5', borderRadius: 12, padding: 14, gap: 12, marginBottom: 8 },
     photoNoticeText: { flex: 1, fontSize: 13, color: '#4A148C', fontWeight: '600', lineHeight: 20 },
-
     reviewRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, alignItems: 'center' },
     reviewLabel: { fontSize: 14, color: '#64748B' },
     reviewVal: { fontSize: 14, fontWeight: '800', color: '#1E293B', flex: 1, textAlign: 'right', marginLeft: 12 },
     divider: { height: 1, backgroundColor: '#F1F5F9' },
     infoBox: { flexDirection: 'row', backgroundColor: '#E3F2FD', borderRadius: 16, padding: 16, marginBottom: 24, gap: 12 },
     infoText: { flex: 1, fontSize: 12, color: '#0D47A1', lineHeight: 18, fontWeight: '600' },
-
-    // Success Screen
     successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#FFF' },
     successIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F8E9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
     successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 10 },
@@ -579,8 +461,6 @@ const s = StyleSheet.create({
     idCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#E2E8F0' },
     idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
     idValue: { fontSize: 24, fontWeight: '800', color: '#0D47A1' },
-    successActions: { flexDirection: 'row', gap: 20, marginBottom: 40 },
-    actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
-    actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-    actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
+    toast: { position: 'absolute', bottom: 120, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, alignSelf: 'center' },
+    toastText: { color: '#FFF', fontSize: 14, fontWeight: '500' },
 });

@@ -47,4 +47,18 @@ export const API_ENDPOINTS = {
     AADHAAR_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/aadhar/correction/send-otp`,
     AADHAAR_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/aadhar/correction/verify-otp`,
     AADHAAR_CORRECTION_SUBMIT: `${API_BASE_URL}/api/aadhar/correction/submit`,
+    
+    // PAN Card Services
+    PAN_APPLY: `${API_BASE_URL}/api/pan/apply`,
+    PAN_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/pan/correction/send-otp`,
+    PAN_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/pan/correction/verify-otp`,
+    PAN_CORRECTION_SUBMIT: `${API_BASE_URL}/api/pan/correction/submit`,
+
+    // Udyam Registration Services
+    UDYAM_APPLY: `${API_BASE_URL}/api/business/udyam/apply`,
+    UDYAM_LIST: `${API_BASE_URL}/api/business/udyam/list`,
+    UDYAM_CORRECTIONS: `${API_BASE_URL}/api/business/udyam/corrections`,
+    UDYAM_CORRECTION_SUBMIT: `${API_BASE_URL}/api/business/udyam/correction/submit`,
+    UDYAM_SEND_OTP: `${API_BASE_URL}/api/business/udyam/send-otp`,
+    UDYAM_VERIFY_OTP: `${API_BASE_URL}/api/business/udyam/verify-otp`,
 };

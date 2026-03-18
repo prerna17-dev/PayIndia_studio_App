@@ -1,4 +1,5 @@
 const UdyamModel = require("../models/udyam.model");
+const SmsService = require("../services/sms.service");
 
 /**
  * Submit a new Udyam Registration application
@@ -166,14 +167,24 @@ exports.submitCorrection = async (req, res, next) => {
         });
 
         // Handle File Uploads
-        const files = req.files || {};
+        const files = req.files || [];
         const uploadTasks = [];
         const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
-        Object.keys(files).forEach(fieldName => {
-            const file = files[fieldName][0];
-            uploadTasks.push(UdyamModel.addCorrectionDocument(correctionId, fieldName, normalizePath(file.path)));
-        });
+        if (Array.isArray(files)) {
+            // Case for multer.any()
+            files.forEach(file => {
+                uploadTasks.push(UdyamModel.addCorrectionDocument(correctionId, file.fieldname, normalizePath(file.path)));
+            });
+        } else {
+            // Case for multer.fields()
+            Object.keys(files).forEach(fieldName => {
+                const file = files[fieldName][0];
+                if (file) {
+                    uploadTasks.push(UdyamModel.addCorrectionDocument(correctionId, fieldName, normalizePath(file.path)));
+                }
+            });
+        }
 
         await Promise.all(uploadTasks);
 
@@ -199,6 +210,55 @@ exports.getCorrections = async (req, res, next) => {
 
         const corrections = await UdyamModel.getAllCorrections();
         res.json({ success: true, data: corrections });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * Send OTP for Udyam Registration
+ */
+exports.sendOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, aadhaar_number } = req.body;
+        if (!mobile_number || !aadhaar_number) {
+            return res.status(400).json({ success: false, message: "Mobile number and Aadhaar number are required" });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        await UdyamModel.storeOTP(mobile_number, otpCode, "UDYAM_REGISTRATION");
+
+        // Send SMS
+        await SmsService.sendSMS(mobile_number, `Your OTP for Udyam Registration (Aadhaar: ${aadhaar_number}) is ${otpCode}. Valid for 10 mins.`);
+
+        res.json({
+            success: true,
+            message: "OTP sent successfully",
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * Verify OTP for Udyam Registration
+ */
+exports.verifyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, otp_code } = req.body;
+        if (!mobile_number || !otp_code) {
+            return res.status(400).json({ success: false, message: "Mobile number and OTP are required" });
+        }
+
+        const isValid = await UdyamModel.verifyOTP(mobile_number, otp_code, "UDYAM_REGISTRATION");
+        if (!isValid) {
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+        }
+
+        res.json({
+            success: true,
+            message: "OTP verified successfully",
+        });
     } catch (err) {
         next(err);
     }

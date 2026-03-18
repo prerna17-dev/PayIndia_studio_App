@@ -35,7 +35,7 @@ exports.createApplication = async (req, res, next) => {
             full_name,
             father_name,
             mother_name,
-            date_of_birth,
+            date_of_birth: date_of_birth ? formatDateToMySQL(date_of_birth) : null,
             mobile_number,
             email_address,
             aadhar_number,
@@ -246,6 +246,10 @@ exports.submitCorrection = async (req, res, next) => {
             mobile_number,
             corrected_name,
             corrected_dob,
+            corrected_date,
+            corrected_father_name,
+            corrected_contact,
+            corrected_address,
             correction_type,
         } = req.body;
 
@@ -258,7 +262,10 @@ exports.submitCorrection = async (req, res, next) => {
             pan_number,
             mobile_number,
             corrected_name,
-            corrected_dob: corrected_dob ? formatDateToMySQL(corrected_dob) : null,
+            corrected_dob: (corrected_dob || corrected_date) ? formatDateToMySQL(corrected_dob || corrected_date) : null,
+            corrected_father_name,
+            corrected_contact,
+            corrected_address,
             correction_type,
         });
 
@@ -279,6 +286,27 @@ exports.submitCorrection = async (req, res, next) => {
             }
             if (documentFiles.photo_sign) {
                 uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Photo_Sign', normalizePath(documentFiles.photo_sign[0].path)));
+            }
+            if (documentFiles.father_proof) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Father_Proof', normalizePath(documentFiles.father_proof[0].path)));
+            }
+            if (documentFiles.father_declare) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Father_Declare', normalizePath(documentFiles.father_declare[0].path)));
+            }
+            if (documentFiles.contact_proof) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Contact_Proof', normalizePath(documentFiles.contact_proof[0].path)));
+            }
+            if (documentFiles.address_proof) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Address_Proof', normalizePath(documentFiles.address_proof[0].path)));
+            }
+            if (documentFiles.address_id) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Address_ID', normalizePath(documentFiles.address_id[0].path)));
+            }
+            if (documentFiles.photo_passport) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Photo_Passport', normalizePath(documentFiles.photo_passport[0].path)));
+            }
+            if (documentFiles.photo_id) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Photo_ID', normalizePath(documentFiles.photo_id[0].path)));
             }
 
             await Promise.all(uploadTasks);
