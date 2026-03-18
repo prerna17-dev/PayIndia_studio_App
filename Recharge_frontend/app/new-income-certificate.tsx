@@ -16,11 +16,15 @@ import {
     View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
+import { Clipboard } from "react-native";
 
 interface DocumentType {
     name: string;
     size?: number;
     uri: string;
+    type?: string;
 }
 
 interface FormDataType {
@@ -77,6 +81,7 @@ export default function NewIncomeCertificateScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [showCopied, setShowCopied] = useState(false);
 
     const [documents, setDocuments] = useState<DocumentsState>({
         aadhaarCard: null,
@@ -84,6 +89,7 @@ export default function NewIncomeCertificateScreen() {
         rationCard: null,
         incomeProof: null,
         selfDeclaration: null,
+        passportPhoto: null,
     });
 
     useEffect(() => {
@@ -153,6 +159,7 @@ export default function NewIncomeCertificateScreen() {
         { id: 'rationCard', name: 'Ration Card *', icon: 'book-open-variant', color: '#E65100', hint: 'Updated copy required' },
         { id: 'incomeProof', name: 'Income Proof *', icon: 'file-document-outline', color: '#7B1FA2', hint: 'Salary Slip / IT Return' },
         { id: 'selfDeclaration', name: 'Self Declaration *', icon: 'file-sign', color: '#C62828', hint: 'Signed declaration copy' },
+        { id: 'passportPhoto', name: 'Passport Size Photo *', icon: 'camera-outline', color: '#00838F', hint: 'Recent clear photo' },
     ];
 
     const pickDocument = async (docType: keyof DocumentsState) => {
@@ -236,7 +243,7 @@ export default function NewIncomeCertificateScreen() {
             setCurrentStep(2);
         } else if (currentStep === 2) {
             // Validation for Step 2
-            if (!documents.aadhaarCard || !documents.addressProof || !documents.rationCard || !documents.incomeProof || !documents.selfDeclaration) {
+            if (!documents.aadhaarCard || !documents.addressProof || !documents.rationCard || !documents.incomeProof || !documents.selfDeclaration || !documents.passportPhoto) {
                 Alert.alert("Documents Required", "Please upload all mandatory documents to proceed");
                 return;
             }
@@ -252,22 +259,91 @@ export default function NewIncomeCertificateScreen() {
 
             // Token check before submission
             const submitApplication = async () => {
-                const token = await AsyncStorage.getItem("userToken");
-                if (!token) {
-                    setIsSubmitting(false);
-                    Alert.alert("Session Expired", "Please login again to continue.", [
-                        { text: "OK", onPress: () => router.replace("/auth/login") }
-                    ]);
-                    return;
-                }
+                try {
+                    const token = await AsyncStorage.getItem("userToken");
+                    if (!token) {
+                        setIsSubmitting(false);
+                        Alert.alert("Session Expired", "Please login again to continue.", [
+                            { text: "OK", onPress: () => router.replace("/auth/login") }
+                        ]);
+                        return;
+                    }
 
-                // Simulate API call
-                setTimeout(() => {
-                    const refId = "INC" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                    setApplicationId(refId);
+                    const formDataToSend = new FormData();
+                    
+                    // A. Applicant Details
+                    formDataToSend.append("full_name", formData.fullName);
+                    formDataToSend.append("aadhaar_number", formData.aadhaarNumber);
+                    formDataToSend.append("dob", formData.dob);
+                    formDataToSend.append("gender", formData.gender);
+                    formDataToSend.append("mobile_number", formData.mobileNumber);
+                    formDataToSend.append("email", formData.email);
+
+                    // B. Family Details
+                    formDataToSend.append("father_name", formData.fatherName);
+                    formDataToSend.append("mother_name", formData.motherName);
+                    formDataToSend.append("spouse_name", formData.spouseName);
+                    formDataToSend.append("family_members_count", formData.familyMembersCount);
+                    formDataToSend.append("occupation", formData.occupation);
+
+                    // C. Income Details
+                    formDataToSend.append("annual_income", formData.annualIncome);
+                    formDataToSend.append("monthly_income", formData.monthlyIncome);
+                    formDataToSend.append("income_source", formData.incomeSource);
+                    formDataToSend.append("employer_name", formData.employerName);
+                    formDataToSend.append("purpose", formData.requiredFor);
+                    formDataToSend.append("required_for", formData.requiredFor);
+
+                    // D. Address Details
+                    formDataToSend.append("house_no", formData.houseNo);
+                    formDataToSend.append("street", formData.street);
+                    formDataToSend.append("village", formData.village);
+                    formDataToSend.append("taluka", formData.taluka);
+                    formDataToSend.append("district", formData.district);
+                    formDataToSend.append("state", formData.state);
+                    formDataToSend.append("pincode", formData.pincode);
+
+                    // Documents mapping to backend snake_case names
+                    const docMapping: Record<string, string> = {
+                        aadhaarCard: "aadhaar_card",
+                        addressProof: "address_proof", // backend uses address_proof for address proof
+                        rationCard: "ration_card",
+                        incomeProof: "income_proof",
+                        selfDeclaration: "self_declaration",
+                        passportPhoto: "passport_photo"
+                    };
+
+                    Object.keys(documents).forEach(key => {
+                        const file = documents[key as keyof DocumentsState];
+                        const backendKey = docMapping[key];
+                        if (file && backendKey) {
+                            formDataToSend.append(backendKey, {
+                                uri: file.uri,
+                                name: file.name,
+                                type: file.type || "application/octet-stream",
+                            } as any);
+                        }
+                    });
+
+                    const response = await axios.post(API_ENDPOINTS.INCOME_APPLY, formDataToSend, {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                            "Authorization": `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id);
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Failed to submit application");
+                    }
+                } catch (error: any) {
+                    console.error("Submission error:", error);
+                    Alert.alert("Error", error.response?.data?.message || "An error occurred during submission");
+                } finally {
                     setIsSubmitting(false);
-                    setIsSubmitted(true);
-                }, 2000);
+                }
             };
 
             submitApplication();
@@ -314,26 +390,26 @@ export default function NewIncomeCertificateScreen() {
                     <Text style={styles.successTitle}>Application Submitted!</Text>
                     <Text style={styles.successSubtitle}>Your Income Certificate application has been received successfully.</Text>
 
-                    <View style={styles.idCard}>
+                    <TouchableOpacity 
+                        style={styles.idCard} 
+                        onPress={() => {
+                            Clipboard.setString(applicationId);
+                            setShowCopied(true);
+                            setTimeout(() => setShowCopied(false), 2000);
+                        }}
+                    >
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <Ionicons name="copy-outline" size={20} color="#0D47A1" />
+                        </View>
+                    </TouchableOpacity>
 
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                            </View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {showCopied && (
+                        <View style={styles.toast}>
+                            <Text style={styles.toastText}>Copied to clipboard</Text>
+                        </View>
+                    )}
 
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
@@ -689,6 +765,7 @@ export default function NewIncomeCertificateScreen() {
                                 { label: "Ration Card", value: documents.rationCard ? "Uploaded ✅" : "Missing ❌" },
                                 { label: "Income Proof", value: documents.incomeProof ? "Uploaded ✅" : "Missing ❌" },
                                 { label: "Declaration", value: documents.selfDeclaration ? "Uploaded ✅" : "Missing ❌" },
+                                { label: "Passport Photo", value: documents.passportPhoto ? "Uploaded ✅" : "Missing ❌" },
                             ]} onEdit={() => setCurrentStep(2)} />
 
                             <TouchableOpacity
@@ -1220,5 +1297,19 @@ const styles = StyleSheet.create({
         color: "#FFF",
         fontSize: 16,
         fontWeight: "800",
+    },
+    toast: {
+        position: 'absolute',
+        bottom: 120,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 25,
+        alignSelf: 'center',
+    },
+    toastText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '500',
     },
 });

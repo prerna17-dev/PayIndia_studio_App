@@ -265,3 +265,37 @@ STACK: TypeError: Cannot read properties of undefined (reading 'path')
     at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\udyam.controller.js:174:28)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
 ----------------------------------
+
+[2026-03-18T07:24:01.336Z]
+METHOD: POST
+URL: /api/certificate/income/apply
+MESSAGE: Column 'user_id' cannot be null
+STACK: Error: Column 'user_id' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\income.model.js:44:33)
+    at exports.createApplication (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\income.controller.js:93:49)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-18T07:24:13.125Z]
+METHOD: POST
+URL: /api/certificate/income/apply
+MESSAGE: Column 'user_id' cannot be null
+STACK: Error: Column 'user_id' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\income.model.js:44:33)
+    at exports.createApplication (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\income.controller.js:93:49)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------

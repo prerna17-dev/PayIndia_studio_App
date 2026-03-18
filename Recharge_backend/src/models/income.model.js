@@ -10,13 +10,20 @@ exports.create = async (data) => {
         aadhaar_number,
         mobile_number,
         email,
+        father_name,
+        mother_name,
+        spouse_name,
+        family_members_count,
         pan_number,
         dob,
         gender,
         occupation,
         annual_income,
+        monthly_income,
         income_source,
+        employer_name,
         purpose,
+        required_for,
         house_no,
         street,
         village,
@@ -27,23 +34,23 @@ exports.create = async (data) => {
         reference_id,
         aadhaar_card_url,
         ration_card_url,
-        tax_receipt_url,
+        address_proof_url,
         income_proof_url,
         self_declaration_url,
-        photo_url,
+        passport_photo_url,
         other_docs_url
     } = data;
 
     const [result] = await pool.query(
         `INSERT INTO income_certificates 
-        (user_id, full_name, aadhaar_number, mobile_number, email, pan_number, dob, gender, occupation, annual_income, 
-        income_source, purpose, house_no, street, village, taluka, district, state, pincode, reference_id,
-        aadhaar_card_url, ration_card_url, tax_receipt_url, income_proof_url, self_declaration_url, photo_url, other_docs_url) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (user_id, full_name, aadhaar_number, mobile_number, email, father_name, mother_name, spouse_name, family_members_count, pan_number, dob, gender, occupation, annual_income, monthly_income,
+        income_source, employer_name, purpose, required_for, house_no, street, village, taluka, district, state, pincode, reference_id,
+        aadhaar_card_url, ration_card_url, address_proof_url, income_proof_url, self_declaration_url, passport_photo_url, other_docs_url) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-            user_id, full_name, aadhaar_number, mobile_number, email, pan_number, dob, gender, occupation, annual_income,
-            income_source, purpose, house_no, street, village, taluka, district, state, pincode, reference_id,
-            aadhaar_card_url, ration_card_url, tax_receipt_url, income_proof_url, self_declaration_url, photo_url, other_docs_url
+            user_id, full_name, aadhaar_number, mobile_number, email, father_name, mother_name, spouse_name, family_members_count, pan_number, dob, gender, occupation, annual_income, monthly_income,
+            income_source, employer_name, purpose, required_for, house_no, street, village, taluka, district, state, pincode, reference_id,
+            aadhaar_card_url, ration_card_url, address_proof_url, income_proof_url, self_declaration_url, passport_photo_url, other_docs_url
         ]
     );
     return result.insertId;

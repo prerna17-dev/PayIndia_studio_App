@@ -24,10 +24,10 @@ const upload = multer({
 const incomeUpload = upload.fields([
     { name: "aadhaar_card", maxCount: 1 },
     { name: "ration_card", maxCount: 1 },
-    { name: "tax_receipt", maxCount: 1 },
+    { name: "address_proof", maxCount: 1 },
     { name: "income_proof", maxCount: 1 },
     { name: "self_declaration", maxCount: 1 },
-    { name: "photo", maxCount: 1 },
+    { name: "passport_photo", maxCount: 1 },
     { name: "other_docs", maxCount: 1 },
 ]);
 

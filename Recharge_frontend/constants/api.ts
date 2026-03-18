@@ -61,4 +61,14 @@ export const API_ENDPOINTS = {
     UDYAM_CORRECTION_SUBMIT: `${API_BASE_URL}/api/business/udyam/correction/submit`,
     UDYAM_SEND_OTP: `${API_BASE_URL}/api/business/udyam/send-otp`,
     UDYAM_VERIFY_OTP: `${API_BASE_URL}/api/business/udyam/verify-otp`,
+
+    // Certificates
+    INCOME_APPLY: `${API_BASE_URL}/api/certificate/income/apply`,
+    CASTE_APPLY: `${API_BASE_URL}/api/certificate/caste/apply`,
+    DOMICILE_APPLY: `${API_BASE_URL}/api/certificate/domicile/apply`,
+    BIRTH_APPLY: `${API_BASE_URL}/api/certificate/birth/apply`,
+    DEATH_APPLY: `${API_BASE_URL}/api/certificate/death/apply`,
+    MARRIAGE_APPLY: `${API_BASE_URL}/api/certificate/marriage/apply`,
+    EWS_APPLY: `${API_BASE_URL}/api/certificate/ews/apply`,
+    NCL_APPLY: `${API_BASE_URL}/api/certificate/ncl/apply`,
 };
