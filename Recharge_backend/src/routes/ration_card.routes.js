@@ -32,7 +32,19 @@ router.post(
     rationCardController.createApplication
 );
 
+router.post(
+    "/correction",
+    auth,
+    upload.any(),
+    rationCardController.createCorrection
+);
+
 router.get("/my-applications", auth, rationCardController.getMyApplications);
 router.get("/:id", auth, rationCardController.getApplicationDetails);
+
+router.post("/apply/send-otp", rationCardController.sendApplyOTP);
+router.post("/apply/verify-otp", rationCardController.verifyApplyOTP);
+router.post("/correction/send-otp", rationCardController.sendCorrectionOTP);
+router.post("/correction/verify-otp", rationCardController.verifyCorrectionOTP);
 
 module.exports = router;

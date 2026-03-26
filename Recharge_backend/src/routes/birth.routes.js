@@ -23,7 +23,8 @@ const upload = multer({
 
 const birthUpload = upload.fields([
     { name: "hospital_report", maxCount: 1 },
-    { name: "parents_aadhaar", maxCount: 1 },
+    { name: "father_aadhaar_card", maxCount: 1 },
+    { name: "mother_aadhaar_card", maxCount: 1 },
     { name: "address_proof", maxCount: 1 },
     { name: "marriage_certificate", maxCount: 1 },
     { name: "affidavit", maxCount: 1 },
@@ -33,6 +34,8 @@ const birthUpload = upload.fields([
 router.use(authMiddleware);
 
 router.post("/apply", birthUpload, birthController.createApplication);
+router.post("/send-otp", birthController.sendOTP);
+router.post("/verify-otp", birthController.verifyOTP);
 router.get("/list", birthController.getApplications);
 router.get("/:referenceId", birthController.getApplicationByRef);
 router.put("/update-status/:id", birthController.updateStatus);

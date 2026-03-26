@@ -14,8 +14,11 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator
+    ActivityIndicator,
+    Clipboard
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -75,6 +78,14 @@ export default function NewDeathCertificateScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [showCopied, setShowCopied] = useState(false);
+
+    // OTP States
+    const [isApplicantVerified, setIsApplicantVerified] = useState(false);
+    const [applicantOtpCode, setApplicantOtpCode] = useState("");
+    const [isVerifyingApplicant, setIsVerifyingApplicant] = useState(false);
+    const [isSendingApplicantOtp, setIsSendingApplicantOtp] = useState(false);
+    const [isApplicantOtpSent, setIsApplicantOtpSent] = useState(false);
 
     const [documents, setDocuments] = useState<DocumentsState>({
         deathReport: null,
@@ -105,7 +116,7 @@ export default function NewDeathCertificateScreen() {
         district: "",
         state: "",
         pincode: "",
-        registrationType: "",
+        registrationType: "Normal",
         delayReason: "",
         declaration: false,
         finalDeclaration: false,
@@ -130,6 +141,13 @@ export default function NewDeathCertificateScreen() {
 
         return () => backHandler.remove();
     }, [currentStep]);
+
+    const REQUIRED_DOCS = [
+        { id: 'deathReport', name: 'Death Report / Doctor Certificate *', icon: 'file-document-outline', color: '#EF4444', hint: 'Hospital / Doctor issued' },
+        { id: 'deceasedAadhaarDoc', name: 'Aadhaar Card (Deceased) *', icon: 'card-account-details-outline', color: '#0D47A1', hint: 'Front & Back side' },
+        { id: 'applicantAadhaarDoc', name: 'Aadhaar Card (Applicant) *', icon: 'account-child-outline', color: '#1565C0', hint: 'Front & Back side' },
+        { id: 'addressProof', name: 'Address Proof *', icon: 'home-outline', color: '#2E7D32', hint: 'Ration Card / Light Bill' },
+    ];
 
     const pickDocument = async (docType: keyof DocumentsState) => {
         try {
@@ -167,6 +185,76 @@ export default function NewDeathCertificateScreen() {
         }));
     };
 
+    const handleSendOTP = async () => {
+        if (formData.mobileNumber.length !== 10 || formData.applicantAadhaar.length !== 12) {
+            Alert.alert("Error", "Please enter valid 10-digit mobile and 12-digit Aadhaar");
+            return;
+        }
+
+        setIsSendingApplicantOtp(true);
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(API_ENDPOINTS.DEATH_OTP_SEND, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    mobile_number: formData.mobileNumber,
+                    aadhar_number: formData.applicantAadhaar,
+                    purpose: "DEATH_APPLY"
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                setIsApplicantOtpSent(true);
+                Alert.alert("Success", "OTP sent to your mobile number");
+            } else {
+                Alert.alert("Error", result.message || "Failed to send OTP");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Connectivity issue while sending OTP");
+        } finally {
+            setIsSendingApplicantOtp(false);
+        }
+    };
+
+    const handleVerifyOTP = async () => {
+        if (applicantOtpCode.length !== 6) {
+            Alert.alert("Error", "Enter 6-digit OTP");
+            return;
+        }
+
+        setIsVerifyingApplicant(true);
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            const response = await fetch(API_ENDPOINTS.DEATH_OTP_VERIFY, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    mobile_number: formData.mobileNumber,
+                    otp_code: applicantOtpCode,
+                    purpose: "DEATH_APPLY"
+                })
+            });
+            const result = await response.json();
+            if (result.success) {
+                setIsApplicantVerified(true);
+                Alert.alert("Success", "Aadhaar verified successfully");
+            } else {
+                Alert.alert("Error", result.message || "Invalid OTP");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Connectivity issue while verifying OTP");
+        } finally {
+            setIsVerifyingApplicant(false);
+        }
+    };
+
     const formatDate = (text: string) => {
         const cleaned = text.replace(/[^0-9]/g, "");
         let formatted = cleaned;
@@ -182,73 +270,84 @@ export default function NewDeathCertificateScreen() {
         return formatted;
     };
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         if (currentStep === 1) {
-            // Step 1 Validation
-            const { deceasedName, deceasedAadhaar, gender, dateOfDeath, applicantName, relationship, mobileNumber, houseNo, village, district, pincode, registrationType, declaration } = formData;
+            const { deceasedName, deceasedAadhaar, gender, dateOfDeath, applicantName, relationship, mobileNumber, houseNo, village, district, pincode, registrationType, declaration, state } = formData;
 
             if (!deceasedName || deceasedAadhaar.length !== 12 || !gender || !dateOfDeath) {
-                Alert.alert("Required", "Please fill mandatory deceased person details correctly");
+                Alert.alert("Required", "Deceased details are incomplete");
                 return;
             }
             if (!applicantName || !relationship || mobileNumber.length !== 10) {
-                Alert.alert("Required", "Please fill mandatory applicant details correctly");
+                Alert.alert("Required", "Applicant details are incomplete");
                 return;
             }
-            if (!houseNo || !village || !district || pincode.length !== 6) {
-                Alert.alert("Required", "Please fill mandatory address details correctly");
+            if (!isApplicantVerified) {
+                Alert.alert("Verification Required", "Please verify Applicant Aadhaar via OTP");
                 return;
             }
-            if (!registrationType) {
-                Alert.alert("Required", "Please select registration type");
-                return;
-            }
-            if (registrationType === "Late" && !formData.delayReason) {
-                Alert.alert("Required", "Please provide reason for delay");
+            if (!houseNo || !village || !district || !state || pincode.length !== 6) {
+                Alert.alert("Required", "Address details are incomplete");
                 return;
             }
             if (!declaration) {
-                Alert.alert("Required", "Please accept the initial declaration");
+                Alert.alert("Required", "Accept the declaration to continue");
                 return;
             }
-
-            // Date of death cannot be future
-            const [d, m, y] = dateOfDeath.split("/").map(Number);
-            const dDate = new Date(y, m - 1, d);
-            if (dDate > new Date()) {
-                Alert.alert("Invalid Date", "Date of death cannot be in the future");
-                return;
-            }
-
             setCurrentStep(2);
         } else if (currentStep === 2) {
-            // Step 2 Validation - All specified documents are mandatory
             if (!documents.deathReport || !documents.deceasedAadhaarDoc || !documents.applicantAadhaarDoc || !documents.addressProof) {
-                Alert.alert("Documents Required", "Please upload all mandatory documents");
+                Alert.alert("Required", "All documents are mandatory");
                 return;
             }
             setCurrentStep(3);
         } else {
-            // Step 3
             if (!formData.finalDeclaration) {
-                Alert.alert("Required", "Please accept the final declaration");
+                Alert.alert("Required", "Check final declaration");
                 return;
             }
 
             setIsSubmitting(true);
-            setTimeout(() => {
-                const refId = "DEATH" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                setApplicationId(refId);
+            try {
+                const token = await AsyncStorage.getItem('userToken');
+                const body = new FormData();
+                
+                // Add text fields
+                Object.keys(formData).forEach(key => {
+                    const backendKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
+                    body.append(backendKey, (formData as any)[key]);
+                });
+
+                // Add documents
+                if (documents.deathReport) body.append('death_report', { uri: documents.deathReport.uri, name: 'death_report.pdf', type: 'application/pdf' } as any);
+                if (documents.deceasedAadhaarDoc) body.append('deceased_aadhaar', { uri: documents.deceasedAadhaarDoc.uri, name: 'deceased_aadhaar.pdf', type: 'application/pdf' } as any);
+                if (documents.applicantAadhaarDoc) body.append('applicant_aadhaar', { uri: documents.applicantAadhaarDoc.uri, name: 'applicant_aadhaar.pdf', type: 'application/pdf' } as any);
+                if (documents.addressProof) body.append('address_proof', { uri: documents.addressProof.uri, name: 'address_proof.pdf', type: 'application/pdf' } as any);
+
+                const response = await fetch(API_ENDPOINTS.DEATH_APPLY, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: body
+                });
+                const result = await response.json();
+                if (result.success) {
+                    setApplicationId(result.data.reference_id || result.data.applicationId);
+                    setIsSubmitted(true);
+                } else {
+                    Alert.alert("Error", result.message || "Failed to submit application");
+                }
+            } catch (error) {
+                Alert.alert("Error", "Submission failed");
+            } finally {
                 setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            }
         }
     };
 
     const renderStepIndicator = () => (
         <View style={styles.stepIndicatorContainer}>
             <View style={styles.progressLine}>
-                <View style={[styles.progressLineActive, { width: currentStep === 1 ? '0%' : currentStep === 2 ? '50%' : '100%' }]} />
+                <View style={[styles.progressLineActive, { width: `${((currentStep - 1) / 2) * 100}%` }]} />
             </View>
             <View style={styles.stepsRow}>
                 {[1, 2, 3].map((s) => (
@@ -280,26 +379,26 @@ export default function NewDeathCertificateScreen() {
                     <Text style={styles.successTitle}>Application Submitted!</Text>
                     <Text style={styles.successSubtitle}>Your Death Certificate application has been received successfully.</Text>
 
-                    <View style={styles.idCard}>
+                    <TouchableOpacity 
+                        style={styles.idCard} 
+                        onPress={() => {
+                            Clipboard.setString(applicationId);
+                            setShowCopied(true);
+                            setTimeout(() => setShowCopied(false), 2000);
+                        }}
+                    >
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <Ionicons name="copy-outline" size={20} color="#0D47A1" />
+                        </View>
+                    </TouchableOpacity>
 
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                            </View>
-                            <Text style={styles.actionText}>Download{"\n"}Acknowledgement</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {showCopied && (
+                        <View style={styles.toast}>
+                            <Text style={styles.toastText}>Copied to clipboard</Text>
+                        </View>
+                    )}
 
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
@@ -348,34 +447,27 @@ export default function NewDeathCertificateScreen() {
                                 <Label text="Aadhaar Number *" />
                                 <Input value={formData.deceasedAadhaar} onChangeText={(v: string) => setFormData({ ...formData, deceasedAadhaar: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} />
 
-                                <View style={styles.inputRow}>
-                                    <View style={{ flex: 1, marginRight: 10 }}>
-                                        <Label text="Gender *" />
-                                        <View style={styles.radioGroup}>
-                                            {["Male", "Female", "Other"].map(g => (
-                                                <TouchableOpacity key={g} style={[styles.radioBtn, formData.gender === g && styles.radioBtnActive]} onPress={() => setFormData({ ...formData, gender: g })}>
-                                                    <Text style={[styles.radioText, formData.gender === g && styles.radioTextActive]}>{g}</Text>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    </View>
+                                <Label text="Gender *" />
+                                <View style={[styles.radioGroup, { marginBottom: 12 }]}>
+                                    {["Male", "Female", "Other"].map(g => (
+                                        <TouchableOpacity key={g} style={[styles.radioBtn, formData.gender === g && styles.radioBtnActive]} onPress={() => setFormData({ ...formData, gender: g })}>
+                                            <Text style={[styles.radioText, formData.gender === g && styles.radioTextActive]}>{g}</Text>
+                                        </TouchableOpacity>
+                                    ))}
                                 </View>
 
-                                <View style={styles.inputRow}>
-                                    <View style={{ flex: 1, marginRight: 10 }}>
-                                        <Label text="Date of Birth" />
-                                        <Input value={formData.dob} onChangeText={(v: string) => setFormData({ ...formData, dob: formatDate(v) })} placeholder="DD/MM/YYYY" icon="calendar-outline" keyboardType="number-pad" maxLength={10} />
-                                    </View>
-                                    <View style={{ flex: 1 }}>
-                                        <Label text="Date of Death *" />
-                                        <Input value={formData.dateOfDeath} onChangeText={(v: string) => setFormData({ ...formData, dateOfDeath: formatDate(v) })} placeholder="DD/MM/YYYY" icon="calendar-outline" keyboardType="number-pad" maxLength={10} />
-                                    </View>
-                                </View>
+                                <Label text="Date of Birth (Optional)" />
+                                <Input value={formData.dob} onChangeText={(v: string) => setFormData({ ...formData, dob: formatDate(v) })} placeholder="DD/MM/YYYY" icon="calendar-outline" keyboardType="number-pad" maxLength={10} />
+
+                                <Label text="Date of Death *" />
+                                <Input value={formData.dateOfDeath} onChangeText={(v: string) => setFormData({ ...formData, dateOfDeath: formatDate(v) })} placeholder="DD/MM/YYYY" icon="calendar-outline" keyboardType="number-pad" maxLength={10} />
 
                                 <View style={styles.inputRow}>
                                     <View style={{ flex: 1, marginRight: 10 }}>
                                         <Label text="Time of Death" />
-                                        <Input value={formData.timeOfDeath} onChangeText={(v: string) => setFormData({ ...formData, timeOfDeath: formatTime(v) })} placeholder="HH:MM" icon="time-outline" keyboardType="number-pad" maxLength={5} />
+                                        <View style={{ marginTop: 5 }}>
+                                            <Input value={formData.timeOfDeath} onChangeText={(v: string) => setFormData({ ...formData, timeOfDeath: formatTime(v) })} placeholder="HH:MM" icon="time-outline" keyboardType="number-pad" maxLength={5} />
+                                        </View>
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <Label text="Place of Death *" />
@@ -405,14 +497,34 @@ export default function NewDeathCertificateScreen() {
                                 <Label text="Full Name *" />
                                 <Input value={formData.applicantName} onChangeText={(v: string) => setFormData({ ...formData, applicantName: v })} placeholder="Enter your full name" icon="person-outline" />
 
-                                <Label text="Aadhaar Number *" />
-                                <Input value={formData.applicantAadhaar} onChangeText={(v: string) => setFormData({ ...formData, applicantAadhaar: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} />
-
                                 <Label text="Relationship with Deceased *" />
                                 <Input value={formData.relationship} onChangeText={(v: string) => setFormData({ ...formData, relationship: v })} placeholder="e.g. Son, Daughter, Spouse" icon="people-outline" />
 
-                                <Label text="Mobile Number *" />
-                                <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} />
+                                <Label text="Applicant Mobile Number *" />
+                                <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} editable={!isApplicantVerified} />
+
+                                <Label text="Applicant Aadhaar Number *" />
+                                <View style={styles.otpRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Input value={formData.applicantAadhaar} onChangeText={(v: string) => setFormData({ ...formData, applicantAadhaar: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} editable={!isApplicantVerified} />
+                                    </View>
+                                    {!isApplicantVerified && (
+                                        <TouchableOpacity style={[styles.otpBtn, isSendingApplicantOtp && styles.btnDisabled]} onPress={handleSendOTP} disabled={isSendingApplicantOtp}>
+                                            {isSendingApplicantOtp ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.otpBtnText}>{isApplicantOtpSent ? "Resend" : "Send OTP"}</Text>}
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                                {isApplicantOtpSent && !isApplicantVerified && (
+                                    <View style={styles.otpVerifyContainer}>
+                                        <View style={{ flex: 1 }}>
+                                            <Input value={applicantOtpCode} onChangeText={setApplicantOtpCode} placeholder="Enter 6-digit OTP" keyboardType="number-pad" maxLength={6} icon="shield-checkmark-outline" />
+                                        </View>
+                                        <TouchableOpacity style={[styles.otpBtn, isVerifyingApplicant && styles.btnDisabled, { backgroundColor: '#2E7D32' }]} onPress={handleVerifyOTP} disabled={isVerifyingApplicant}>
+                                            {isVerifyingApplicant ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.otpBtnText}>Verify</Text>}
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+                                {isApplicantVerified && <View style={styles.verifiedBadge}><Ionicons name="checkmark-circle" size={16} color="#2E7D32" /><Text style={styles.verifiedText}>Aadhaar verified</Text></View>}
 
                                 <Label text="Email (Optional)" />
                                 <Input value={formData.email} onChangeText={(v: string) => setFormData({ ...formData, email: v })} placeholder="Enter email address" icon="mail-outline" />
@@ -482,22 +594,44 @@ export default function NewDeathCertificateScreen() {
 
                     {currentStep === 2 && (
                         <View style={styles.stepWrapper}>
-                            <View style={styles.requiredDocsCard}>
-                                <Text style={styles.requiredDocsTitle}>📄 DOCUMENTS REQUIRED – DEATH CERTIFICATE</Text>
-                                <View style={styles.docsList}>
-                                    <Text style={styles.docItem}>• Hospital Death Report / Doctor Certificate (मृत्यू अहवाल / डॉक्टर प्रमाणपत्र)</Text>
-                                    <Text style={styles.docItem}>• Aadhaar Card of Deceased (मृत व्यक्तीचे आधार कार्ड)</Text>
-                                    <Text style={styles.docItem}>• Applicant Aadhaar Card (अर्जदाराचे आधार कार्ड)</Text>
-                                    <Text style={styles.docItem}>• Address Proof (पत्त्याचा पुरावा)</Text>
+                            <View style={styles.cardHeader}>
+                                <View style={[styles.cardHeaderIcon, { backgroundColor: '#E3F2FD' }]}>
+                                    <Ionicons name="document-text" size={20} color="#1565C0" />
+                                </View>
+                                <View>
+                                    <Text style={styles.cardHeaderTitle}>Upload Documents</Text>
+                                    <Text style={styles.cardHeaderSubtitle}>Clear photos or PDF (Max 2MB)</Text>
                                 </View>
                             </View>
 
-                            <SectionTitle title="Upload Documents" icon="cloud-upload" color="#2E7D32" />
-                            <View style={styles.uploadGrid}>
-                                <DocUploadItem title="Death Report / Doctor Certificate" hindi="मृत्यू अहवाल / डॉक्टर प्रमाणपत्र" isUploaded={!!documents.deathReport} filename={documents.deathReport?.name} onUpload={() => pickDocument('deathReport')} onRemove={() => removeDocument('deathReport')} required />
-                                <DocUploadItem title="Aadhaar of Deceased" hindi="मृत व्यक्तीचे आधार कार्ड" isUploaded={!!documents.deceasedAadhaarDoc} filename={documents.deceasedAadhaarDoc?.name} onUpload={() => pickDocument('deceasedAadhaarDoc')} onRemove={() => removeDocument('deceasedAadhaarDoc')} required />
-                                <DocUploadItem title="Applicant Aadhaar" hindi="अर्जदाराचे आधार कार्ड" isUploaded={!!documents.applicantAadhaarDoc} filename={documents.applicantAadhaarDoc?.name} onUpload={() => pickDocument('applicantAadhaarDoc')} onRemove={() => removeDocument('applicantAadhaarDoc')} required />
-                                <DocUploadItem title="Address Proof" hindi="पत्त्याचा पुरावा" isUploaded={!!documents.addressProof} filename={documents.addressProof?.name} onUpload={() => pickDocument('addressProof')} onRemove={() => removeDocument('addressProof')} required />
+                            <View style={styles.docList}>
+                                {REQUIRED_DOCS.map((doc) => (
+                                    <TouchableOpacity
+                                        key={doc.id}
+                                        style={[styles.docUploadCard, documents[doc.id] && styles.docUploadCardActive]}
+                                        onPress={() => pickDocument(doc.id as keyof DocumentsState)}
+                                    >
+                                        <View style={[styles.docIconCircle, { backgroundColor: doc.color + '15' }]}>
+                                            <MaterialCommunityIcons
+                                                name={doc.icon as any}
+                                                size={24}
+                                                color={documents[doc.id] ? "#FFF" : doc.color}
+                                                style={documents[doc.id] && { backgroundColor: doc.color, borderRadius: 12, padding: 4 }}
+                                            />
+                                        </View>
+                                        <View style={styles.docTextContent}>
+                                            <Text style={styles.docTitle}>{doc.name}</Text>
+                                            <Text style={styles.docHint}>
+                                                {documents[doc.id] ? documents[doc.id]!.name : doc.hint}
+                                            </Text>
+                                        </View>
+                                        <Ionicons
+                                            name={documents[doc.id] ? "checkmark-circle" : "cloud-upload"}
+                                            size={24}
+                                            color={documents[doc.id] ? "#2E7D32" : "#94A3B8"}
+                                        />
+                                    </TouchableOpacity>
+                                ))}
                             </View>
                         </View>
                     )}
@@ -532,12 +666,22 @@ export default function NewDeathCertificateScreen() {
 
                             <ReviewCard title="Documents" onEdit={() => setCurrentStep(2)}>
                                 <View style={styles.reviewDocList}>
-                                    {Object.entries(documents).filter(([_, v]) => v).map(([k, v]) => (
-                                        <View key={k} style={styles.reviewDocItem}>
-                                            <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
-                                            <Text style={styles.reviewDocName}>{v?.name}</Text>
-                                        </View>
-                                    ))}
+                                    <View style={styles.reviewDocItem}>
+                                        <Ionicons name={documents.deathReport ? "checkmark-circle" : "close-circle"} size={16} color={documents.deathReport ? "#2E7D32" : "#94A3B8"} />
+                                        <Text style={styles.reviewDocName}>Death Report: {documents.deathReport?.name || "Missing"}</Text>
+                                    </View>
+                                    <View style={styles.reviewDocItem}>
+                                        <Ionicons name={documents.deceasedAadhaarDoc ? "checkmark-circle" : "close-circle"} size={16} color={documents.deceasedAadhaarDoc ? "#2E7D32" : "#94A3B8"} />
+                                        <Text style={styles.reviewDocName}>Deceased Aadhaar: {documents.deceasedAadhaarDoc?.name || "Missing"}</Text>
+                                    </View>
+                                    <View style={styles.reviewDocItem}>
+                                        <Ionicons name={documents.applicantAadhaarDoc ? "checkmark-circle" : "close-circle"} size={16} color={documents.applicantAadhaarDoc ? "#2E7D32" : "#94A3B8"} />
+                                        <Text style={styles.reviewDocName}>Applicant Aadhaar: {documents.applicantAadhaarDoc?.name || "Missing"}</Text>
+                                    </View>
+                                    <View style={styles.reviewDocItem}>
+                                        <Ionicons name={documents.addressProof ? "checkmark-circle" : "close-circle"} size={16} color={documents.addressProof ? "#2E7D32" : "#94A3B8"} />
+                                        <Text style={styles.reviewDocName}>Address Proof: {documents.addressProof?.name || "Missing"}</Text>
+                                    </View>
                                 </View>
                             </ReviewCard>
 
@@ -551,20 +695,20 @@ export default function NewDeathCertificateScreen() {
                     )}
 
                     <View style={{ height: 40 }} />
-                </ScrollView>
 
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity style={styles.mainBtn} onPress={handleContinue} disabled={isSubmitting}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
-                            {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
-                                <>
-                                    <Text style={styles.mainBtnText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
-                                    <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={18} color="#FFF" />
-                                </>
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity style={styles.mainBtn} onPress={handleContinue} disabled={isSubmitting}>
+                            <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
+                                {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
+                                    <>
+                                        <Text style={styles.mainBtnText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
+                                        <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={18} color="#FFF" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                </ScrollView>
             </SafeAreaView>
         </View>
     );
@@ -588,29 +732,6 @@ const Input = ({ icon, style, ...props }: any) => (
     </View>
 );
 
-const DocUploadItem = ({ title, hindi, isUploaded, filename, onUpload, onRemove, required }: any) => (
-    <TouchableOpacity style={[styles.docCard, isUploaded && styles.docCardActive]} onPress={isUploaded ? undefined : onUpload}>
-        <View style={styles.docInfo}>
-            <View style={[styles.docIcon, { backgroundColor: isUploaded ? '#E8F5E9' : '#F1F5F9' }]}>
-                <Ionicons name={isUploaded ? "document" : "cloud-upload-outline"} size={22} color={isUploaded ? "#2E7D32" : "#475569"} />
-            </View>
-            <View style={{ flex: 1 }}>
-                <Text style={styles.docTitle}>{title} {required && "*"}</Text>
-                {hindi && <Text style={styles.docHindi}>{hindi}</Text>}
-                {isUploaded && <Text style={styles.filename} numberOfLines={1}>{filename}</Text>}
-            </View>
-            {isUploaded ? (
-                <TouchableOpacity onPress={onRemove} style={styles.removeBtn}>
-                    <Ionicons name="close-circle" size={24} color="#C62828" />
-                </TouchableOpacity>
-            ) : (
-                <View style={styles.uploadBadge}>
-                    <Text style={styles.uploadBadgeText}>Upload</Text>
-                </View>
-            )}
-        </View>
-    </TouchableOpacity>
-);
 
 const ReviewCard = ({ title, children, onEdit }: any) => (
     <View style={styles.reviewCard}>
@@ -675,22 +796,69 @@ const styles = StyleSheet.create({
     checkBoxActive: { backgroundColor: '#0D47A1' },
     declarationText: { flex: 1, fontSize: 12, color: '#475569', lineHeight: 18 },
 
-    requiredDocsCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 20, borderLeftWidth: 4, borderLeftColor: '#0D47A1', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-    requiredDocsTitle: { fontSize: 14, fontWeight: '800', color: '#0D47A1', marginBottom: 12 },
-    docsList: { gap: 8 },
-    docItem: { fontSize: 13, color: '#475569', lineHeight: 20 },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 15,
+        marginTop: 10,
+    },
+    cardHeaderIcon: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: '#E3F2FD',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 12,
+    },
+    cardHeaderTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1E293B',
+    },
+    cardHeaderSubtitle: {
+        fontSize: 12,
+        color: '#64748B',
+        marginTop: 2,
+    },
 
-    uploadGrid: { gap: 12 },
-    docCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#E2E8F0' },
-    docCardActive: { borderColor: '#2E7D32', backgroundColor: '#F1F8E9' },
-    docInfo: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    docIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-    docTitle: { fontSize: 14, fontWeight: '700', color: '#1E293B' },
-    docHindi: { fontSize: 11, color: '#64748B' },
-    filename: { fontSize: 11, color: '#2E7D32', marginTop: 2 },
-    uploadBadge: { backgroundColor: '#E3F2FD', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-    uploadBadgeText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
-    removeBtn: { padding: 4 },
+    docList: {
+        gap: 12,
+    },
+    docUploadCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFF',
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+    },
+    docUploadCardActive: {
+        borderColor: '#2E7D32',
+        backgroundColor: '#F0FDF4',
+    },
+    docIconCircle: {
+        width: 48,
+        height: 48,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 16,
+    },
+    docTextContent: {
+        flex: 1,
+    },
+    docTitle: {
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1E293B',
+    },
+    docHint: {
+        fontSize: 12,
+        color: '#94A3B8',
+        marginTop: 2,
+    },
 
     reviewCard: { backgroundColor: '#FFF', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
     reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 8 },
@@ -707,21 +875,27 @@ const styles = StyleSheet.create({
     noticeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFF3E0', padding: 12, borderRadius: 10, marginTop: 10 },
     noticeText: { fontSize: 11, color: '#E65100', flex: 1 },
 
-    bottomBar: { backgroundColor: '#FFF', padding: 20, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
-    mainBtn: { borderRadius: 14, overflow: 'hidden' },
+    bottomBar: { paddingVertical: 20 },
+    mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
     mainBtnText: { fontSize: 16, fontWeight: '800', color: '#FFF' },
 
-    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: '#FFF' },
-    successIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F8E9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-    successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 10 },
-    successSubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 30, paddingHorizontal: 20 },
-    idCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#E2E8F0' },
-    idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-    idValue: { fontSize: 24, fontWeight: '800', color: '#0D47A1' },
-    successActions: { flexDirection: 'row', gap: 15, marginBottom: 30 },
-    actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
-    actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-    actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
+    successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#FFF' },
+    successIconCircle: { width: 120, height: 120, borderRadius: 60, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+    successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B' },
+    successSubtitle: { color: '#64748B', textAlign: 'center', marginTop: 8, lineHeight: 20 },
+    idCard: { backgroundColor: '#F8FAFC', padding: 24, borderRadius: 20, width: '100%', alignItems: 'center', marginVertical: 32, borderWidth: 1, borderColor: '#E2E8F0' },
+    idLabel: { fontSize: 12, color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+    idValue: { fontSize: 28, fontWeight: '800', color: '#0D47A1', marginTop: 4 },
+    toast: { position: 'absolute', bottom: 120, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, alignSelf: 'center' },
+    toastText: { color: '#FFF', fontSize: 14, fontWeight: '500' },
     timeEstimate: { fontSize: 12, color: '#94A3B8', marginTop: 20 },
+
+    otpVerifyContainer: { flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 12, marginBottom: 15 },
+    otpRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+    otpBtn: { backgroundColor: '#0D47A1', paddingHorizontal: 15, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', minWidth: 80 },
+    otpBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+    btnDisabled: { opacity: 0.5 },
+    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, backgroundColor: '#E8F5E9', padding: 10, borderRadius: 8 },
+    verifiedText: { color: '#2E7D32', fontSize: 13, fontWeight: '700' },
 });

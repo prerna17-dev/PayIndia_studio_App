@@ -32,6 +32,10 @@ const panUpload = upload.fields([
 // All routes require authentication
 router.use(authMiddleware);
 
+// User: Send and Verify OTP for New Application
+router.post("/apply/send-otp", panController.sendApplyOTP);
+router.post("/apply/verify-otp", panController.verifyApplyOTP);
+
 // User: Submit application with documents
 router.post("/apply", panUpload, panController.createApplication);
 

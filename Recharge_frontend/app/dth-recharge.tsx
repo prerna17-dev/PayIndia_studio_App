@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
     ActivityIndicator,
     BackHandler,
@@ -19,13 +19,18 @@ import {
     Alert,
 } from "react-native";
 
-const popularOperators = [
-    { id: '1', name: 'Tata Play', logo: '📡', icon: 'satellite-uplink', color: '#0066CC' },
-    { id: '2', name: 'Dish TV', logo: '📺', icon: 'television-classic', color: '#FF6B35' },
-    { id: '3', name: 'Airtel Digital TV', logo: '📡', icon: 'satellite-variant', color: '#ED1C24' },
-    { id: '4', name: 'Sun Direct', logo: '☀️', icon: 'weather-sunny', color: '#FF9500' },
-    { id: '5', name: 'D2H', logo: '📺', icon: 'television-guide', color: '#00A8E1' },
-];
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_ENDPOINTS } from "@/constants/api";
+
+const POPULAR_DTH_NAMES = ["TATA PLAY", "DISH TV", "AIRTEL DIGITAL TV", "SUN DIRECT", "D2H", "VIDEOCON D2H"];
+const DTH_SHORT_NAMES: { [key: string]: string } = {
+    "TATA PLAY": "Tata Play",
+    "DISH TV": "Dish TV",
+    "AIRTEL DIGITAL TV": "Airtel TV",
+    "SUN DIRECT": "Sun Direct",
+    "D2H": "D2H",
+    "VIDEOCON D2H": "d2h"
+};
 
 const availablePlans = [
     { id: '1', price: '₹299', duration: '1 Month', popular: true, benefit: 'HD Sports Pack' },
@@ -40,6 +45,11 @@ export default function DTHRechargeScreen() {
     // Form states
     const [selectedOperator, setSelectedOperator] = useState<any>(null);
     const [subscriberId, setSubscriberId] = useState("");
+    const [mobileNumber, setMobileNumber] = useState("");
+
+    // API Data states
+    const [allOperators, setAllOperators] = useState<any[]>([]);
+    const [isRefreshing, setIsRefreshing] = useState(true);
 
     // UI States
     const [operatorSearchQuery, setOperatorSearchQuery] = useState("");
@@ -49,6 +59,57 @@ export default function DTHRechargeScreen() {
     // Details Flow State
     const [accountDetails, setAccountDetails] = useState<any>(null);
     const [customAmount, setCustomAmount] = useState('');
+
+    useEffect(() => {
+        fetchOperators();
+    }, []);
+
+    const fetchOperators = async () => {
+        setIsRefreshing(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(`${API_ENDPOINTS.BILL_OPERATORS}?category=DTH`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const result = await response.json();
+
+            if (result.status && result.data) {
+                const formatted = result.data.map((op: any) => ({
+                    id: op.id || op.operator_id,
+                    name: op.name || op.operator_name,
+                }));
+                // Ensure unique operators (PaySprint sometimes has duplicates)
+                const unique = Array.from(new Set(formatted.map((a: any) => a.name)))
+                    .map(name => formatted.find((a: any) => a.name === name));
+                setAllOperators(unique);
+            }
+        } catch (error) {
+            console.error("Fetch DTH operators error:", error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    const getOperatorIcon = (name: string) => {
+        const n = name.toUpperCase();
+        if (n.includes("TATA")) return "satellite-uplink";
+        if (n.includes("DISH")) return "television-classic";
+        if (n.includes("AIRTEL")) return "satellite-variant";
+        if (n.includes("SUN")) return "weather-sunny";
+        if (n.includes("D2H")) return "television-guide";
+        return "satellite-variant";
+    };
+
+    const getOperatorColor = (name: string) => {
+        if (name.includes("TATA")) return "#0066CC";
+        if (name.includes("DISH")) return "#FF6B35";
+        if (name.includes("AIRTEL")) return "#ED1C24";
+        if (name.includes("SUN")) return "#FF9500";
+        if (name.includes("D2H")) return "#00A8E1";
+        return "#666";
+    };
 
     const handleBack = useCallback(() => {
         if (accountDetails) {
@@ -75,26 +136,56 @@ export default function DTHRechargeScreen() {
     const validateForm = () => {
         if (!selectedOperator) return false;
         if (subscriberId.trim().length < 8) return false;
+        if (mobileNumber.length !== 10) return false;
         return true;
     };
 
-    const handleFetchDetails = () => {
+    const handleFetchDetails = async () => {
         if (!validateForm()) {
             Alert.alert('Invalid Information', 'Please select an operator and enter a valid Subscriber ID.');
             return;
         }
 
         setIsFetching(true);
-        setTimeout(() => {
-            setIsFetching(false);
-            setAccountDetails({
-                subscriberName: 'Rahul Kumar',
-                mobile: '9876543210',
-                currentPlan: 'HD Sports Pack',
-                balance: '₹150',
-                expiryDate: '25 Feb 2026',
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(API_ENDPOINTS.FETCH_BILL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    operator: selectedOperator.id,
+                    canumber: subscriberId,
+                }),
             });
-        }, 1500);
+            const result = await response.json();
+
+            if (result.status === true || result.status === "true") {
+                const billData = result.data || result;
+                if (billData.amount || billData.name) {
+                    setAccountDetails({
+                        subscriberName: billData.name || 'Customer',
+                        mobile: billData.ad1 || '',
+                        currentPlan: billData.ad2 || 'N/A',
+                        balance: `₹${billData.amount || '0'}`,
+                        expiryDate: billData.duedate || 'N/A',
+                        amount: billData.amount
+                    });
+                    setCustomAmount(billData.amount || '');
+                } else {
+                    Alert.alert('No Data', result.message || 'Could not fetch account details.');
+                }
+            } else {
+                Alert.alert('Error', result.message || 'Failed to fetch details. Please check Subscriber ID.');
+            }
+        } catch (error) {
+            console.error("Fetch DTH details error:", error);
+            Alert.alert('Error', 'An error occurred while fetching details.');
+        } finally {
+            setIsFetching(false);
+        }
     };
 
     const handlePlanSelect = (plan: any) => {
@@ -133,9 +224,6 @@ export default function DTHRechargeScreen() {
         });
     };
 
-    const filteredOperators = popularOperators.filter(operator =>
-        operator.name.toLowerCase().includes(operatorSearchQuery.toLowerCase())
-    );
 
     return (
         <View style={styles.container}>
@@ -163,24 +251,33 @@ export default function DTHRechargeScreen() {
                                 <>
                                     {/* Select Provider & Enter ID */}
                                     <View style={{ marginBottom: 20 }}>
-                                        <Text style={styles.sectionTitle}>Select DTH Provider</Text>
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                                            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Select DTH Provider</Text>
+                                            {isRefreshing && <ActivityIndicator size="small" color="#0D47A1" />}
+                                        </View>
                                         <View style={styles.grid}>
-                                            {popularOperators.map((item) => (
-                                                <TouchableOpacity
-                                                    key={item.id}
-                                                    style={[styles.gridItem, selectedOperator?.id === item.id && styles.selectedGridItem]}
-                                                    onPress={() => handleOperatorSelect(item)}
-                                                >
-                                                    <View style={[styles.iconCircle, selectedOperator?.id === item.id && styles.selectedIconCircle]}>
-                                                        <MaterialCommunityIcons
-                                                            name={item.icon as any}
-                                                            size={24}
-                                                            color={selectedOperator?.id === item.id ? "#FFFFFF" : "#0D47A1"}
-                                                        />
-                                                    </View>
-                                                    <Text style={styles.gridLabel}>{item.name}</Text>
-                                                </TouchableOpacity>
-                                            ))}
+                                            {allOperators.map((item) => {
+                                                const shortName = Object.entries(DTH_SHORT_NAMES).find(([full]) => 
+                                                    item.name.toUpperCase().includes(full)
+                                                )?.[1] || item.name;
+
+                                                return (
+                                                    <TouchableOpacity
+                                                        key={item.id}
+                                                        style={[styles.gridItem, selectedOperator?.id === item.id && styles.selectedGridItem]}
+                                                        onPress={() => handleOperatorSelect(item)}
+                                                    >
+                                                        <View style={[styles.iconCircle, selectedOperator?.id === item.id && styles.selectedIconCircle]}>
+                                                            <MaterialCommunityIcons
+                                                                name={getOperatorIcon(item.name) as any}
+                                                                size={24}
+                                                                color={selectedOperator?.id === item.id ? "#FFFFFF" : "#0D47A1"}
+                                                            />
+                                                        </View>
+                                                        <Text style={styles.gridLabel}>{shortName}</Text>
+                                                    </TouchableOpacity>
+                                                );
+                                            })}
                                         </View>
                                     </View>
 
@@ -196,6 +293,22 @@ export default function DTHRechargeScreen() {
                                                     keyboardType="number-pad"
                                                     value={subscriberId}
                                                     onChangeText={setSubscriberId}
+                                                />
+                                            </View>
+                                        </View>
+
+                                        <View style={[styles.fieldGroup, { marginTop: 15 }]}>
+                                            <Text style={styles.fieldLabel}>Mobile Number *</Text>
+                                            <View style={styles.inputContainer}>
+                                                <Ionicons name="call-outline" size={16} color="#94A3B8" />
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="Enter 10-digit mobile"
+                                                    placeholderTextColor="#94A3B8"
+                                                    keyboardType="number-pad"
+                                                    maxLength={10}
+                                                    value={mobileNumber}
+                                                    onChangeText={setMobileNumber}
                                                 />
                                             </View>
                                         </View>
@@ -305,31 +418,6 @@ export default function DTHRechargeScreen() {
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
-
-                {/* Operator Selection Modal */}
-                <Modal visible={showOperatorModal} transparent animationType="slide" onRequestClose={() => setShowOperatorModal(false)}>
-                    <View style={styles.modalOverlay}>
-                        <View style={styles.modalContent}>
-                            <View style={styles.modalHeader}>
-                                <Text style={styles.modalTitle}>Select Provider</Text>
-                                <TouchableOpacity onPress={() => setShowOperatorModal(false)}><Ionicons name="close" size={24} color="#666" /></TouchableOpacity>
-                            </View>
-                            <View style={styles.modalSearch}>
-                                <Ionicons name="search" size={20} color="#666" />
-                                <TextInput style={styles.modalSearchInput} placeholder="Search Provider..." value={operatorSearchQuery} onChangeText={setOperatorSearchQuery} />
-                            </View>
-                            <ScrollView style={styles.optionsList}>
-                                {filteredOperators.map((op, index) => (
-                                    <TouchableOpacity key={index} style={styles.optionItem} onPress={() => handleOperatorSelect(op)}>
-                                        <Text style={styles.optionText}>{op.name}</Text>
-                                        {selectedOperator?.id === op.id && <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />}
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
-                        </View>
-                    </View>
-                </Modal>
-
             </SafeAreaView>
         </View>
     );
@@ -364,6 +452,8 @@ const styles = StyleSheet.create({
     iconCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F1F8FE', justifyContent: 'center', alignItems: 'center', marginBottom: 6 },
     selectedIconCircle: { backgroundColor: '#0D47A1' },
     gridLabel: { fontSize: 10, fontWeight: '600', color: '#1A1A1A', textAlign: 'center' },
+    viewAllButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F0F7FF', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#0D47A1', borderStyle: 'dashed', marginTop: 10 },
+    viewAllText: { fontSize: 14, fontWeight: 'bold', color: '#0D47A1', marginRight: 8 },
 
     summaryCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#E2E8F0', elevation: 2 },
     summaryHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 15 },
@@ -380,14 +470,4 @@ const styles = StyleSheet.create({
     planPrice: { fontSize: 24, fontWeight: 'bold', color: '#0D47A1', marginBottom: 6 },
     planDuration: { fontSize: 14, color: '#1A1A1A', fontWeight: '500' },
     planBenefit: { fontSize: 11, color: '#64748B', marginTop: 4 },
-
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '80%', paddingTop: 20 },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-    modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
-    modalSearch: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F1F5F9', borderRadius: 12, margin: 20, paddingHorizontal: 15, paddingVertical: 10 },
-    modalSearchInput: { flex: 1, marginLeft: 10, fontSize: 15, color: '#1A1A1A' },
-    optionsList: { paddingHorizontal: 20 },
-    optionItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-    optionText: { fontSize: 15, color: '#1A1A1A' }
 });

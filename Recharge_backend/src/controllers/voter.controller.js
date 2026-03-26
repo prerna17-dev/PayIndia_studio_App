@@ -13,13 +13,15 @@ exports.createApplication = async (req, res, next) => {
             date_of_birth,
             gender,
             aadhar_number,
+            mobile_number,
+            email,
             house_no,
+            area,
             assembly_constituency,
             city,
             district,
             state,
             pincode,
-            mobile_number,
         } = req.body;
 
         // Ensure application data is provided
@@ -33,13 +35,15 @@ exports.createApplication = async (req, res, next) => {
             date_of_birth,
             gender,
             aadhar_number,
+            mobile_number,
+            email,
             house_no,
+            area,
             assembly_constituency,
             city,
             district,
             state,
             pincode,
-            mobile_number,
         });
 
         // Handle File Uploads
@@ -174,6 +178,57 @@ exports.processApplication = async (req, res, next) => {
         res.json({
             success: true,
             message: "Application processed successfully",
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/* --- VOTER REGISTRATION OTP --- */
+
+/**
+ * Send OTP for New Voter Registration
+ */
+exports.sendApplyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, aadhar_number } = req.body;
+        if (!mobile_number || !aadhar_number) {
+            return res.status(400).json({ success: false, message: "Mobile number and Aadhaar number are required" });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        await VoterModel.storeOTP(mobile_number, otpCode, "VOTER_APPLY");
+
+        // Send SMS
+        await SmsService.sendSMS(mobile_number, `Your OTP for Voter Registration (Aadhaar: ****${aadhar_number.slice(-4)}) is ${otpCode}. Valid for 10 mins.`);
+
+        res.json({
+            success: true,
+            message: "OTP sent successfully",
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * Verify OTP for New Voter Registration
+ */
+exports.verifyApplyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, otp_code } = req.body;
+        if (!mobile_number || !otp_code) {
+            return res.status(400).json({ success: false, message: "Mobile number and OTP are required" });
+        }
+
+        const isValid = await VoterModel.verifyOTP(mobile_number, otp_code, "VOTER_APPLY");
+        if (!isValid) {
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+        }
+
+        res.json({
+            success: true,
+            message: "OTP verified successfully",
         });
     } catch (err) {
         next(err);

@@ -14,7 +14,12 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Clipboard,
+    Keyboard,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -42,6 +47,7 @@ interface FormDataType {
 interface DocumentsState {
     aadhaarCard: DocumentType | null;
     addressProof: DocumentType | null;
+    dobProof: DocumentType | null;
     photo: DocumentType | null;
     [key: string]: DocumentType | null;
 }
@@ -58,6 +64,7 @@ export default function NewVoterIDScreen() {
     const [documents, setDocuments] = useState<DocumentsState>({
         aadhaarCard: null,
         addressProof: null,
+        dobProof: null,
         photo: null,
     });
     const [formData, setFormData] = useState<FormDataType>({
@@ -79,6 +86,24 @@ export default function NewVoterIDScreen() {
     const [isOtpVerified, setIsOtpVerified] = useState(false);
     const [otp, setOtp] = useState("");
     const [isOtpSent, setIsOtpSent] = useState(false);
+
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+    useEffect(() => {
+        const keyboardDidShowListener = Keyboard.addListener(
+            "keyboardDidShow",
+            () => setKeyboardVisible(true)
+        );
+        const keyboardDidHideListener = Keyboard.addListener(
+            "keyboardDidHide",
+            () => setKeyboardVisible(false)
+        );
+
+        return () => {
+            keyboardDidHideListener.remove();
+            keyboardDidShowListener.remove();
+        };
+    }, []);
 
     // Handle hardware back button
     useEffect(() => {
@@ -141,21 +166,53 @@ export default function NewVoterIDScreen() {
         return formatted;
     };
 
-    const handleSendOtp = () => {
-        if (formData.aadhaarNo.length !== 12) {
+    const handleSendOtp = async () => {
+        if (formData.aadhaarNo.replace(/\s/g, "").length !== 12) {
             Alert.alert("Error", "Please enter valid 12-digit Aadhaar number");
             return;
         }
-        setIsOtpSent(true);
-        Alert.alert("Success", "OTP sent to registered mobile number");
+        if (formData.mobile.length !== 10) {
+            Alert.alert("Error", "Please enter a valid 10-digit mobile number");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.VOTER_APPLY_OTP_SEND,
+                { mobile_number: formData.mobile, aadhar_number: formData.aadhaarNo.replace(/\s/g, "") },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to registered mobile number");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        }
     };
 
-    const handleVerifyOtp = () => {
-        if (otp.length === 6) {
-            setIsOtpVerified(true);
-            Alert.alert("Verified", "Aadhaar OTP verified successfully");
-        } else {
+    const handleVerifyOtp = async () => {
+        if (otp.length !== 6) {
             Alert.alert("Error", "Please enter valid 6-digit OTP");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.VOTER_APPLY_OTP_VERIFY,
+                { mobile_number: formData.mobile, otp_code: otp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpVerified(true);
+                Alert.alert("Verified", "Aadhaar OTP verified successfully");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Invalid or expired OTP");
         }
     };
 
@@ -190,16 +247,103 @@ export default function NewVoterIDScreen() {
                 Alert.alert("Required", "Address Proof is mandatory");
                 return;
             }
+            if (!documents.dobProof) {
+                Alert.alert("Required", "Date of Birth Proof is mandatory");
+                return;
+            }
             setCurrentStep(3);
         } else {
             setIsSubmitting(true);
-            // Simulate API call
-            setTimeout(() => {
-                const refId = "VOT" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                setApplicationId(refId);
+            submitApplication();
+        }
+    };
+
+    const submitApplication = async () => {
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            if (!token) {
+                Alert.alert("Error", "User not authenticated. Please log in.");
+                setIsSubmitting(false);
+                return;
+            }
+
+            const data = new FormData();
+
+            // Map structured form data to expected API fields
+            data.append("full_name", formData.fullName);
+            data.append("date_of_birth", formData.dob);
+            data.append("gender", formData.gender);
+            data.append("mobile_number", formData.mobile);
+            data.append("email", formData.email);
+            data.append("aadhar_number", formData.aadhaarNo);
+            data.append("house_no", formData.houseNo);
+            data.append("area", formData.area);
+            data.append("city", formData.city);
+            data.append("district", formData.district);
+            data.append("state", formData.state);
+            data.append("pincode", formData.pincode);
+            data.append("assembly_constituency", formData.assembly);
+
+            // Append documents mapping frontend keys to backend expectations
+            if (documents.aadhaarCard) {
+                data.append("aadhar_card", {
+                    uri: documents.aadhaarCard.uri,
+                    name: documents.aadhaarCard.name,
+                    type: documents.aadhaarCard.mimeType || "application/pdf",
+                } as any);
+            }
+
+            if (documents.addressProof) {
+                data.append("address_proof", {
+                    uri: documents.addressProof.uri,
+                    name: documents.addressProof.name,
+                    type: documents.addressProof.mimeType || "application/pdf",
+                } as any);
+            }
+
+            if (documents.dobProof) {
+                data.append("dob_proof", {
+                    uri: documents.dobProof.uri,
+                    name: documents.dobProof.name,
+                    type: documents.dobProof.mimeType || "application/pdf",
+                } as any);
+            }
+
+            if (documents.photo) {
+                data.append("passport_photo", {
+                    uri: documents.photo.uri,
+                    name: documents.photo.name,
+                    type: documents.photo.mimeType || "image/jpeg",
+                } as any);
+            }
+
+            const response = await axios.post(
+                API_ENDPOINTS.VOTER_APPLY,
+                data,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
+
+            if (response.data.success) {
+                const generatedId = "VOTER" + response.data.data.applicationId.toString().padStart(5, '0');
+                setApplicationId(generatedId);
                 setIsSubmitting(false);
                 setIsSubmitted(true);
-            }, 2000);
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to submit application");
+                setIsSubmitting(false);
+            }
+        } catch (error: any) {
+            console.error("Voter Application Error:", error);
+            Alert.alert(
+                "Error",
+                error.response?.data?.message || "Something went wrong. Please try again."
+            );
+            setIsSubmitting(false);
         }
     };
 
@@ -209,6 +353,14 @@ export default function NewVoterIDScreen() {
         } else {
             router.back();
         }
+    };
+
+    const [showToast, setShowToast] = useState(false);
+
+    const copyToClipboard = () => {
+        Clipboard.setString(applicationId);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000); // Hide toast after 3 seconds
     };
 
     if (isSubmitted) {
@@ -224,26 +376,29 @@ export default function NewVoterIDScreen() {
 
                     <View style={styles.idCard}>
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <TouchableOpacity onPress={copyToClipboard} style={{ padding: 4 }}>
+                                <Ionicons name="copy-outline" size={24} color="#0D47A1" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                            </View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
+                    {showToast && (
+                        <View style={{
+                            position: 'absolute',
+                            bottom: 120,
+                            backgroundColor: '#333',
+                            paddingHorizontal: 20,
+                            paddingVertical: 10,
+                            borderRadius: 20,
+                            zIndex: 100
+                        }}>
+                            <Text style={{ color: '#FFF', fontSize: 14 }}>Reference ID Copied!</Text>
+                        </View>
+                    )}
 
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
+                    <TouchableOpacity style={[styles.mainBtn, { marginTop: 40 }]} onPress={() => router.replace('/voter-id-services')}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
                             <Ionicons name="arrow-forward" size={18} color="#FFF" />
@@ -374,6 +529,19 @@ export default function NewVoterIDScreen() {
                                     />
                                 </View>
 
+                                <Text style={styles.inputLabel}>Email Address</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="mail-outline" size={18} color="#94A3B8" />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Enter your email ID"
+                                        keyboardType="email-address"
+                                        autoCapitalize="none"
+                                        value={formData.email}
+                                        onChangeText={(text) => setFormData({ ...formData, email: text })}
+                                    />
+                                </View>
+
                                 <Text style={styles.inputLabel}>Aadhaar Number *</Text>
                                 <View style={styles.otpSection}>
                                     <View style={[styles.inputContainer, { flex: 1, marginBottom: 0 }]}>
@@ -390,9 +558,9 @@ export default function NewVoterIDScreen() {
                                     </View>
                                     {!isOtpVerified && (
                                         <TouchableOpacity
-                                            style={[styles.otpButton, formData.aadhaarNo.length !== 12 && styles.otpButtonDisabled]}
+                                            style={[styles.otpButton, (formData.aadhaarNo.replace(/\s/g, "").length !== 12 || formData.mobile.length !== 10) && styles.otpButtonDisabled]}
                                             onPress={handleSendOtp}
-                                            disabled={formData.aadhaarNo.length !== 12}
+                                            disabled={formData.aadhaarNo.replace(/\s/g, "").length !== 12 || formData.mobile.length !== 10}
                                         >
                                             <Text style={styles.otpButtonText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
                                         </TouchableOpacity>
@@ -448,6 +616,17 @@ export default function NewVoterIDScreen() {
                                         placeholder="Flat/House No."
                                         value={formData.houseNo}
                                         onChangeText={(text) => setFormData({ ...formData, houseNo: text })}
+                                    />
+                                </View>
+
+                                <Text style={styles.inputLabel}>Area / Locality *</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="map-outline" size={18} color="#94A3B8" />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="Street, Sector, Area"
+                                        value={formData.area}
+                                        onChangeText={(text) => setFormData({ ...formData, area: text })}
                                     />
                                 </View>
 
@@ -587,6 +766,25 @@ export default function NewVoterIDScreen() {
                                         color={documents.addressProof ? "#2E7D32" : "#94A3B8"}
                                     />
                                 </TouchableOpacity>
+
+                                {/* DOB Proof */}
+                                <TouchableOpacity
+                                    style={[styles.docUploadCard, documents.dobProof && styles.docUploadCardActive]}
+                                    onPress={() => handleDocumentUpload("dobProof")}
+                                >
+                                    <View style={[styles.docIconCircle, { backgroundColor: '#FFF3E0' }]}>
+                                        <Ionicons name="calendar" size={24} color={documents.dobProof ? "#FFF" : "#EF6C00"} />
+                                    </View>
+                                    <View style={styles.docTextContent}>
+                                        <Text style={styles.docTitle}>Date of Birth Proof *</Text>
+                                        <Text style={styles.docHint}>{documents.dobProof ? documents.dobProof.name : "Birth Certificate, School LC, etc."}</Text>
+                                    </View>
+                                    <Ionicons
+                                        name={documents.dobProof ? "checkmark-circle" : "cloud-upload"}
+                                        size={24}
+                                        color={documents.dobProof ? "#2E7D32" : "#94A3B8"}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         </View>
                     )}
@@ -604,60 +802,28 @@ export default function NewVoterIDScreen() {
                                 </View>
                             </View>
 
-                            <View style={styles.reviewCard}>
-                                <View style={styles.reviewSection}>
-                                    <Text style={styles.reviewSectionTitle}>Applicant Info</Text>
-                                    <View style={styles.reviewItem}>
-                                        <Text style={styles.reviewLabel}>Name</Text>
-                                        <Text style={styles.reviewValue}>{formData.fullName}</Text>
-                                    </View>
-                                    <View style={styles.reviewItem}>
-                                        <Text style={styles.reviewLabel}>DOB</Text>
-                                        <Text style={styles.reviewValue}>{formData.dob}</Text>
-                                    </View>
-                                    <View style={styles.reviewItem}>
-                                        <Text style={styles.reviewLabel}>Mobile</Text>
-                                        <Text style={styles.reviewValue}>+91 {formData.mobile}</Text>
-                                    </View>
-                                    <View style={styles.reviewItem}>
-                                        <Text style={styles.reviewLabel}>Aadhaar</Text>
-                                        <Text style={styles.reviewValue}>XXXX XXXX {formData.aadhaarNo.slice(-4)}</Text>
-                                    </View>
-                                </View>
+                            <ReviewItem title="Applicant Info" data={[
+                                { label: "Full Name", value: formData.fullName },
+                                { label: "DOB", value: formData.dob },
+                                { label: "Email", value: formData.email || "N/A" },
+                                { label: "Mobile", value: "+91 " + formData.mobile },
+                                { label: "Aadhaar", value: "XXXX XXXX " + formData.aadhaarNo.slice(-4) },
+                            ]} onEdit={() => setCurrentStep(1)} />
 
-                                <View style={styles.divider} />
+                            <ReviewItem title="Location Info" data={[
+                                { label: "Assembly", value: formData.assembly },
+                                { label: "Address", value: `${formData.houseNo}, ${formData.area}` },
+                                { label: "City", value: formData.city },
+                                { label: "District", value: formData.district },
+                                { label: "State", value: `${formData.state} - ${formData.pincode}` },
+                            ]} onEdit={() => setCurrentStep(1)} />
 
-                                <View style={styles.reviewSection}>
-                                    <Text style={styles.reviewSectionTitle}>Location Info</Text>
-                                    <View style={styles.reviewItem}>
-                                        <Text style={styles.reviewLabel}>Assembly</Text>
-                                        <Text style={styles.reviewValue}>{formData.assembly}</Text>
-                                    </View>
-                                    <Text style={styles.addressText}>
-                                        {formData.houseNo}, {formData.area}, {formData.city}, {formData.district}, {formData.state} - {formData.pincode}
-                                    </Text>
-                                </View>
-
-                                <View style={styles.divider} />
-
-                                <View style={styles.reviewSection}>
-                                    <Text style={styles.reviewSectionTitle}>Documents Uploaded</Text>
-                                    <View style={styles.docStatusRow}>
-                                        <View style={styles.docBadge}>
-                                            <Ionicons name="image" size={14} color="#2196F3" />
-                                            <Text style={styles.docBadgeText}>Photo</Text>
-                                        </View>
-                                        <View style={styles.docBadge}>
-                                            <Ionicons name="card" size={14} color="#2196F3" />
-                                            <Text style={styles.docBadgeText}>Aadhaar</Text>
-                                        </View>
-                                        <View style={styles.docBadge}>
-                                            <Ionicons name="home" size={14} color="#2196F3" />
-                                            <Text style={styles.docBadgeText}>Address</Text>
-                                        </View>
-                                    </View>
-                                </View>
-                            </View>
+                            <ReviewItem title="Documents Uploaded" data={[
+                                { label: "Photograph", value: documents.photo ? "Uploaded ✅" : "Missing ❌" },
+                                { label: "Aadhaar Card", value: documents.aadhaarCard ? "Uploaded ✅" : "Missing ❌" },
+                                { label: "Address Proof", value: documents.addressProof ? "Uploaded ✅" : "Missing ❌" },
+                                { label: "DOB Proof", value: documents.dobProof ? "Uploaded ✅" : "Missing ❌" },
+                            ]} onEdit={() => setCurrentStep(2)} />
 
                             <View style={styles.declarationBox}>
                                 <Ionicons name="information-circle" size={20} color="#0D47A1" />
@@ -672,33 +838,52 @@ export default function NewVoterIDScreen() {
                 </ScrollView>
 
                 {/* Bottom Bar */}
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity
-                        style={styles.continueButton}
-                        onPress={handleContinue}
-                        activeOpacity={0.8}
-                    >
-                        <LinearGradient
-                            colors={['#0D47A1', '#1565C0']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.buttonGradient}
+                {!isKeyboardVisible && (
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity
+                            style={styles.continueButton}
+                            onPress={handleContinue}
+                            activeOpacity={0.8}
                         >
-                            <Text style={styles.buttonText}>
-                                {currentStep === 3 ? "Submit Registration" : "Continue"}
-                            </Text>
-                            <Ionicons
-                                name={currentStep === 3 ? "checkmark-done" : "arrow-forward"}
-                                size={20}
-                                color="#FFF"
-                            />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
+                            <LinearGradient
+                                colors={['#0D47A1', '#1565C0']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.buttonGradient}
+                            >
+                                <Text style={styles.buttonText}>
+                                    {currentStep === 3 ? "Submit Registration" : "Continue"}
+                                </Text>
+                                <Ionicons
+                                    name={currentStep === 3 ? "checkmark-done" : "arrow-forward"}
+                                    size={20}
+                                    color="#FFF"
+                                />
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </SafeAreaView>
         </View>
     );
 }
+
+const ReviewItem = ({ title, data, onEdit }: any) => (
+    <View style={styles.reviewCard}>
+        <View style={styles.reviewHeader}>
+            <Text style={styles.reviewSectionTitle}>{title}</Text>
+            <TouchableOpacity onPress={onEdit}>
+                <Text style={styles.editLink}>Edit</Text>
+            </TouchableOpacity>
+        </View>
+        {data.map((item: any, index: number) => (
+            <View key={index} style={styles.reviewRow}>
+                <Text style={styles.reviewLabel}>{item.label}</Text>
+                <Text style={styles.reviewValue}>{item.value}</Text>
+            </View>
+        ))}
+    </View>
+);
 
 const styles = StyleSheet.create({
     container: {
@@ -996,37 +1181,43 @@ const styles = StyleSheet.create({
     // Review
     reviewCard: {
         backgroundColor: '#FFF',
-        borderRadius: 20,
-        padding: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 10,
-        elevation: 5,
-    },
-    reviewSection: {
+        borderRadius: 16,
+        padding: 16,
         marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#E2E8F0',
+    },
+    reviewHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+        paddingBottom: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
     },
     reviewSectionTitle: {
-        fontSize: 14,
-        fontWeight: '800',
-        color: '#0D47A1',
-        marginBottom: 10,
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
+        fontSize: 15,
+        fontWeight: '700',
+        color: '#1E293B',
     },
-    reviewItem: {
+    editLink: {
+        fontSize: 13,
+        fontWeight: '600',
+        color: '#0D47A1',
+    },
+    reviewRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 8,
     },
     reviewLabel: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#64748B',
     },
     reviewValue: {
-        fontSize: 14,
-        fontWeight: '700',
+        fontSize: 13,
+        fontWeight: '600',
         color: '#1E293B',
     },
     addressText: {

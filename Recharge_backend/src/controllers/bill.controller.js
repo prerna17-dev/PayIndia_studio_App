@@ -6,7 +6,15 @@ const pool = require("../config/db");
  */
 exports.getOperators = async (req, res) => {
   try {
-    const data = await paysprintBill.getBillOperators();
+    const { category } = req.query;
+    let data = await paysprintBill.getBillOperators();
+    
+    if (category && data.status === true && Array.isArray(data.data)) {
+      data.data = data.data.filter(op => 
+        op.category?.toLowerCase() === category.toLowerCase()
+      );
+    }
+    
     res.json(data);
   } catch (err) {
     res.status(500).json({

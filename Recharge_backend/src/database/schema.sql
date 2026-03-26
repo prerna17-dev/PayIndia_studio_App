@@ -316,6 +316,13 @@ CREATE TABLE voter_corrections (
   voter_id_number VARCHAR(20) NOT NULL,
   aadhar_number VARCHAR(12) NOT NULL,
   mobile_number VARCHAR(15) NOT NULL,
+  corrected_name VARCHAR(100) NULL,
+  corrected_dob DATE NULL,
+  corrected_gender VARCHAR(20) NULL,
+  corrected_address TEXT NULL,
+  corrected_state VARCHAR(100) NULL,
+  corrected_pincode VARCHAR(6) NULL,
+  correction_type VARCHAR(50) NULL,
   status ENUM('Pending', 'Approved', 'Rejected', 'Processed') DEFAULT 'Pending',
   admin_id INT,
   agent_id INT,
@@ -332,7 +339,7 @@ CREATE TABLE voter_corrections (
 CREATE TABLE voter_correction_documents (
   document_id INT AUTO_INCREMENT PRIMARY KEY,
   correction_id INT NOT NULL,
-  document_type ENUM('Identity_Proof', 'Address_Proof', 'DOB_Proof', 'Photo') NOT NULL,
+  document_type VARCHAR(50) NOT NULL,
   file_path VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (correction_id) REFERENCES voter_corrections(correction_id) ON DELETE CASCADE

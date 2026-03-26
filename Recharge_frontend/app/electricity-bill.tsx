@@ -19,6 +19,9 @@ import {
     KeyboardAvoidingView,
 } from "react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_ENDPOINTS } from "@/constants/api";
+
 interface ElectricityBillDetails {
     consumerName: string;
     consumerNumber: string;
@@ -31,34 +34,79 @@ interface ElectricityBillDetails {
     boardName: string;
 }
 
-const popularBoards = [
-    { id: '1', name: "MSEDCL", icon: "flash" },
-    { id: '2', name: "BSES Rajdhani", icon: "flash-outline" },
-    { id: '3', name: "BESCOM", icon: "lightning-bolt" },
-    { id: '4', name: "TNEB", icon: "home-lightning-bolt-outline" },
-    { id: '5', name: "UPPCL", icon: "transmission-tower" },
-    { id: '6', name: "Tata Power", icon: "power-plug-outline" },
-];
-
-const allBoards = [
-    "MSEDCL (Maharashtra State Electricity Distribution Co. Ltd.)", "Tata Power - Mumbai", "Adani Electricity - Mumbai",
-    "BSES Rajdhani", "BSES Yamuna", "Tata Power Delhi", "NDMC",
-    "BESCOM (Bangalore)", "MESCOM (Mangalore)", "HESCOM (Hubli)", "GESCOM (Gulbarga)", "CHESCOM (Chamundeshwari)",
-    "TNEB (Tamil Nadu Electricity Board)", "Tangedco",
-    "DGVCL (Dakshin Gujarat)", "MGVCL (Madhya Gujarat)", "PGVCL (Paschim Gujarat)", "UGVCL (Uttar Gujarat)", "Torrent Power - Ahmedabad",
-    "DVVNL (Dakshinanchal)", "MVVNL (Madhyanchal)", "PVVNL (Paschimanchal)", "PUVVNL (Purvanchal)"
-];
-
 export default function ElectricityBillScreen() {
     const router = useRouter();
 
     // Form states
-    const [selectedBoard, setSelectedBoard] = useState("");
+    const [selectedBoard, setSelectedBoard] = useState<any>(null);
     const [consumerNumber, setConsumerNumber] = useState("");
     const [mobileNumber, setMobileNumber] = useState("");
     const [area, setArea] = useState("");
     const [paymentAmount, setPaymentAmount] = useState("");
     const [isConfirmed, setIsConfirmed] = useState(false);
+
+    // API Data states
+    const [popularBoards, setPopularBoards] = useState<any[]>([]);
+    const [allBoards, setAllBoards] = useState<any[]>([]);
+    const [isRefreshing, setIsRefreshing] = useState(true);
+
+    React.useEffect(() => {
+        fetchOperators();
+    }, []);
+
+    const fetchOperators = async () => {
+        setIsRefreshing(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(`${API_ENDPOINTS.BILL_OPERATORS}?category=Electricity`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const result = await response.json();
+
+            if (result.status && result.data) {
+                const formattedBoards = result.data.map((op: any) => ({
+                    id: op.id || op.operator_id,
+                    name: op.name || op.operator_name,
+                    icon: "flash"
+                }));
+                setAllBoards(formattedBoards);
+                
+                // Filter for 8 popular providers in India with short names
+                const popularNames = ["MSEDCL", "UPPCL", "BESCOM", "TANGEDCO", "BSES", "Tata Power", "ADANI", "CESC"];
+                const POPULAR_SHORT_NAMES: { [key: string]: string } = {
+                    "MSEDCL": "MSEDCL",
+                    "UPPCL": "UPPCL",
+                    "BESCOM": "BESCOM",
+                    "TANGEDCO": "TANGEDCO",
+                    "BSES": "BSES",
+                    "TATA POWER": "Tata Power",
+                    "ADANI": "Adani Elec",
+                    "CESC": "CESC"
+                };
+
+                const popular: any[] = [];
+                popularNames.forEach(p => {
+                    const match = formattedBoards.find((board: any) => 
+                        board.name.toUpperCase().includes(p.toUpperCase())
+                    );
+                    if (match) {
+                        popular.push({
+                            ...match,
+                            name: POPULAR_SHORT_NAMES[p.toUpperCase()]
+                        });
+                    }
+                });
+
+                setPopularBoards(popular.slice(0, 8));
+            }
+        } catch (error) {
+            console.error("Fetch operators error:", error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     // Keyboard state for consumer number
     const [consumerKeyboardType, setConsumerKeyboardType] = useState<"number-pad" | "default">("number-pad");
@@ -97,7 +145,7 @@ export default function ElectricityBillScreen() {
         }, [handleBack])
     );
 
-    const handleBoardSelect = (board: string) => {
+    const handleBoardSelect = (board: any) => {
         setSelectedBoard(board);
         setShowBoardModal(false);
     };
@@ -130,28 +178,56 @@ export default function ElectricityBillScreen() {
         if (!validateForm()) return;
 
         setIsLoading(true);
-        setTimeout(() => {
-            const mockData: ElectricityBillDetails = {
-                consumerName: "John Doe",
-                consumerNumber: consumerNumber,
-                billingPeriod: "Jan 2026 - Feb 2026",
-                electricityUsage: "125 Units",
-                outstandingAmount: 2450,
-                dueDate: "10 Mar 2026",
-                lateFee: 0,
-                totalPayable: 2450,
-                boardName: selectedBoard,
-            };
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(API_ENDPOINTS.FETCH_BILL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    operator: selectedBoard.id,
+                    canumber: consumerNumber,
+                }),
+            });
+            const result = await response.json();
 
-            setBillDetails(mockData);
-            setPaymentAmount(mockData.totalPayable.toString());
+            if (result.status === true || result.status === "true") {
+                const billData = result.data || result;
+                // Check if we actually have bill data (amount or name)
+                if (billData.amount || billData.name) {
+                    const mappedDetails: ElectricityBillDetails = {
+                        consumerName: billData.name || "Customer",
+                        consumerNumber: consumerNumber,
+                        billingPeriod: billData.ad1 || "Current Period",
+                        electricityUsage: billData.ad2 || "N/A",
+                        outstandingAmount: parseFloat(billData.amount) || 0,
+                        dueDate: billData.duedate || "N/A",
+                        lateFee: 0,
+                        totalPayable: parseFloat(billData.amount) || 0,
+                        boardName: selectedBoard.name,
+                    };
+
+                    setBillDetails(mappedDetails);
+                    setPaymentAmount(mappedDetails.totalPayable.toString());
+
+                    Animated.parallel([
+                        Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+                        Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+                    ]).start();
+                } else {
+                    alert(result.message || "No bill data found for this consumer number.");
+                }
+            } else {
+                alert(result.message || "Failed to fetch bill details. Please check your consumer number.");
+            }
+        } catch (error) {
+            console.error("Fetch bill error:", error);
+            alert("An error occurred while fetching the bill. Please try again later.");
+        } finally {
             setIsLoading(false);
-
-            Animated.parallel([
-                Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
-                Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-            ]).start();
-        }, 1500);
+        }
     };
 
     const isReadyToPay = () => {
@@ -180,7 +256,7 @@ export default function ElectricityBillScreen() {
                     billType: "Electricity Bill",
                     borrowerName: billDetails?.consumerName,
                     loanAccountNumber: billDetails?.consumerNumber,
-                    lenderName: selectedBoard,
+                    lenderName: selectedBoard.name,
                 },
             });
             return;
@@ -194,7 +270,7 @@ export default function ElectricityBillScreen() {
     };
 
     const filteredBoards = allBoards.filter(board =>
-        board.toLowerCase().includes(boardSearchQuery.toLowerCase())
+        board.name.toLowerCase().includes(boardSearchQuery.toLowerCase())
     );
 
     return (
@@ -227,14 +303,14 @@ export default function ElectricityBillScreen() {
                                         {popularBoards.map((item) => (
                                             <TouchableOpacity
                                                 key={item.id}
-                                                style={[styles.gridItem, selectedBoard === item.name && styles.selectedGridItem]}
-                                                onPress={() => handleBoardSelect(item.name)}
+                                                style={[styles.gridItem, selectedBoard?.id === item.id && styles.selectedGridItem]}
+                                                onPress={() => handleBoardSelect(item)}
                                             >
-                                                <View style={[styles.iconCircle, selectedBoard === item.name && styles.selectedIconCircle]}>
+                                                <View style={[styles.iconCircle, selectedBoard?.id === item.id && styles.selectedIconCircle]}>
                                                     <MaterialCommunityIcons
                                                         name={item.icon as any}
                                                         size={24}
-                                                        color={selectedBoard === item.name ? "#FFFFFF" : "#0D47A1"}
+                                                        color={selectedBoard?.id === item.id ? "#FFFFFF" : "#0D47A1"}
                                                     />
                                                 </View>
                                                 <Text style={styles.gridLabel}>{item.name}</Text>
@@ -258,10 +334,10 @@ export default function ElectricityBillScreen() {
                                                     <MaterialCommunityIcons name="flash" size={16} color="#94A3B8" />
                                                     <TextInput
                                                         style={[styles.input, { color: '#64748B' }]}
-                                                        value={selectedBoard}
+                                                        value={selectedBoard.name}
                                                         editable={false}
                                                     />
-                                                    <TouchableOpacity onPress={() => setSelectedBoard("")}>
+                                                    <TouchableOpacity onPress={() => setSelectedBoard(null)}>
                                                         <Ionicons name="close-circle" size={18} color="#94A3B8" />
                                                     </TouchableOpacity>
                                                 </View>
@@ -483,10 +559,10 @@ export default function ElectricityBillScreen() {
                                 <TextInput style={styles.modalSearchInput} placeholder="Search Electricity Board..." value={boardSearchQuery} onChangeText={setBoardSearchQuery} />
                             </View>
                             <ScrollView style={styles.optionsList}>
-                                {filteredBoards.map((name, index) => (
-                                    <TouchableOpacity key={index} style={styles.optionItem} onPress={() => handleBoardSelect(name)}>
-                                        <Text style={styles.optionText}>{name}</Text>
-                                        {selectedBoard === name && <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />}
+                                {filteredBoards.map((board, index) => (
+                                    <TouchableOpacity key={index} style={styles.optionItem} onPress={() => handleBoardSelect(board)}>
+                                        <Text style={styles.optionText}>{board.name}</Text>
+                                        {selectedBoard?.id === board.id && <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />}
                                     </TouchableOpacity>
                                 ))}
                             </ScrollView>

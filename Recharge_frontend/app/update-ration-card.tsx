@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
+import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -18,6 +19,9 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface UpdateType {
     id: string;
@@ -27,53 +31,53 @@ interface UpdateType {
 }
 
 // ----------- Detail field configs per update type ----------------------------
-const UPDATE_DETAIL_CONFIG: Record<string, { label: string; fields: { key: string; placeholder: string; label: string; keyboardType?: any; maxLength?: number }[] }> = {
+const UPDATE_DETAIL_CONFIG: Record<string, { label: string; fields: { key: string; placeholder: string; label: string; keyboardType?: any; maxLength?: number; icon?: any }[] }> = {
     add: {
         label: "Add Member",
         fields: [
-            { key: "name", label: "Full Name *", placeholder: "Enter member's full name" },
-            { key: "aadhaar", label: "Aadhaar Number *", placeholder: "12-digit Aadhaar", keyboardType: "number-pad", maxLength: 12 },
-            { key: "relation", label: "Relation with Head *", placeholder: "e.g. Son, Daughter, Wife" },
-            { key: "dob", label: "Date of Birth *", placeholder: "DD/MM/YYYY" },
+            { key: "name", label: "Full Name *", placeholder: "Enter member's full name", icon: "person-outline" },
+            { key: "aadhaar", label: "Aadhaar Number *", placeholder: "12-digit Aadhaar", keyboardType: "number-pad", maxLength: 12, icon: "finger-print-outline" },
+            { key: "relation", label: "Relation with Head *", placeholder: "e.g. Son, Daughter, Wife", icon: "people-outline" },
+            { key: "dob", label: "Date of Birth *", placeholder: "DD/MM/YYYY", icon: "calendar-outline" },
         ],
     },
     remove: {
         label: "Remove Member",
         fields: [
-            { key: "name", label: "Member's Full Name *", placeholder: "Name as on ration card" },
-            { key: "memberAadhaar", label: "Member's Aadhaar Number", placeholder: "12-digit Aadhaar", keyboardType: "number-pad", maxLength: 12 },
-            { key: "reason", label: "Reason for Removal *", placeholder: "e.g. Death, Migration, Marriage" },
+            { key: "name", label: "Member's Full Name *", placeholder: "Name as on ration card", icon: "person-outline" },
+            { key: "memberAadhaar", label: "Member's Aadhaar Number", placeholder: "12-digit Aadhaar", keyboardType: "number-pad", maxLength: 12, icon: "finger-print-outline" },
+            { key: "reason", label: "Reason for Removal *", placeholder: "e.g. Death, Migration, Marriage", icon: "document-text-outline" },
         ],
     },
     address: {
         label: "Address Change",
         fields: [
-            { key: "fullAddress", label: "New Full Address *", placeholder: "House No., Street, Locality, City" },
-            { key: "district", label: "District *", placeholder: "Enter district" },
-            { key: "pincode", label: "Pincode *", placeholder: "6-digit pincode", keyboardType: "number-pad", maxLength: 6 },
+            { key: "fullAddress", label: "New Full Address *", placeholder: "House No., Street, Locality, City", icon: "home-outline" },
+            { key: "district", label: "District *", placeholder: "Enter district", icon: "business-outline" },
+            { key: "pincode", label: "Pincode *", placeholder: "6-digit pincode", keyboardType: "number-pad", maxLength: 6, icon: "pin-outline" },
         ],
     },
     head: {
         label: "Change Head of Family",
         fields: [
-            { key: "name", label: "New Head's Full Name *", placeholder: "Enter full name" },
-            { key: "aadhaar", label: "New Head's Aadhaar *", placeholder: "12-digit Aadhaar", keyboardType: "number-pad", maxLength: 12 },
-            { key: "relation", label: "Relation with Current Head *", placeholder: "e.g. Son, Sister, Spouse" },
+            { key: "name", label: "New Head's Full Name *", placeholder: "Enter full name", icon: "person-outline" },
+            { key: "aadhaar", label: "New Head's Aadhaar *", placeholder: "12-digit Aadhaar", keyboardType: "number-pad", maxLength: 12, icon: "finger-print-outline" },
+            { key: "relation", label: "Relation with Current Head *", placeholder: "e.g. Son, Sister, Spouse", icon: "people-outline" },
         ],
     },
     name: {
         label: "Name Correction",
         fields: [
-            { key: "memberName", label: "Member to Correct *", placeholder: "Name as on ration card" },
-            { key: "currentName", label: "Incorrect / Current Name *", placeholder: "As it appears now" },
-            { key: "correctedName", label: "Correct Name *", placeholder: "As it should be" },
+            { key: "memberName", label: "Member to Correct *", placeholder: "Name as on ration card", icon: "person-outline" },
+            { key: "currentName", label: "Incorrect / Current Name *", placeholder: "As it appears now", icon: "close-circle-outline" },
+            { key: "correctedName", label: "Correct Name *", placeholder: "As it should be", icon: "checkmark-circle-outline" },
         ],
     },
     mobile: {
         label: "Mobile Number Update",
         fields: [
-            { key: "oldNumber", label: "Current Registered Mobile", placeholder: "Old 10-digit number", keyboardType: "number-pad", maxLength: 10 },
-            { key: "number", label: "New Mobile Number *", placeholder: "New 10-digit number", keyboardType: "phone-pad", maxLength: 10 },
+            { key: "oldNumber", label: "Current Registered Mobile", placeholder: "Old 10-digit number", keyboardType: "number-pad", maxLength: 10, icon: "call-outline" },
+            { key: "number", label: "New Mobile Number *", placeholder: "New 10-digit number", keyboardType: "phone-pad", maxLength: 10, icon: "phone-portrait-outline" },
         ],
     },
 };
@@ -114,9 +118,22 @@ export default function UpdateRationCardScreen() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isVerified, setIsVerified] = useState(false);
 
+    const [mobileNumber, setMobileNumber] = useState("");
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+    const [otp, setOtp] = useState("");
+
     const [rationCardNumber, setRationCardNumber] = useState("");
     const [headAadhaar, setHeadAadhaar] = useState("");
     const [applicationId, setApplicationId] = useState("");
+
+    const [showToast, setShowToast] = useState(false);
+
+    const copyToClipboard = () => {
+        Clipboard.setString(applicationId);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+    };
 
     const [updateTypes, setUpdateTypes] = useState<UpdateType[]>([
         { id: "add", label: "Add Member", selected: false, icon: "account-plus" },
@@ -187,7 +204,63 @@ export default function UpdateRationCardScreen() {
         } catch (e) { Alert.alert("Error", "Upload failed"); }
     };
 
+    const handleSendOtp = async () => {
+        if (!rationCardNumber) {
+            Alert.alert("Required", "Please enter Ration Card number first");
+            return;
+        }
+        if (headAadhaar.replace(/\s/g, "").length !== 12) {
+            Alert.alert("Error", "Please enter valid 12-digit Aadhaar number");
+            return;
+        }
+        if (mobileNumber.length !== 10) {
+            Alert.alert("Error", "Please enter a valid 10-digit mobile number");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.RATION_CARD_CORRECTION_OTP_SEND,
+                { mobile_number: mobileNumber, ration_card_number: rationCardNumber },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to registered mobile number");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (otp.length !== 6) {
+            Alert.alert("Error", "Please enter valid 6-digit OTP");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.RATION_CARD_CORRECTION_OTP_VERIFY,
+                { mobile_number: mobileNumber, otp_code: otp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpVerified(true);
+                setIsVerified(true);
+                Alert.alert("Verified", "Aadhaar OTP verified successfully");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Invalid or expired OTP");
+        }
+    };
+
     const handleVerifyToken = () => {
+        // Obsoleted by OTP but keeping backward compat locally if needed
         if (!rationCardNumber || headAadhaar.length !== 12) {
             Alert.alert("Required", "Please enter Ration Card number and 12-digit Aadhaar");
             return;
@@ -198,7 +271,7 @@ export default function UpdateRationCardScreen() {
     const handleContinue = () => {
         if (currentStep === 1) {
             // Step 1: verify + select at least one
-            if (!isVerified) { Alert.alert("Verification", "Please verify your details first"); return; }
+            if (!isVerified || !isOtpVerified) { Alert.alert("Verification", "Please verify Aadhaar OTP first"); return; }
             if (!selectedTypes.length) { Alert.alert("Select", "Choose at least one update type"); return; }
             setCurrentStep(2);
 
@@ -238,14 +311,47 @@ export default function UpdateRationCardScreen() {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const refId = "RAT" + Math.random().toString(36).substr(2, 9).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const data = new FormData();
+            
+            data.append("ration_card_number", rationCardNumber);
+            data.append("head_aadhaar", headAadhaar);
+            data.append("update_types", selectedTypes.map(t => t.id).join(","));
+            data.append("update_details", JSON.stringify(updateDetails));
+
+            // Append all documents dynamically
+            Object.keys(documents).forEach(docKey => {
+                const file = documents[docKey];
+                if (file) {
+                    data.append(docKey, {
+                        uri: file.uri,
+                        name: file.name,
+                        type: "application/pdf",
+                    } as any);
+                }
+            });
+
+            const response = await axios.post(API_ENDPOINTS.RATION_CARD_CORRECTION, data, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            if (response.data.success) {
+                const refId = response.data.data?.correctionId?.toString() || ("RAT" + Math.random().toString(36).substr(2, 6).toUpperCase());
+                setApplicationId(refId);
+                setIsSubmitted(true);
+            }
+        } catch (error: any) {
+            console.error(error);
+            Alert.alert("Error", error.response?.data?.message || "Failed to submit correction request");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
     };
 
     // ----------------------------- Success Screen ----------------------------
@@ -261,22 +367,27 @@ export default function UpdateRationCardScreen() {
                     <Text style={styles.successSubtitle}>Your Ration Card correction request has been submitted successfully.</Text>
                     <View style={styles.idCard}>
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <TouchableOpacity onPress={copyToClipboard} style={{ padding: 4 }}>
+                                <Ionicons name="copy-outline" size={24} color="#0D47A1" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                            </View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+
+                    {showToast && (
+                        <View style={{
+                            position: 'absolute',
+                            bottom: 120,
+                            backgroundColor: '#333',
+                            paddingHorizontal: 20,
+                            paddingVertical: 10,
+                            borderRadius: 20,
+                            zIndex: 100
+                        }}>
+                            <Text style={{ color: '#FFF', fontSize: 14 }}>Reference ID Copied!</Text>
+                        </View>
+                    )}
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
@@ -351,17 +462,62 @@ export default function UpdateRationCardScreen() {
                                             </View>
                                         </View>
                                         <View style={styles.formCard}>
-                                            <Text style={styles.inputLabel}>Ration Card Number *</Text>
+                                            <Text style={[styles.inputLabel, { marginTop: 0 }]}>Ration Card Number *</Text>
                                             <View style={styles.inputContainer}>
+                                                <Ionicons name="card-outline" size={18} color="#94A3B8" />
                                                 <TextInput style={styles.input} placeholder="Enter existing number" value={rationCardNumber} onChangeText={setRationCardNumber} />
                                             </View>
-                                            <Text style={styles.inputLabel}>Head Aadhaar Number *</Text>
+                                            <Text style={styles.inputLabel}>Mobile Number *</Text>
                                             <View style={styles.inputContainer}>
-                                                <TextInput style={styles.input} placeholder="12 digit Aadhaar" keyboardType="number-pad" maxLength={12} value={headAadhaar} onChangeText={setHeadAadhaar} />
+                                                <Ionicons name="call-outline" size={18} color="#94A3B8" />
+                                                <TextInput style={styles.input} placeholder="10 digit mobile" keyboardType="phone-pad" maxLength={10} value={mobileNumber} onChangeText={setMobileNumber} />
                                             </View>
-                                            <TouchableOpacity style={[styles.verifyBtn, { marginTop: 20 }]} onPress={handleVerifyToken}>
-                                                <Text style={styles.verifyText}>Verify & Proceed</Text>
-                                            </TouchableOpacity>
+                                            
+                                            <Text style={styles.inputLabel}>Head Aadhaar Number *</Text>
+                                            <View style={styles.otpSection}>
+                                                <View style={[styles.inputContainer, { flex: 1, marginBottom: 0 }]}>
+                                                    <Ionicons name="finger-print-outline" size={18} color="#94A3B8" />
+                                                    <TextInput style={styles.input} placeholder="12 digit Aadhaar" keyboardType="number-pad" maxLength={12} value={headAadhaar} onChangeText={setHeadAadhaar} editable={!isOtpVerified} />
+                                                </View>
+                                                {!isOtpVerified && (
+                                                    <TouchableOpacity 
+                                                        style={[styles.otpButton, (headAadhaar.replace(/\s/g, "").length !== 12 || mobileNumber.length !== 10) && styles.otpButtonDisabled]} 
+                                                        onPress={handleSendOtp} 
+                                                        disabled={headAadhaar.replace(/\s/g, "").length !== 12 || mobileNumber.length !== 10}
+                                                    >
+                                                        <Text style={styles.otpButtonText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                                {isOtpVerified && (
+                                                    <View style={styles.verifiedBadge}>
+                                                        <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                                                        <Text style={styles.verifiedText}>Verified</Text>
+                                                    </View>
+                                                )}
+                                            </View>
+
+                                            {isOtpSent && !isOtpVerified && (
+                                                <View style={styles.otpVerifyContainer}>
+                                                    <View style={[styles.inputContainer, { flex: 1, marginBottom: 0 }]}>
+                                                        <Ionicons name="key-outline" size={18} color="#94A3B8" />
+                                                        <TextInput
+                                                            style={styles.input}
+                                                            placeholder="Enter 6-digit OTP"
+                                                            keyboardType="number-pad"
+                                                            maxLength={6}
+                                                            value={otp}
+                                                            onChangeText={setOtp}
+                                                        />
+                                                    </View>
+                                                    <TouchableOpacity
+                                                        style={[styles.verifyButton, otp.length !== 6 && styles.otpButtonDisabled]}
+                                                        onPress={handleVerifyOtp}
+                                                        disabled={otp.length !== 6}
+                                                    >
+                                                        <Text style={styles.verifyButtonText}>Verify</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            )}
                                         </View>
                                     </View>
                                 ) : (
@@ -417,10 +573,11 @@ export default function UpdateRationCardScreen() {
                                                 <Text style={styles.typeSectionTitle}>{config.label}</Text>
                                             </View>
                                             <View style={styles.formCard}>
-                                                {config.fields.map(field => (
+                                                {config.fields.map((field, index) => (
                                                     <View key={field.key}>
-                                                        <Text style={styles.inputLabel}>{field.label}</Text>
+                                                        <Text style={[styles.inputLabel, index === 0 && { marginTop: 0 }]}>{field.label}</Text>
                                                         <View style={styles.inputContainer}>
+                                                            {field.icon && <Ionicons name={field.icon} size={18} color="#94A3B8" />}
                                                             <TextInput
                                                                 style={styles.input}
                                                                 placeholder={field.placeholder}
@@ -625,13 +782,22 @@ const styles = StyleSheet.create({
 
     formCard: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, elevation: 4, shadowColor: '#64748B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12 },
     inputLabel: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8, marginTop: 16 },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, height: 48 },
-    input: { flex: 1, fontSize: 15, color: '#1E293B' },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 16, height: 48 },
+    input: { flex: 1, fontSize: 15, color: '#1E293B', padding: 0, marginLeft: 10 },
 
     verifyBtn: { backgroundColor: "#0D47A1", borderRadius: 12, padding: 15, alignItems: "center" },
     verifyText: { color: "#FFF", fontWeight: "800", fontSize: 15 },
     verifiedBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#E8F5E9', padding: 12, borderRadius: 12, marginBottom: 20 },
     verifiedText: { color: '#2E7D32', fontWeight: '800' },
+    
+    otpSection: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+    otpButton: { backgroundColor: '#0D47A1', paddingHorizontal: 16, height: 48, borderRadius: 12, justifyContent: 'center' },
+    otpButtonDisabled: { opacity: 0.5 },
+    otpButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E8F5E9', paddingHorizontal: 12, height: 48, borderRadius: 12 },
+    otpVerifyContainer: { flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 12 },
+    verifyButton: { backgroundColor: '#2E7D32', paddingHorizontal: 24, height: 48, borderRadius: 12, justifyContent: 'center' },
+    verifyButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
 
     typeGrid: { gap: 12 },
     typeItem: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFF", padding: 16, borderRadius: 18, borderWidth: 1, borderColor: "#F1F5F9", gap: 12, elevation: 2, shadowColor: '#64748B', shadowOpacity: 0.05, shadowRadius: 8 },

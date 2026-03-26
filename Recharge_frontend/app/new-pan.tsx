@@ -47,6 +47,11 @@ export default function NewPANScreen() {
     const [state, setState] = useState("");
     const [pincode, setPincode] = useState("");
 
+    // OTP State
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+    const [otp, setOtp] = useState("");
+
     useEffect(() => {
         const backAction = () => {
             if (currentStep > 1) {
@@ -142,6 +147,63 @@ export default function NewPANScreen() {
         setDob(formatted);
     };
 
+    // OTP functions
+    const handleSendOtp = async () => {
+        if (aadhaarNumber.replace(/\s/g, "").length !== 12) {
+            Alert.alert("Error", "Please enter valid 12-digit Aadhaar number");
+            return;
+        }
+        if (mobile.length !== 10) {
+            Alert.alert("Error", "Please enter a valid 10-digit mobile number");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.PAN_APPLY_OTP_SEND,
+                { mobile_number: mobile, aadhar_number: aadhaarNumber.replace(/\s/g, "") },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to registered mobile number");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (otp.length !== 6) {
+            Alert.alert("Error", "Please enter valid 6-digit OTP");
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.PAN_APPLY_OTP_VERIFY,
+                { mobile_number: mobile, otp_code: otp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpVerified(true);
+                Alert.alert("Verified", "Aadhaar OTP verified successfully");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Invalid or expired OTP");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     const canProceedStep1 =
         fullName.trim() &&
         fatherName.trim() &&
@@ -150,6 +212,7 @@ export default function NewPANScreen() {
         mobile.length === 10 &&
         email.includes("@") &&
         aadhaarNumber.replace(/\s/g, "").length === 12 &&
+        isOtpVerified &&
         address.trim() &&
         city.trim() &&
         district.trim() &&
@@ -244,7 +307,7 @@ export default function NewPANScreen() {
     const handleContinue = () => {
         if (currentStep === 1) {
             if (!canProceedStep1) {
-                Alert.alert("Required", "Please fill all mandatory personal and address details correctly");
+                Alert.alert("Required", "Please fill all mandatory personal details and verify Aadhaar OTP");
                 return;
             }
             setCurrentStep(2);
@@ -470,17 +533,64 @@ export default function NewPANScreen() {
 
                                 <View style={styles.formCard}>
                                     <Text style={styles.inputLabel}>Aadhaar Number *</Text>
-                                    <View style={styles.inputContainer}>
-                                        <Ionicons name="card-outline" size={18} color="#94A3B8" />
-                                        <TextInput
-                                            style={styles.input}
-                                            placeholder="XXXX XXXX XXXX"
-                                            value={aadhaarNumber}
-                                            onChangeText={formatAadhaar}
-                                            keyboardType="numeric"
-                                            maxLength={14}
-                                        />
+                                    <View style={styles.otpSection}>
+                                        <View style={[styles.inputContainer, { flex: 1 }]}>
+                                            <Ionicons name="card-outline" size={18} color="#94A3B8" />
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="XXXX XXXX XXXX"
+                                                value={aadhaarNumber}
+                                                onChangeText={formatAadhaar}
+                                                keyboardType="numeric"
+                                                maxLength={14}
+                                            />
+                                        </View>
+                                        {!isOtpVerified && (
+                                            <TouchableOpacity 
+                                                style={[styles.otpButton, (aadhaarNumber.replace(/\s/g, "").length !== 12 || mobile.length !== 10 || isSubmitting) && styles.otpButtonDisabled]} 
+                                                onPress={handleSendOtp} 
+                                                disabled={aadhaarNumber.replace(/\s/g, "").length !== 12 || mobile.length !== 10 || isSubmitting}
+                                            >
+                                                {isSubmitting && !isOtpSent ? (
+                                                    <ActivityIndicator color="#FFF" size="small" />
+                                                ) : (
+                                                    <Text style={styles.otpButtonText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                                )}
+                                            </TouchableOpacity>
+                                        )}
+                                        {isOtpVerified && (
+                                            <View style={[styles.otpButton, { backgroundColor: '#4CAF50' }]}>
+                                                <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                                            </View>
+                                        )}
                                     </View>
+
+                                    {isOtpSent && !isOtpVerified && (
+                                        <View style={styles.otpVerifyContainer}>
+                                            <View style={[styles.inputContainer, { flex: 1 }]}>
+                                                <Ionicons name="key-outline" size={18} color="#94A3B8" />
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="Enter 6-digit OTP"
+                                                    value={otp}
+                                                    onChangeText={setOtp}
+                                                    keyboardType="numeric"
+                                                    maxLength={6}
+                                                />
+                                            </View>
+                                            <TouchableOpacity
+                                                style={[styles.verifyButton, (otp.length !== 6 || isSubmitting) && styles.otpButtonDisabled]}
+                                                onPress={handleVerifyOtp}
+                                                disabled={otp.length !== 6 || isSubmitting}
+                                            >
+                                                {isSubmitting && isOtpSent ? (
+                                                    <ActivityIndicator color="#FFF" size="small" />
+                                                ) : (
+                                                    <Text style={styles.verifyButtonText}>Verify</Text>
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
 
                                     <Text style={styles.inputLabel}>Full Address *</Text>
                                     <View style={[styles.inputContainer, { height: 80, alignItems: 'flex-start', paddingTop: 10 }]}>
@@ -726,40 +836,40 @@ export default function NewPANScreen() {
                                 </View>
                             </View>
                         )}
+                        <View style={{ height: 40 }} />
+                        {/* Bottom Bar */}
+                        <View style={styles.bottomBar}>
+                            <TouchableOpacity
+                                style={styles.continueButton}
+                                onPress={handleContinue}
+                                activeOpacity={0.8}
+                                disabled={isSubmitting}
+                            >
+                                <LinearGradient
+                                    colors={['#0D47A1', '#1565C0']}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.buttonGradient}
+                                >
+                                    {isSubmitting ? (
+                                        <ActivityIndicator color="#FFF" size="small" />
+                                    ) : (
+                                        <>
+                                            <Text style={styles.buttonText}>
+                                                {currentStep === 3 ? "Confirm & Submit" : "Continue"}
+                                            </Text>
+                                            <Ionicons
+                                                name={currentStep === 3 ? "checkmark-done" : "arrow-forward"}
+                                                size={20}
+                                                color="#FFF"
+                                            />
+                                        </>
+                                    )}
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
-
-                {/* Bottom Bar */}
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity
-                        style={styles.continueButton}
-                        onPress={handleContinue}
-                        activeOpacity={0.8}
-                        disabled={isSubmitting}
-                    >
-                        <LinearGradient
-                            colors={['#0D47A1', '#1565C0']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.buttonGradient}
-                        >
-                            {isSubmitting ? (
-                                <ActivityIndicator color="#FFF" size="small" />
-                            ) : (
-                                <>
-                                    <Text style={styles.buttonText}>
-                                        {currentStep === 3 ? "Confirm & Submit" : "Continue"}
-                                    </Text>
-                                    <Ionicons
-                                        name={currentStep === 3 ? "checkmark-done" : "arrow-forward"}
-                                        size={20}
-                                        color="#FFF"
-                                    />
-                                </>
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
             </SafeAreaView>
         </View>
     );
@@ -908,6 +1018,45 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.08,
         shadowRadius: 12,
         elevation: 4,
+    },
+    // OTP Section
+    otpSection: {
+        flexDirection: 'row',
+        gap: 10,
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    otpButton: {
+        backgroundColor: '#0D47A1',
+        paddingHorizontal: 12,
+        height: 50,
+        borderRadius: 12,
+        justifyContent: 'center',
+    },
+    otpButtonDisabled: {
+        opacity: 0.5,
+    },
+    otpButtonText: {
+        color: '#FFF',
+        fontSize: 12,
+        fontWeight: '700',
+    },
+    otpVerifyContainer: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 16,
+    },
+    verifyButton: {
+        backgroundColor: '#2E7D32',
+        paddingHorizontal: 16,
+        height: 50,
+        borderRadius: 12,
+        justifyContent: 'center',
+    },
+    verifyButtonText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '700',
     },
     inputLabel: {
         fontSize: 13,
@@ -1081,10 +1230,7 @@ const styles = StyleSheet.create({
 
     // Bottom Bar
     bottomBar: {
-        backgroundColor: '#FFF',
-        padding: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
+        paddingVertical: 20,
     },
     continueButton: {
         borderRadius: 16,

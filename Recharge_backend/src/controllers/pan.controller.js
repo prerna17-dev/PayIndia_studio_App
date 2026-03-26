@@ -184,6 +184,58 @@ exports.processApplication = async (req, res, next) => {
     }
 };
 
+/* --- PAN REGISTRATION OTP --- */
+
+/**
+ * Send OTP for New PAN Registration
+ */
+exports.sendApplyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, aadhar_number } = req.body;
+        if (!mobile_number || !aadhar_number) {
+            return res.status(400).json({ success: false, message: "Mobile number and Aadhaar number are required" });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        await PanModel.storeOTP(mobile_number, otpCode, "PAN_APPLY");
+
+        // Send SMS
+        await SmsService.sendSMS(mobile_number, `Your OTP for PAN Application (Aadhaar: ****${aadhar_number.slice(-4)}) is ${otpCode}. Valid for 10 mins.`);
+
+        res.json({
+            success: true,
+            message: "OTP sent successfully",
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * Verify OTP for New PAN Registration
+ */
+exports.verifyApplyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, otp_code } = req.body;
+        if (!mobile_number || !otp_code) {
+            return res.status(400).json({ success: false, message: "Mobile number and OTP are required" });
+        }
+
+        const isValid = await PanModel.verifyOTP(mobile_number, otp_code, "PAN_APPLY");
+        if (!isValid) {
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+        }
+
+        res.json({
+            success: true,
+            message: "OTP verified successfully",
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+
 /* --- PAN CORRECTION CONTROLLERS --- */
 
 /**

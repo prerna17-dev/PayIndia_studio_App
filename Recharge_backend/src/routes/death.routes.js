@@ -32,6 +32,8 @@ const deathUpload = upload.fields([
 router.use(authMiddleware);
 
 router.post("/apply", deathUpload, deathController.createApplication);
+router.post("/send-otp", deathController.sendOTP);
+router.post("/verify-otp", deathController.verifyOTP);
 router.get("/list", deathController.getApplications);
 router.get("/:referenceId", deathController.getApplicationByRef);
 router.put("/update-status/:id", deathController.updateStatus);

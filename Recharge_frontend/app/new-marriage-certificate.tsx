@@ -484,21 +484,20 @@ export default function NewMarriageCertificateScreen() {
                         </View>
                     )}
 
-                    <View style={{ height: 100 }} />
+                    <View style={{ height: 40 }} />
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
+                            <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
+                                {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
+                                    <>
+                                        <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
+                                        <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
-
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
-                            {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
-                                <>
-                                    <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
-                                    <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
-                                </>
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
             </SafeAreaView>
         </View>
     );
@@ -580,7 +579,7 @@ const styles = StyleSheet.create({
     reviewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
     reviewLabel: { fontSize: 13, color: '#64748B' },
     reviewValue: { fontSize: 13, fontWeight: '700', color: '#1E293B', textAlign: 'right', flex: 1, marginLeft: 20 },
-    bottomBar: { backgroundColor: '#FFF', padding: 20, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+    bottomBar: { paddingVertical: 20 },
     continueButton: { borderRadius: 16, overflow: 'hidden' },
     buttonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
     buttonText: { fontSize: 16, fontWeight: '800', color: '#FFF' },

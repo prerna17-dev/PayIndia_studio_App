@@ -1,5 +1,6 @@
 const BirthModel = require("../models/birth.model");
 const path = require("path");
+const SmsService = require("../services/sms.service");
 const { formatDateToMySQL } = require("../utils/date.helper");
 
 /**
@@ -9,6 +10,9 @@ exports.createApplication = async (req, res, next) => {
     try {
         const userId = req.user.userId;
         const {
+            applicant_mobile,
+            applicant_aadhaar,
+            email,
             child_name,
             gender,
             dob,
@@ -20,13 +24,22 @@ exports.createApplication = async (req, res, next) => {
             father_aadhaar,
             father_mobile,
             father_occupation,
+            father_dob,
+            father_marital_status,
+            father_place_of_birth,
+            father_address,
             mother_name,
             mother_aadhaar,
             mother_mobile,
             mother_occupation,
+            mother_dob,
+            mother_marital_status,
+            mother_place_of_birth,
+            mother_address,
             house_no,
             street,
             village,
+            taluka,
             district,
             state,
             pincode,
@@ -35,15 +48,16 @@ exports.createApplication = async (req, res, next) => {
         } = req.body;
 
         // Basic validation
-        if (!child_name || !dob || !place_of_birth) {
-            return res.status(400).json({ success: false, message: "Missing required details" });
+        if (!child_name || !dob || !gender || !place_of_birth) {
+            return res.status(400).json({ success: false, message: "Missing required child details" });
         }
 
         // Generate Reference ID
-        const reference_id = "BIR" + Math.random().toString(36).substr(2, 9).toUpperCase();
+        const reference_id = "BRT" + Math.random().toString(36).substr(2, 9).toUpperCase();
 
         // Map uploaded files
         const files = req.files || {};
+        
         const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/.*src\/uploads\//, '') : null;
         const getFilePath = (fieldName) => {
             return (files[fieldName] && files[fieldName][0]) 
@@ -53,6 +67,9 @@ exports.createApplication = async (req, res, next) => {
 
         const applicationData = {
             user_id: userId,
+            applicant_mobile,
+            applicant_aadhaar,
+            email,
             child_name,
             gender,
             dob: formatDateToMySQL(dob),
@@ -64,13 +81,22 @@ exports.createApplication = async (req, res, next) => {
             father_aadhaar,
             father_mobile,
             father_occupation,
+            father_dob: formatDateToMySQL(father_dob),
+            father_marital_status,
+            father_place_of_birth,
+            father_address,
             mother_name,
             mother_aadhaar,
             mother_mobile,
             mother_occupation,
+            mother_dob: formatDateToMySQL(mother_dob),
+            mother_marital_status,
+            mother_place_of_birth,
+            mother_address,
             house_no,
             street,
             village,
+            taluka,
             district,
             state,
             pincode,
@@ -78,7 +104,8 @@ exports.createApplication = async (req, res, next) => {
             delay_reason,
             reference_id,
             hospital_report_url: getFilePath('hospital_report'),
-            parents_aadhaar_url: getFilePath('parents_aadhaar'),
+            father_aadhaar_card_url: getFilePath('father_aadhaar_card'),
+            mother_aadhaar_card_url: getFilePath('mother_aadhaar_card'),
             address_proof_url: getFilePath('address_proof'),
             marriage_certificate_url: getFilePath('marriage_certificate'),
             affidavit_url: getFilePath('affidavit')
@@ -163,6 +190,44 @@ exports.updateStatus = async (req, res, next) => {
             success: true,
             message: `Application status updated to ${status}`,
         });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/* --- BIRTH OTP CONTROLLERS --- */
+
+exports.sendOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, aadhar_number } = req.body;
+        if (!mobile_number || !aadhar_number) {
+            return res.status(400).json({ success: false, message: "Mobile and Aadhaar are required" });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const purpose = req.body.purpose || "BIRTH_APPLY";
+        await BirthModel.storeOTP(mobile_number, otpCode, purpose);
+
+        await SmsService.sendSMS(mobile_number, `Your OTP for Birth Certificate Verification (Aadhaar: ****${aadhar_number.slice(-4)}) is ${otpCode}. Valid for 10 mins.`);
+
+        res.json({ success: true, message: "OTP sent successfully" });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.verifyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, otp_code } = req.body;
+        if (!mobile_number || !otp_code) {
+            return res.status(400).json({ success: false, message: "Mobile and OTP are required" });
+        }
+
+        const purpose = req.body.purpose || "BIRTH_APPLY";
+        const isValid = await BirthModel.verifyOTP(mobile_number, otp_code, purpose);
+        if (!isValid) return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+
+        res.json({ success: true, message: "OTP verified successfully" });
     } catch (err) {
         next(err);
     }

@@ -35,6 +35,8 @@ const domicileUpload = upload.fields([
 router.use(authMiddleware);
 
 router.post("/apply", domicileUpload, domicileController.createApplication);
+router.post("/send-otp", domicileController.sendOTP);
+router.post("/verify-otp", domicileController.verifyOTP);
 router.get("/list", domicileController.getApplications);
 router.get("/:referenceId", domicileController.getApplicationByRef);
 router.put("/update-status/:id", domicileController.updateStatus);

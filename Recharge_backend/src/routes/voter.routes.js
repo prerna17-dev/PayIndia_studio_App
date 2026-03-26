@@ -31,6 +31,10 @@ const voterUpload = upload.fields([
 // All routes require authentication
 router.use(authMiddleware);
 
+// User: Send and Verify OTP for New Application
+router.post("/apply/send-otp", voterController.sendApplyOTP);
+router.post("/apply/verify-otp", voterController.verifyApplyOTP);
+
 // User: Submit application with documents
 router.post("/apply", voterUpload, voterController.createApplication);
 
@@ -67,6 +71,7 @@ const voterCorrectionUpload = uploadCorrection.fields([
     { name: "identity_proof", maxCount: 1 },
     { name: "address_proof", maxCount: 1 },
     { name: "dob_proof", maxCount: 1 },
+    { name: "gender_proof", maxCount: 1 },
     { name: "photo", maxCount: 1 },
 ]);
 
