@@ -35,6 +35,8 @@ const casteUpload = upload.fields([
 router.use(authMiddleware);
 
 router.post("/apply", casteUpload, casteController.createApplication);
+router.post("/apply/send-otp", casteController.sendOTP);
+router.post("/apply/verify-otp", casteController.verifyOTP);
 router.get("/list", casteController.getApplications);
 router.get("/:referenceId", casteController.getApplicationByRef);
 router.put("/update-status/:id", casteController.updateStatus);

@@ -35,7 +35,7 @@ exports.createApplication = async (req, res, next) => {
             full_name,
             father_name,
             mother_name,
-            date_of_birth,
+            date_of_birth: date_of_birth ? formatDateToMySQL(date_of_birth) : null,
             mobile_number,
             email_address,
             aadhar_number,
@@ -184,6 +184,58 @@ exports.processApplication = async (req, res, next) => {
     }
 };
 
+/* --- PAN REGISTRATION OTP --- */
+
+/**
+ * Send OTP for New PAN Registration
+ */
+exports.sendApplyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, aadhar_number } = req.body;
+        if (!mobile_number || !aadhar_number) {
+            return res.status(400).json({ success: false, message: "Mobile number and Aadhaar number are required" });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        await PanModel.storeOTP(mobile_number, otpCode, "PAN_APPLY");
+
+        // Send SMS
+        await SmsService.sendSMS(mobile_number, `Your OTP for PAN Application (Aadhaar: ****${aadhar_number.slice(-4)}) is ${otpCode}. Valid for 10 mins.`);
+
+        res.json({
+            success: true,
+            message: "OTP sent successfully",
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/**
+ * Verify OTP for New PAN Registration
+ */
+exports.verifyApplyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, otp_code } = req.body;
+        if (!mobile_number || !otp_code) {
+            return res.status(400).json({ success: false, message: "Mobile number and OTP are required" });
+        }
+
+        const isValid = await PanModel.verifyOTP(mobile_number, otp_code, "PAN_APPLY");
+        if (!isValid) {
+            return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+        }
+
+        res.json({
+            success: true,
+            message: "OTP verified successfully",
+        });
+    } catch (err) {
+        next(err);
+    }
+};
+
+
 /* --- PAN CORRECTION CONTROLLERS --- */
 
 /**
@@ -246,6 +298,10 @@ exports.submitCorrection = async (req, res, next) => {
             mobile_number,
             corrected_name,
             corrected_dob,
+            corrected_date,
+            corrected_father_name,
+            corrected_contact,
+            corrected_address,
             correction_type,
         } = req.body;
 
@@ -258,7 +314,10 @@ exports.submitCorrection = async (req, res, next) => {
             pan_number,
             mobile_number,
             corrected_name,
-            corrected_dob: corrected_dob ? formatDateToMySQL(corrected_dob) : null,
+            corrected_dob: (corrected_dob || corrected_date) ? formatDateToMySQL(corrected_dob || corrected_date) : null,
+            corrected_father_name,
+            corrected_contact,
+            corrected_address,
             correction_type,
         });
 
@@ -279,6 +338,27 @@ exports.submitCorrection = async (req, res, next) => {
             }
             if (documentFiles.photo_sign) {
                 uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Photo_Sign', normalizePath(documentFiles.photo_sign[0].path)));
+            }
+            if (documentFiles.father_proof) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Father_Proof', normalizePath(documentFiles.father_proof[0].path)));
+            }
+            if (documentFiles.father_declare) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Father_Declare', normalizePath(documentFiles.father_declare[0].path)));
+            }
+            if (documentFiles.contact_proof) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Contact_Proof', normalizePath(documentFiles.contact_proof[0].path)));
+            }
+            if (documentFiles.address_proof) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Address_Proof', normalizePath(documentFiles.address_proof[0].path)));
+            }
+            if (documentFiles.address_id) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Address_ID', normalizePath(documentFiles.address_id[0].path)));
+            }
+            if (documentFiles.photo_passport) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Photo_Passport', normalizePath(documentFiles.photo_passport[0].path)));
+            }
+            if (documentFiles.photo_id) {
+                uploadTasks.push(PanModel.addCorrectionDocument(correctionId, 'Photo_ID', normalizePath(documentFiles.photo_id[0].path)));
             }
 
             await Promise.all(uploadTasks);

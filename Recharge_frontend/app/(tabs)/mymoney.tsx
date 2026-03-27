@@ -11,6 +11,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -71,25 +72,100 @@ const MONTHS = [
   "December",
 ];
 
-// Default data structure (you can remove this once you have real user data)
+// Default data structure
 const DEFAULT_DATA: MonthData = {
   totalIncome: 0,
   totalSpent: 0,
   netBalance: 0,
   percentageChange: 0,
-  expenses: [],
-  earnings: [],
+  expenses: [
+    {
+      id: "1",
+      title: "Bill payments",
+      amount: 0,
+      icon: "receipt-outline",
+      iconType: "ionicons",
+      backgroundColor: "#E3F2FD",
+      iconColor: "#2196F3",
+      progressColor: "#2196F3",
+      percentage: 0,
+    },
+    {
+      id: "2",
+      title: "OTT and subscriptions",
+      amount: 0,
+      icon: "tv-outline",
+      iconType: "ionicons",
+      backgroundColor: "#F3E5F5",
+      iconColor: "#9C27B0",
+      progressColor: "#9C27B0",
+      percentage: 0,
+    },
+    {
+      id: "3",
+      title: "Travel Bookings",
+      amount: 0,
+      icon: "airplane-outline",
+      iconType: "ionicons",
+      backgroundColor: "#E8F5E9",
+      iconColor: "#4CAF50",
+      progressColor: "#4CAF50",
+      percentage: 0,
+    },
+    {
+      id: "4",
+      title: "Municipal taxes",
+      amount: 0,
+      icon: "business-outline",
+      iconType: "ionicons",
+      backgroundColor: "#FFF3E0",
+      iconColor: "#FF9800",
+      progressColor: "#FF9800",
+      percentage: 0,
+    },
+  ],
+  earnings: [
+    {
+      id: "e1",
+      label: "Refer and Earn",
+      amount: 0,
+      icon: "people-outline",
+      backgroundColor: "#E1F5FE",
+      iconColor: "#03A9F4",
+    },
+    {
+      id: "e2",
+      label: "Rewards Earned",
+      amount: 0,
+      icon: "trophy-outline",
+      backgroundColor: "#FFF8E1",
+      iconColor: "#FFC107",
+    },
+  ],
   insight: "No data available for this month",
   highestExpense: "No expenses",
 };
 
 export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
   const router = useRouter();
-  const [selectedMonth, setSelectedMonth] = useState("February"); // Current month
+  const currentMonthIdx = new Date().getMonth();
+  const [selectedMonth, setSelectedMonth] = useState(MONTHS[currentMonthIdx]);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [monthlyIncome, setMonthlyIncome] = useState("0");
 
   // Get data for selected month or use default
   const monthData = userData?.[selectedMonth] || DEFAULT_DATA;
+  
+  // Calculate total spent based on current expenses
+  const totalSpent = monthData.totalSpent || 0;
+  const incomeVal = parseFloat(monthlyIncome) || 0;
+  const netBalance = incomeVal - totalSpent;
+
+  // Previous month logic for comparison
+  const selectedMonthIdx = MONTHS.indexOf(selectedMonth);
+  const prevMonthIdx = selectedMonthIdx === 0 ? 11 : selectedMonthIdx - 1;
+  const prevMonth = MONTHS[prevMonthIdx].substring(0, 3);
+
 
   useEffect(() => {
     const onBackPress = () => {
@@ -179,9 +255,16 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
               <View style={styles.statsRow}>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>🏆 Total Income</Text>
-                  <Text style={styles.statValue}>
-                    ₹{monthData.totalIncome.toLocaleString()}
-                  </Text>
+                  <View style={styles.incomeInputWrapper}>
+                    <Text style={styles.currencySymbol}>₹</Text>
+                    <TextInput
+                      style={styles.incomeInput}
+                      value={monthlyIncome}
+                      onChangeText={setMonthlyIncome}
+                      keyboardType="numeric"
+                      placeholder="0"
+                    />
+                  </View>
                 </View>
 
                 <View style={styles.statDivider} />
@@ -189,7 +272,7 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>👍 Total Spent</Text>
                   <Text style={styles.statValue}>
-                    ₹{monthData.totalSpent.toLocaleString()}
+                    ₹{totalSpent.toLocaleString()}
                   </Text>
                 </View>
 
@@ -200,13 +283,13 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
                   <Text
                     style={[
                       styles.statValue,
-                      monthData.netBalance >= 0
+                      netBalance >= 0
                         ? styles.positiveBalance
                         : styles.negativeBalance,
                     ]}
                   >
-                    {monthData.netBalance >= 0 ? "+" : ""}₹
-                    {monthData.netBalance.toLocaleString()}
+                    {netBalance >= 0 ? "+" : ""}₹
+                    {netBalance.toLocaleString()}
                   </Text>
                 </View>
               </View>
@@ -228,12 +311,12 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Where your money went</Text>
 
-            {monthData.expenses.length > 0 ? (
+            {totalSpent > 0 ? (
               <>
                 <View style={styles.highlightBox}>
                   <Ionicons name="bulb" size={20} color="#2196F3" />
                   <Text style={styles.highlightText}>
-                    {monthData.highestExpense}
+                    {monthData.highestExpense || "Expenses are tracked by category"}
                   </Text>
                 </View>
 
@@ -288,10 +371,10 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
               <View style={styles.noExpensesBox}>
                 <Ionicons name="wallet-outline" size={48} color="#DDD" />
                 <Text style={styles.noExpensesText}>
-                  No expenses tracked yet
+                  No expense tracked yet
                 </Text>
                 <Text style={styles.noExpensesSubtext}>
-                  Your spending will appear here
+                  Your spending will appear here once you make transactions
                 </Text>
               </View>
             )}
@@ -301,57 +384,60 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Compare this month</Text>
 
-            <View style={styles.compareRow}>
-              <View style={styles.compareCard}>
-                <Text style={styles.compareLabel}>
-                  Last Month <Text style={styles.compareMonth}>(Jan)</Text>
-                </Text>
-                <Text style={styles.compareAmount}>
-                  ₹
-                  {monthData.percentageChange !== 0
-                    ? (
-                      monthData.totalSpent +
-                      (monthData.totalSpent *
-                        Math.abs(monthData.percentageChange)) /
-                      100
-                    ).toFixed(0)
-                    : "0"}
-                </Text>
-              </View>
-
-              <View style={styles.compareCard}>
-                <Text style={styles.compareLabel}>
-                  This Month{" "}
-                  <Text style={styles.compareMonth}>
-                    ({selectedMonth.substring(0, 3)})
+            {incomeVal > 0 ? (
+              <View style={styles.compareRow}>
+                <View style={styles.compareCard}>
+                  <Text style={styles.compareLabel}>
+                    Last Month <Text style={styles.compareMonth}>({prevMonth})</Text>
                   </Text>
-                </Text>
-                <View style={styles.compareValueRow}>
                   <Text style={styles.compareAmount}>
-                    ₹{monthData.totalSpent.toLocaleString()}
+                    ₹
+                    {(monthData.totalSpent * 0.9).toFixed(0)}
                   </Text>
-                  {monthData.percentageChange < 0 && (
-                    <View style={styles.goodControlBadge}>
-                      <Text style={styles.goodControlText}>
-                        ▲ Good control!
-                      </Text>
-                    </View>
-                  )}
+                </View>
+
+                <View style={styles.compareCard}>
+                  <Text style={styles.compareLabel}>
+                    This Month{" "}
+                    <Text style={styles.compareMonth}>
+                      ({selectedMonth.substring(0, 3)})
+                    </Text>
+                  </Text>
+                  <View style={styles.compareValueRow}>
+                    <Text style={styles.compareAmount}>
+                      ₹{totalSpent.toLocaleString()}
+                    </Text>
+                    {totalSpent < (monthData.totalSpent * 0.9) && (
+                      <View style={styles.goodControlBadge}>
+                        <Text style={styles.goodControlText}>
+                          ▲ Good control!
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
-            </View>
+            ) : (
+              <View style={styles.noExpensesBox}>
+                <Ionicons name="stats-chart-outline" size={48} color="#DDD" />
+                <Text style={styles.noExpensesText}>Comparison unavailable</Text>
+                <Text style={styles.noExpensesSubtext}>
+                  Set your monthly salary to see comparison
+                </Text>
+              </View>
+            )}
           </View>
 
           {/* Your Earnings Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Your Earnings</Text>
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push("/refer-earn")}>
                 <Text style={styles.earnMoreLink}>Earn more →</Text>
               </TouchableOpacity>
             </View>
 
-            {monthData.earnings.length > 0 ? (
+            {monthData.earnings.some(e => e.amount > 0) ? (
               <View style={styles.earningsGrid}>
                 {monthData.earnings.map((earning) => (
                   <TouchableOpacity key={earning.id} style={styles.earningCard}>
@@ -382,7 +468,7 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
                 <Ionicons name="gift-outline" size={48} color="#DDD" />
                 <Text style={styles.noExpensesText}>No earnings yet</Text>
                 <Text style={styles.noExpensesSubtext}>
-                  Complete offers to earn rewards
+                  Earnings will be displayed when earned
                 </Text>
               </View>
             )}
@@ -640,9 +726,34 @@ const styles = StyleSheet.create({
   },
 
   statValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "bold",
     color: "#1A1A1A",
+  },
+
+  incomeInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 80,
+  },
+
+  currencySymbol: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    marginRight: 2,
+  },
+
+  incomeInput: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1A1A1A',
+    padding: 0,
+    flex: 1,
   },
 
   positiveBalance: {
@@ -883,13 +994,12 @@ const styles = StyleSheet.create({
   insightCard: {
     borderRadius: 12,
     padding: 15,
-    shadowColor: "#FFC107",
+    backgroundColor: "#F1F8FE",
+    shadowColor: "#2196F3",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    borderWidth: 1,
-    borderColor: "#FFE082",
   },
 
   insightHeader: {

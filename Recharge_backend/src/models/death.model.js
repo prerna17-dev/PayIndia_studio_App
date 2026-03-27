@@ -98,3 +98,33 @@ exports.updateStatus = async (id, status) => {
         [status, id]
     );
 };
+
+/* --- DEATH OTP METHODS --- */
+
+exports.storeOTP = async (mobileNumber, otpCode, purpose) => {
+    // Delete any existing unverified OTP for this mobile and purpose
+    await pool.query(
+        "DELETE FROM verification_otps WHERE mobile_number = ? AND purpose = ? AND is_verified = FALSE",
+        [mobileNumber, purpose]
+    );
+
+    // Store new OTP (expires in 10 mins)
+    await pool.query(
+        "INSERT INTO verification_otps (mobile_number, otp_code, purpose, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))",
+        [mobileNumber, otpCode, purpose]
+    );
+};
+
+exports.verifyOTP = async (mobileNumber, otpCode, purpose) => {
+    const [rows] = await pool.query(
+        "SELECT * FROM verification_otps WHERE mobile_number = ? AND otp_code = ? AND purpose = ? AND is_verified = FALSE AND expires_at > NOW() ORDER BY created_at DESC LIMIT 1",
+        [mobileNumber, otpCode, purpose]
+    );
+
+    if (rows.length > 0) {
+        // Mark as verified
+        await pool.query("UPDATE verification_otps SET is_verified = TRUE WHERE otp_id = ?", [rows[0].otp_id]);
+        return true;
+    }
+    return false;
+};

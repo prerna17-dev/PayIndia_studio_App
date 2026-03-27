@@ -14,8 +14,13 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator
+    ActivityIndicator,
+    ToastAndroid,
+    Platform
 } from "react-native";
+import { API_ENDPOINTS } from "../constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Clipboard from 'expo-clipboard';
 
 interface DocumentType {
     name: string;
@@ -86,6 +91,23 @@ export default function NewMarriageCertificateScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [showCopied, setShowCopied] = useState(false);
+    
+    // OTP State (Groom)
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+    const [otpCode, setOtpCode] = useState("");
+    const [loadingOtp, setLoadingOtp] = useState(false);
+    const [timer, setTimer] = useState(0);
+    const [canResend, setCanResend] = useState(true);
+
+    // OTP State (Bride)
+    const [isBrideOtpSent, setIsBrideOtpSent] = useState(false);
+    const [isBrideOtpVerified, setIsBrideOtpVerified] = useState(false);
+    const [brideOtpCode, setBrideOtpCode] = useState("");
+    const [loadingBrideOtp, setLoadingBrideOtp] = useState(false);
+    const [brideTimer, setBrideTimer] = useState(0);
+    const [canBrideResend, setCanBrideResend] = useState(true);
 
     const [documents, setDocuments] = useState<DocumentsState>({
         groomAadhaarDoc: null,
@@ -125,6 +147,175 @@ export default function NewMarriageCertificateScreen() {
         const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
         return () => backHandler.remove();
     }, [currentStep]);
+
+    // Timers for OTP
+    useEffect(() => {
+        let interval: any;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        } else {
+            setCanResend(true);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
+
+    useEffect(() => {
+        let interval: any;
+        if (brideTimer > 0) {
+            interval = setInterval(() => {
+                setBrideTimer((prev) => prev - 1);
+            }, 1000);
+        } else {
+            setCanBrideResend(true);
+        }
+        return () => clearInterval(interval);
+    }, [brideTimer]);
+
+    const sendOtp = async () => {
+        if (formData.groomAadhaar.length !== 12 || formData.groomMobile.length !== 10) {
+            Alert.alert("Invalid Input", "Please enter 12-digit Aadhaar and 10-digit Mobile number first.");
+            return;
+        }
+
+        setLoadingOtp(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(API_ENDPOINTS.MARRIAGE_OTP_SEND, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    mobile_number: formData.groomMobile,
+                    aadhaar_number: formData.groomAadhaar
+                }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setIsOtpSent(true);
+                setTimer(60);
+                setCanResend(false);
+                Alert.alert("Success", "OTP sent to your mobile number.");
+            } else {
+                Alert.alert("Error", data.message || "Failed to send OTP");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network error. Please try again.");
+        } finally {
+            setLoadingOtp(false);
+        }
+    };
+
+    const verifyOtp = async () => {
+        if (otpCode.length !== 6) {
+            Alert.alert("Invalid OTP", "Please enter 6-digit OTP.");
+            return;
+        }
+
+        setLoadingOtp(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(API_ENDPOINTS.MARRIAGE_OTP_VERIFY, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    mobile_number: formData.groomMobile,
+                    otp_code: otpCode
+                }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setIsOtpVerified(true);
+                Alert.alert("Verified", "Groom's Aadhaar OTP verified successfully.");
+            } else {
+                Alert.alert("Error", data.message || "Invalid OTP");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network error. Please try again.");
+        } finally {
+            setLoadingOtp(false);
+        }
+    };
+
+    const sendBrideOtp = async () => {
+        if (formData.brideAadhaar.length !== 12 || formData.brideMobile.length !== 10) {
+            Alert.alert("Invalid Input", "Please enter 12-digit Aadhaar and 10-digit Mobile number for Bride first.");
+            return;
+        }
+
+        setLoadingBrideOtp(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(API_ENDPOINTS.MARRIAGE_OTP_SEND, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    mobile_number: formData.brideMobile,
+                    aadhaar_number: formData.brideAadhaar
+                }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setIsBrideOtpSent(true);
+                setBrideTimer(60);
+                setCanBrideResend(false);
+                Alert.alert("Success", "OTP sent to Bride's mobile number.");
+            } else {
+                Alert.alert("Error", data.message || "Failed to send OTP");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network error. Please try again.");
+        } finally {
+            setLoadingBrideOtp(false);
+        }
+    };
+
+    const verifyBrideOtp = async () => {
+        if (brideOtpCode.length !== 6) {
+            Alert.alert("Invalid OTP", "Please enter 6-digit OTP.");
+            return;
+        }
+
+        setLoadingBrideOtp(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(API_ENDPOINTS.MARRIAGE_OTP_VERIFY, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    mobile_number: formData.brideMobile,
+                    otp_code: brideOtpCode
+                }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                setIsBrideOtpVerified(true);
+                Alert.alert("Verified", "Bride's Aadhaar OTP verified successfully.");
+            } else {
+                Alert.alert("Error", data.message || "Invalid OTP");
+            }
+        } catch (error) {
+            Alert.alert("Error", "Network error. Please try again.");
+        } finally {
+            setLoadingBrideOtp(false);
+        }
+    };
 
     const REQUIRED_DOCS = [
         { id: 'groomAadhaarDoc', name: 'Groom Aadhaar *', icon: 'card-account-details', color: '#1565C0', hint: 'Front & Back side' },
@@ -190,12 +381,22 @@ export default function NewMarriageCertificateScreen() {
         setFormData({ ...formData, [field]: formatted, [ageField]: age });
     };
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         if (currentStep === 1) {
-            const { groomName, groomAadhaar, groomAge, brideName, brideAadhaar, brideAge, dateOfMarriage, placeOfMarriage, w1Name, w1Aadhaar, w1Mobile, w2Name, w2Aadhaar, w2Mobile, declaration } = formData;
+            const { groomName, groomAadhaar, groomAge, brideName, brideAadhaar, brideAge, dateOfMarriage, placeOfMarriage, w1Name, w1Aadhaar, w1Mobile, w1Address, w2Name, w2Aadhaar, w2Mobile, w2Address, declaration } = formData;
 
             if (!groomName || groomAadhaar.length !== 12 || !brideName || brideAadhaar.length !== 12 || !dateOfMarriage || !placeOfMarriage || !declaration) {
                 Alert.alert("Required", "Please fill all mandatory details and accept declaration");
+                return;
+            }
+
+            if (!isOtpVerified) {
+                Alert.alert("Verification Required", "Please verify Groom's Aadhaar using OTP.");
+                return;
+            }
+
+            if (!isBrideOtpVerified) {
+                Alert.alert("Verification Required", "Please verify Bride's Aadhaar using OTP.");
                 return;
             }
 
@@ -208,8 +409,8 @@ export default function NewMarriageCertificateScreen() {
                 return;
             }
 
-            if (!w1Name || w1Aadhaar.length !== 12 || w1Mobile.length !== 10 || !w2Name || w2Aadhaar.length !== 12 || w2Mobile.length !== 10) {
-                Alert.alert("Witness Required", "Please fill correct details for both witnesses (12-digit Aadhaar, 10-digit Mobile)");
+            if (!w1Name || w1Aadhaar.length !== 12 || w1Mobile.length !== 10 || !w1Address || !w2Name || w2Aadhaar.length !== 12 || w2Mobile.length !== 10 || !w2Address) {
+                Alert.alert("Witness Required", "Please fill correct details for both witnesses (including Address)");
                 return;
             }
 
@@ -226,13 +427,137 @@ export default function NewMarriageCertificateScreen() {
                 Alert.alert("Confirmation", "Please confirm that all details are accurate");
                 return;
             }
+            
             setIsSubmitting(true);
-            setTimeout(() => {
-                const refId = "MARR" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                setApplicationId(refId);
+            try {
+                const token = await AsyncStorage.getItem("userToken");
+                const fd = new FormData();
+
+                // Append text fields
+                fd.append('groom_name', formData.groomName);
+                fd.append('groom_aadhaar', formData.groomAadhaar);
+                fd.append('groom_dob', formData.groomDob);
+                fd.append('groom_age', formData.groomAge);
+                fd.append('groom_occupation', formData.groomOccupation);
+                fd.append('groom_mobile', formData.groomMobile);
+                fd.append('groom_email', formData.groomEmail);
+
+                fd.append('bride_name', formData.brideName);
+                fd.append('bride_aadhaar', formData.brideAadhaar);
+                fd.append('bride_dob', formData.brideDob);
+                fd.append('bride_age', formData.brideAge);
+                fd.append('bride_occupation', formData.brideOccupation);
+                fd.append('bride_mobile', formData.brideMobile);
+                fd.append('bride_email', formData.brideEmail);
+
+                fd.append('date_of_marriage', formData.dateOfMarriage);
+                fd.append('place_of_marriage', formData.placeOfMarriage);
+                fd.append('marriage_address', formData.marriageAddress);
+                fd.append('type_of_marriage', formData.typeOfMarriage);
+
+                fd.append('w1_name', formData.w1Name);
+                fd.append('w1_aadhaar', formData.w1Aadhaar);
+                fd.append('w1_address', formData.w1Address);
+                fd.append('w1_mobile', formData.w1Mobile);
+
+                fd.append('w2_name', formData.w2Name);
+                fd.append('w2_aadhaar', formData.w2Aadhaar);
+                fd.append('w2_address', formData.w2Address);
+                fd.append('w2_mobile', formData.w2Mobile);
+
+                // Append documents
+                if (documents.groomAadhaarDoc) {
+                    fd.append('groom_aadhaar', {
+                        uri: documents.groomAadhaarDoc.uri,
+                        name: 'groom_aadhaar.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+                if (documents.brideAadhaarDoc) {
+                    fd.append('bride_aadhaar', {
+                        uri: documents.brideAadhaarDoc.uri,
+                        name: 'bride_aadhaar.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+                if (documents.invitationCard) {
+                    fd.append('invitation_card', {
+                        uri: documents.invitationCard.uri,
+                        name: 'invitation_card.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+                if (documents.venueProof) {
+                    fd.append('venue_proof', {
+                        uri: documents.venueProof.uri,
+                        name: 'venue_proof.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+                if (documents.marriagePhotos) {
+                    fd.append('marriage_photos', {
+                        uri: documents.marriagePhotos.uri,
+                        name: 'marriage_photos.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+                if (documents.w1AadhaarDoc) {
+                    fd.append('w1_aadhaar', {
+                        uri: documents.w1AadhaarDoc.uri,
+                        name: 'w1_aadhaar.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+                if (documents.w2AadhaarDoc) {
+                    fd.append('w2_aadhaar', {
+                        uri: documents.w2AadhaarDoc.uri,
+                        name: 'w2_aadhaar.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+                if (documents.w1Photo) {
+                    fd.append('w1_photo', {
+                        uri: documents.w1Photo.uri,
+                        name: 'w1_photo.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+                if (documents.w2Photo) {
+                    fd.append('w2_photo', {
+                        uri: documents.w2Photo.uri,
+                        name: 'w2_photo.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+                if (documents.addressProof) {
+                    fd.append('address_proof', {
+                        uri: documents.addressProof.uri,
+                        name: 'address_proof.jpg',
+                        type: 'image/jpeg',
+                    } as any);
+                }
+
+                const response = await fetch(API_ENDPOINTS.MARRIAGE_APPLY, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json',
+                    },
+                    body: fd,
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    setApplicationId(result.data.reference_id);
+                    setIsSubmitted(true);
+                } else {
+                    Alert.alert("Submission Failed", result.message || "An error occurred");
+                }
+            } catch (error) {
+                Alert.alert("Error", "Failed to submit application. Please try again.");
+            } finally {
                 setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            }
         }
     };
 
@@ -266,20 +591,25 @@ export default function NewMarriageCertificateScreen() {
                     </View>
                     <Text style={styles.successTitle}>Application Submitted!</Text>
                     <Text style={styles.successSubtitle}>Your Marriage Certificate application has been received successfully.</Text>
-                    <View style={styles.idCard}>
+                    <TouchableOpacity 
+                        style={styles.idCard} 
+                        onPress={() => {
+                            Clipboard.setStringAsync(applicationId);
+                            setShowCopied(true);
+                            setTimeout(() => setShowCopied(false), 2000);
+                        }}
+                    >
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
-                    </View>
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}><Ionicons name="download-outline" size={24} color="#0D47A1" /></View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}><Ionicons name="time-outline" size={24} color="#2E7D32" /></View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <Ionicons name="copy-outline" size={20} color="#0D47A1" />
+                        </View>
+                    </TouchableOpacity>
+                    {showCopied && (
+                        <View style={styles.toast}>
+                            <Text style={styles.toastText}>Copied to clipboard</Text>
+                        </View>
+                    )}
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
@@ -319,8 +649,65 @@ export default function NewMarriageCertificateScreen() {
                             <View style={styles.formCard}>
                                 <Label text="Full Name (as per Aadhaar) *" />
                                 <Input value={formData.groomName} onChangeText={(v: string) => setFormData({ ...formData, groomName: v })} placeholder="Enter Groom full name" icon="person-outline" />
+                                <Label text="Mobile Number *" />
+                                <Input value={formData.groomMobile} onChangeText={(v: string) => setFormData({ ...formData, groomMobile: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} />
+
                                 <Label text="Aadhaar Number *" />
-                                <Input value={formData.groomAadhaar} onChangeText={(v: string) => setFormData({ ...formData, groomAadhaar: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} />
+                                <View style={styles.otpRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Input 
+                                            value={formData.groomAadhaar} 
+                                            onChangeText={(v: string) => setFormData({ ...formData, groomAadhaar: v.replace(/\D/g, '').substring(0, 12) })} 
+                                            placeholder="12-digit Aadhaar" 
+                                            icon="card-outline" 
+                                            keyboardType="number-pad" 
+                                            maxLength={12} 
+                                            editable={!isOtpVerified}
+                                        />
+                                    </View>
+                                    {!isOtpVerified && (
+                                        <TouchableOpacity 
+                                            style={[styles.otpBtn, (loadingOtp || !canResend) && styles.btnDisabled]} 
+                                            onPress={sendOtp} 
+                                            disabled={loadingOtp || !canResend}
+                                        >
+                                            {loadingOtp ? <ActivityIndicator size="small" color="#FFF" /> : 
+                                                <Text style={styles.otpBtnText}>{timer > 0 ? `Resend (${timer}s)` : (isOtpSent ? "Resend" : "Send OTP")}</Text>
+                                            }
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+
+                                {isOtpSent && !isOtpVerified && (
+                                    <View style={styles.otpVerifyContainer}>
+                                        <View style={{ flex: 1 }}>
+                                            <Input 
+                                                value={otpCode} 
+                                                onChangeText={setOtpCode} 
+                                                placeholder="6-digit OTP" 
+                                                keyboardType="number-pad" 
+                                                maxLength={6} 
+                                                icon="lock-closed-outline" 
+                                            />
+                                        </View>
+                                        <TouchableOpacity 
+                                            style={[styles.otpBtn, styles.verifyBtn, loadingOtp && styles.btnDisabled]} 
+                                            onPress={verifyOtp} 
+                                            disabled={loadingOtp}
+                                        >
+                                            {loadingOtp ? <ActivityIndicator size="small" color="#FFF" /> : 
+                                                <Text style={styles.otpBtnText}>Verify</Text>
+                                            }
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+
+                                {isOtpVerified && (
+                                    <View style={styles.verifiedBadge}>
+                                        <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+                                        <Text style={styles.verifiedText}>Aadhaar Verified</Text>
+                                    </View>
+                                )}
                                 <View style={styles.inputRow}>
                                     <View style={{ flex: 1, marginRight: 10 }}>
                                         <Label text="Date of Birth *" />
@@ -333,8 +720,6 @@ export default function NewMarriageCertificateScreen() {
                                 </View>
                                 <Label text="Occupation *" />
                                 <Input value={formData.groomOccupation} onChangeText={(v: string) => setFormData({ ...formData, groomOccupation: v })} placeholder="Groom's Occupation" icon="briefcase-outline" />
-                                <Label text="Mobile Number *" />
-                                <Input value={formData.groomMobile} onChangeText={(v: string) => setFormData({ ...formData, groomMobile: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} />
 
                                 <Label text="Email (Optional)" />
                                 <Input value={formData.groomEmail} onChangeText={(v: string) => setFormData({ ...formData, groomEmail: v })} placeholder="Email address" icon="mail-outline" />
@@ -344,8 +729,65 @@ export default function NewMarriageCertificateScreen() {
                             <View style={styles.formCard}>
                                 <Label text="Full Name (as per Aadhaar) *" />
                                 <Input value={formData.brideName} onChangeText={(v: string) => setFormData({ ...formData, brideName: v })} placeholder="Enter Bride full name" icon="person-outline" />
+                                <Label text="Mobile Number *" />
+                                <Input value={formData.brideMobile} onChangeText={(v: string) => setFormData({ ...formData, brideMobile: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} />
+
                                 <Label text="Aadhaar Number *" />
-                                <Input value={formData.brideAadhaar} onChangeText={(v: string) => setFormData({ ...formData, brideAadhaar: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} />
+                                <View style={styles.otpRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Input 
+                                            value={formData.brideAadhaar} 
+                                            onChangeText={(v: string) => setFormData({ ...formData, brideAadhaar: v.replace(/\D/g, '').substring(0, 12) })} 
+                                            placeholder="12-digit Aadhaar" 
+                                            icon="card-outline" 
+                                            keyboardType="number-pad" 
+                                            maxLength={12} 
+                                            editable={!isBrideOtpVerified}
+                                        />
+                                    </View>
+                                    {!isBrideOtpVerified && (
+                                        <TouchableOpacity 
+                                            style={[styles.otpBtn, (loadingBrideOtp || !canBrideResend) && styles.btnDisabled]} 
+                                            onPress={sendBrideOtp} 
+                                            disabled={loadingBrideOtp || !canBrideResend}
+                                        >
+                                            {loadingBrideOtp ? <ActivityIndicator size="small" color="#FFF" /> : 
+                                                <Text style={styles.otpBtnText}>{brideTimer > 0 ? `Resend (${brideTimer}s)` : (isBrideOtpSent ? "Resend" : "Send OTP")}</Text>
+                                            }
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+
+                                {isBrideOtpSent && !isBrideOtpVerified && (
+                                    <View style={styles.otpVerifyContainer}>
+                                        <View style={{ flex: 1 }}>
+                                            <Input 
+                                                value={brideOtpCode} 
+                                                onChangeText={setBrideOtpCode} 
+                                                placeholder="6-digit OTP" 
+                                                keyboardType="number-pad" 
+                                                maxLength={6} 
+                                                icon="lock-closed-outline" 
+                                            />
+                                        </View>
+                                        <TouchableOpacity 
+                                            style={[styles.otpBtn, styles.verifyBtn, loadingBrideOtp && styles.btnDisabled]} 
+                                            onPress={verifyBrideOtp} 
+                                            disabled={loadingBrideOtp}
+                                        >
+                                            {loadingBrideOtp ? <ActivityIndicator size="small" color="#FFF" /> : 
+                                                <Text style={styles.otpBtnText}>Verify</Text>
+                                            }
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+
+                                {isBrideOtpVerified && (
+                                    <View style={styles.verifiedBadge}>
+                                        <Ionicons name="checkmark-circle" size={14} color="#2E7D32" />
+                                        <Text style={styles.verifiedText}>Aadhaar Verified</Text>
+                                    </View>
+                                )}
                                 <View style={styles.inputRow}>
                                     <View style={{ flex: 1, marginRight: 10 }}>
                                         <Label text="Date of Birth *" />
@@ -358,8 +800,6 @@ export default function NewMarriageCertificateScreen() {
                                 </View>
                                 <Label text="Occupation *" />
                                 <Input value={formData.brideOccupation} onChangeText={(v: string) => setFormData({ ...formData, brideOccupation: v })} placeholder="Bride's Occupation" icon="briefcase-outline" />
-                                <Label text="Mobile Number *" />
-                                <Input value={formData.brideMobile} onChangeText={(v: string) => setFormData({ ...formData, brideMobile: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} />
 
                                 <Label text="Email (Optional)" />
                                 <Input value={formData.brideEmail} onChangeText={(v: string) => setFormData({ ...formData, brideEmail: v })} placeholder="Email address" icon="mail-outline" />
@@ -393,6 +833,9 @@ export default function NewMarriageCertificateScreen() {
                                 <Label text="Witness 1 - Mobile *" />
                                 <Input value={formData.w1Mobile} onChangeText={(v: string) => setFormData({ ...formData, w1Mobile: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" keyboardType="number-pad" maxLength={10} icon="phone-portrait-outline" />
 
+                                <Label text="Witness 1 - Address *" />
+                                <Input value={formData.w1Address} onChangeText={(v: string) => setFormData({ ...formData, w1Address: v })} placeholder="Witness 1 Address" icon="location-outline" multiline />
+
                                 <View style={{ height: 15 }} />
 
                                 <Label text="Witness 2 - Full Name *" />
@@ -402,6 +845,9 @@ export default function NewMarriageCertificateScreen() {
 
                                 <Label text="Witness 2 - Mobile *" />
                                 <Input value={formData.w2Mobile} onChangeText={(v: string) => setFormData({ ...formData, w2Mobile: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" keyboardType="number-pad" maxLength={10} icon="phone-portrait-outline" />
+
+                                <Label text="Witness 2 - Address *" />
+                                <Input value={formData.w2Address} onChangeText={(v: string) => setFormData({ ...formData, w2Address: v })} placeholder="Witness 2 Address" icon="location-outline" multiline />
                             </View>
 
                             <TouchableOpacity style={styles.declarationRow} onPress={() => setFormData({ ...formData, declaration: !formData.declaration })}>
@@ -469,12 +915,14 @@ export default function NewMarriageCertificateScreen() {
                                 { label: "Name", value: formData.w1Name },
                                 { label: "Aadhaar", value: formData.w1Aadhaar },
                                 { label: "Mobile", value: formData.w1Mobile },
+                                { label: "Address", value: formData.w1Address },
                             ]} onEdit={() => setCurrentStep(1)} />
 
                             <ReviewItem title="Witness 2" data={[
                                 { label: "Name", value: formData.w2Name },
                                 { label: "Aadhaar", value: formData.w2Aadhaar },
                                 { label: "Mobile", value: formData.w2Mobile },
+                                { label: "Address", value: formData.w2Address },
                             ]} onEdit={() => setCurrentStep(1)} />
 
                             <TouchableOpacity style={[styles.declarationRow, { marginTop: 20 }]} onPress={() => setFormData({ ...formData, finalConfirmation: !formData.finalConfirmation })}>
@@ -484,21 +932,20 @@ export default function NewMarriageCertificateScreen() {
                         </View>
                     )}
 
-                    <View style={{ height: 100 }} />
+                    <View style={{ height: 40 }} />
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
+                            <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
+                                {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
+                                    <>
+                                        <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
+                                        <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
-
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
-                            {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
-                                <>
-                                    <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
-                                    <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
-                                </>
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
             </SafeAreaView>
         </View>
     );
@@ -580,7 +1027,7 @@ const styles = StyleSheet.create({
     reviewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
     reviewLabel: { fontSize: 13, color: '#64748B' },
     reviewValue: { fontSize: 13, fontWeight: '700', color: '#1E293B', textAlign: 'right', flex: 1, marginLeft: 20 },
-    bottomBar: { backgroundColor: '#FFF', padding: 20, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+    bottomBar: { paddingVertical: 20 },
     continueButton: { borderRadius: 16, overflow: 'hidden' },
     buttonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
     buttonText: { fontSize: 16, fontWeight: '800', color: '#FFF' },
@@ -591,6 +1038,8 @@ const styles = StyleSheet.create({
     idCard: { backgroundColor: '#F8FAFC', borderRadius: 20, padding: 25, width: '100%', alignItems: 'center', marginBottom: 35, borderWidth: 1, borderColor: '#E2E8F0' },
     idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
     idValue: { fontSize: 28, fontWeight: '900', color: '#0D47A1' },
+    toast: { position: 'absolute', bottom: 120, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, alignSelf: 'center' },
+    toastText: { color: '#FFF', fontSize: 14, fontWeight: '500' },
     successActions: { flexDirection: 'row', gap: 15, marginBottom: 35 },
     actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 20, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
     actionIcon: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
@@ -598,4 +1047,12 @@ const styles = StyleSheet.create({
     mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
     mainBtnText: { fontSize: 16, fontWeight: '800', color: '#FFF' },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 12 },
+    otpRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+    otpBtn: { backgroundColor: '#0D47A1', paddingHorizontal: 15, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', minWidth: 80 },
+    verifyBtn: { backgroundColor: '#2E7D32' },
+    otpBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+    btnDisabled: { opacity: 0.5 },
+    otpVerifyContainer: { flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 12, marginBottom: 5 },
+    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, backgroundColor: '#E8F5E9', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+    verifiedText: { fontSize: 12, fontWeight: '700', color: '#2E7D32' },
 });

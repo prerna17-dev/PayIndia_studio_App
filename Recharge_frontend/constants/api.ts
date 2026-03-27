@@ -47,4 +47,62 @@ export const API_ENDPOINTS = {
     AADHAAR_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/aadhar/correction/send-otp`,
     AADHAAR_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/aadhar/correction/verify-otp`,
     AADHAAR_CORRECTION_SUBMIT: `${API_BASE_URL}/api/aadhar/correction/submit`,
+
+    // PAN Card Services
+    PAN_APPLY: `${API_BASE_URL}/api/pan/apply`,
+    PAN_APPLY_OTP_SEND: `${API_BASE_URL}/api/pan/apply/send-otp`,
+    PAN_APPLY_OTP_VERIFY: `${API_BASE_URL}/api/pan/apply/verify-otp`,
+    PAN_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/pan/correction/send-otp`,
+    PAN_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/pan/correction/verify-otp`,
+    PAN_CORRECTION_SUBMIT: `${API_BASE_URL}/api/pan/correction/submit`,
+
+    // Udyam Registration Services
+    UDYAM_APPLY: `${API_BASE_URL}/api/business/udyam/apply`,
+    UDYAM_LIST: `${API_BASE_URL}/api/business/udyam/list`,
+    UDYAM_CORRECTIONS: `${API_BASE_URL}/api/business/udyam/corrections`,
+    UDYAM_CORRECTION_SUBMIT: `${API_BASE_URL}/api/business/udyam/correction/submit`,
+    UDYAM_SEND_OTP: `${API_BASE_URL}/api/business/udyam/send-otp`,
+    UDYAM_VERIFY_OTP: `${API_BASE_URL}/api/business/udyam/verify-otp`,
+
+    // Certificates
+    INCOME_APPLY: `${API_BASE_URL}/api/certificate/income/apply`,
+    INCOME_OTP_SEND: `${API_BASE_URL}/api/certificate/income/send-otp`,
+    INCOME_OTP_VERIFY: `${API_BASE_URL}/api/certificate/income/verify-otp`,
+    CASTE_APPLY: `${API_BASE_URL}/api/certificate/caste/apply`,
+    CASTE_OTP_SEND: `${API_BASE_URL}/api/certificate/caste/apply/send-otp`,
+    CASTE_OTP_VERIFY: `${API_BASE_URL}/api/certificate/caste/apply/verify-otp`,
+    DOMICILE_APPLY: `${API_BASE_URL}/api/certificate/domicile/apply`,
+    DOMICILE_OTP_SEND: `${API_BASE_URL}/api/certificate/domicile/send-otp`,
+    DOMICILE_OTP_VERIFY: `${API_BASE_URL}/api/certificate/domicile/verify-otp`,
+    BIRTH_APPLY: `${API_BASE_URL}/api/certificate/birth/apply`,
+    BIRTH_OTP_SEND: `${API_BASE_URL}/api/certificate/birth/send-otp`,
+    BIRTH_OTP_VERIFY: `${API_BASE_URL}/api/certificate/birth/verify-otp`,
+    DEATH_APPLY: `${API_BASE_URL}/api/certificate/death/apply`,
+    DEATH_OTP_SEND: `${API_BASE_URL}/api/certificate/death/send-otp`,
+    DEATH_OTP_VERIFY: `${API_BASE_URL}/api/certificate/death/verify-otp`,
+    MARRIAGE_APPLY: `${API_BASE_URL}/api/certificate/marriage/apply`,
+    MARRIAGE_OTP_SEND: `${API_BASE_URL}/api/certificate/marriage/send-otp`,
+    MARRIAGE_OTP_VERIFY: `${API_BASE_URL}/api/certificate/marriage/verify-otp`,
+    EWS_APPLY: `${API_BASE_URL}/api/certificate/ews/apply`,
+    EWS_OTP_SEND: `${API_BASE_URL}/api/certificate/ews/send-otp`,
+    EWS_OTP_VERIFY: `${API_BASE_URL}/api/certificate/ews/verify-otp`,
+    NCL_APPLY: `${API_BASE_URL}/api/certificate/ncl/apply`,
+    NCL_OTP_SEND: `${API_BASE_URL}/api/certificate/ncl/send-otp`,
+    NCL_OTP_VERIFY: `${API_BASE_URL}/api/certificate/ncl/verify-otp`,
+
+    // Voter ID Services
+    VOTER_APPLY: `${API_BASE_URL}/api/voter/apply`,
+    VOTER_APPLY_OTP_SEND: `${API_BASE_URL}/api/voter/apply/send-otp`,
+    VOTER_APPLY_OTP_VERIFY: `${API_BASE_URL}/api/voter/apply/verify-otp`,
+    VOTER_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/voter/correction/send-otp`,
+    VOTER_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/voter/correction/verify-otp`,
+    VOTER_CORRECTION_SUBMIT: `${API_BASE_URL}/api/voter/correction/submit`,
+
+    // Ration Card Services
+    RATION_CARD_APPLY: `${API_BASE_URL}/api/social/ration-card/apply`,
+    RATION_CARD_APPLY_OTP_SEND: `${API_BASE_URL}/api/social/ration-card/apply/send-otp`,
+    RATION_CARD_APPLY_OTP_VERIFY: `${API_BASE_URL}/api/social/ration-card/apply/verify-otp`,
+    RATION_CARD_CORRECTION: `${API_BASE_URL}/api/social/ration-card/correction`,
+    RATION_CARD_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/social/ration-card/correction/send-otp`,
+    RATION_CARD_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/social/ration-card/correction/verify-otp`,
 };

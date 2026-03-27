@@ -17,7 +17,11 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Clipboard,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 type UpdateType = "name" | "dob" | "address" | "gender" | "photo";
 
@@ -108,21 +112,51 @@ export default function VoterIDUpdateScreen() {
         setNewDob(formatted);
     };
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async () => {
         const cleanAadhaar = aadhaarNo.replace(/\s/g, "");
         if (cleanAadhaar.length !== 12) return Alert.alert("Error", "Enter valid 12-digit Aadhaar");
         if (mobileNumber.length !== 10) return Alert.alert("Error", "Enter valid 10-digit mobile");
-        setIsOtpSent(true);
-        Alert.alert("Success", "OTP sent to registered mobile");
+        if (!voterID) return Alert.alert("Error", "Enter valid Voter ID");
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const res = await axios.post(
+                API_ENDPOINTS.VOTER_CORRECTION_OTP_SEND,
+                { mobile_number: mobileNumber, voter_id_number: voterID },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (res.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to registered mobile");
+            } else {
+                Alert.alert("Error", res.data.message || "Failed to send OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        }
     };
 
-    const handleVerifyOtp = () => {
+    const handleVerifyOtp = async () => {
         if (otp.length !== 6) return Alert.alert("Error", "Enter 6-digit OTP");
         setIsVerifying(true);
-        setTimeout(() => {
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const res = await axios.post(
+                API_ENDPOINTS.VOTER_CORRECTION_OTP_VERIFY,
+                { mobile_number: mobileNumber, otp_code: otp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+            if (res.data.success) {
+                setIsVerifying(false);
+                setStep(2);
+            } else {
+                setIsVerifying(false);
+                Alert.alert("Error", res.data.message || "Invalid OTP");
+            }
+        } catch (error: any) {
             setIsVerifying(false);
-            setStep(2);
-        }, 1200);
+            Alert.alert("Error", error.response?.data?.message || "Invalid OTP");
+        }
     };
 
     const handleFileUpload = async (docId: string) => {
@@ -161,14 +195,69 @@ export default function VoterIDUpdateScreen() {
         setStep(3);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const refId = "VOT" + Math.random().toString(36).substr(2, 9).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const data = new FormData();
+            data.append("voter_id_number", voterID);
+            data.append("aadhar_number", aadhaarNo.replace(/\s/g, ""));
+            data.append("mobile_number", mobileNumber);
+            data.append("correction_type", selectedType as string);
+
+            if (selectedType === "name") data.append("corrected_name", newName);
+            if (selectedType === "dob") data.append("corrected_dob", newDob);
+            if (selectedType === "gender") data.append("corrected_gender", newGender);
+            if (selectedType === "address") {
+                data.append("corrected_address", newAddress);
+                data.append("corrected_state", newState);
+                data.append("corrected_pincode", newPincode);
+            }
+
+            // Document Mapping
+            const docMap: Record<string, string> = {
+                nameProof: "identity_proof",
+                dobProof: "dob_proof",
+                addressProof: "address_proof",
+                genderProof: "gender_proof",
+                newPhoto: "photo"
+            };
+
+            Object.keys(uploadedDocs).forEach(key => {
+                const doc = uploadedDocs[key];
+                if (docMap[key]) {
+                    data.append(docMap[key], {
+                        uri: doc.uri,
+                        name: doc.name,
+                        type: "application/pdf"
+                    } as any);
+                }
+            });
+
+            const res = await axios.post(
+                API_ENDPOINTS.VOTER_CORRECTION_SUBMIT,
+                data,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data"
+                    }
+                }
+            );
+
+            if (res.data.success) {
+                const generatedId = "VOTER" + res.data.data.correctionId.toString().padStart(5, '0');
+                setApplicationId(generatedId);
+                setIsSubmitting(false);
+                setIsSubmitted(true);
+            } else {
+                setIsSubmitting(false);
+                Alert.alert("Error", res.data.message || "Failed to submit application");
+            }
+        } catch (error: any) {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+            Alert.alert("Error", error.response?.data?.message || "Failed to submit application");
+        }
     };
 
     const renderDocumentUploads = () => {
@@ -212,6 +301,14 @@ export default function VoterIDUpdateScreen() {
         );
     };
 
+    const [showToast, setShowToast] = useState(false);
+
+    const copyToClipboard = () => {
+        Clipboard.setString(applicationId);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+    };
+
     if (isSubmitted) {
         return (
             <View style={s.root}>
@@ -225,26 +322,29 @@ export default function VoterIDUpdateScreen() {
 
                     <View style={s.idCard}>
                         <Text style={s.idLabel}>Reference ID</Text>
-                        <Text style={s.idValue}>{applicationId}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                            <Text style={s.idValue}>{applicationId}</Text>
+                            <TouchableOpacity onPress={copyToClipboard} style={{ padding: 4 }}>
+                                <Ionicons name="copy-outline" size={24} color="#0D47A1" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
-                    <View style={s.successActions}>
-                        <TouchableOpacity style={s.actionBtn}>
-                            <View style={[s.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                            </View>
-                            <Text style={s.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
+                    {showToast && (
+                        <View style={{
+                            position: 'absolute',
+                            bottom: 120,
+                            backgroundColor: '#333',
+                            paddingHorizontal: 20,
+                            paddingVertical: 10,
+                            borderRadius: 20,
+                            zIndex: 100
+                        }}>
+                            <Text style={{ color: '#FFF', fontSize: 14 }}>Reference ID Copied!</Text>
+                        </View>
+                    )}
 
-                        <TouchableOpacity style={s.actionBtn}>
-                            <View style={[s.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={s.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    <TouchableOpacity style={s.mainBtn} onPress={() => router.back()}>
+                    <TouchableOpacity style={[s.mainBtn, { marginTop: 40 }]} onPress={() => router.replace('/voter-id-services')}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}>
                             <Text style={s.mainBtnText}>Return to Services</Text>
                             <Ionicons name="arrow-forward" size={18} color="#FFF" />

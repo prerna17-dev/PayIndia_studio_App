@@ -50,6 +50,8 @@ router.use(authMiddleware);
 router.post("/apply", udyamUpload, udyamController.createApplication);
 router.get("/list", udyamController.getApplications);
 router.get("/corrections", udyamController.getCorrections);
+router.post("/send-otp", udyamController.sendOTP);
+router.post("/verify-otp", udyamController.verifyOTP);
 router.post("/correction/submit", uploadCorrection.any(), udyamController.submitCorrection);
 router.get("/:referenceId", udyamController.getApplicationByRef);
 router.put("/update-status/:id", udyamController.updateStatus);

@@ -149,10 +149,16 @@ exports.processApplication = async (applicationId, agentId, remarks) => {
  * Create a new Verification OTP
  */
 exports.storeOTP = async (mobileNumber, otpCode, purpose) => {
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    // Delete any existing unverified OTP for this mobile and purpose
     await pool.query(
-        `INSERT INTO verification_otps (mobile_number, otp_code, purpose, expires_at) VALUES (?, ?, ?, ?)`,
-        [mobileNumber, otpCode, purpose, expiresAt]
+        "DELETE FROM verification_otps WHERE mobile_number = ? AND purpose = ? AND is_verified = FALSE",
+        [mobileNumber, purpose]
+    );
+
+    // Store new OTP (expires in 10 mins)
+    await pool.query(
+        "INSERT INTO verification_otps (mobile_number, otp_code, purpose, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))",
+        [mobileNumber, otpCode, purpose]
     );
 };
 
@@ -184,14 +190,27 @@ exports.createCorrection = async (data) => {
         mobile_number,
         corrected_name,
         corrected_dob,
+        corrected_father_name,
+        corrected_contact,
+        corrected_address,
         correction_type,
     } = data;
 
     const [result] = await pool.query(
         `INSERT INTO pan_corrections 
-     (user_id, pan_number, mobile_number, corrected_name, corrected_dob, correction_type) 
-     VALUES (?, ?, ?, ?, ?, ?)`,
-        [user_id, pan_number, mobile_number, corrected_name, corrected_dob, correction_type]
+     (user_id, pan_number, mobile_number, corrected_name, corrected_dob, corrected_father_name, corrected_contact, corrected_address, correction_type) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            user_id,
+            pan_number,
+            mobile_number,
+            corrected_name,
+            corrected_dob,
+            corrected_father_name,
+            corrected_contact,
+            corrected_address,
+            correction_type,
+        ]
     );
     return result.insertId;
 };

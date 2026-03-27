@@ -4,6 +4,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
     Alert,
     Modal,
@@ -17,17 +20,17 @@ import {
     BackHandler,
     KeyboardAvoidingView,
     Platform,
+    ActivityIndicator,
+    Clipboard
 } from "react-native";
 
 const ORG_TYPES = ["Proprietorship", "Partnership", "Pvt Ltd", "LLP"];
-const ACTIVITIES = ["Manufacturing", "Services"];
 const STATES = ["Maharashtra", "Karnataka", "Gujarat", "Tamil Nadu", "Delhi", "Other"];
 
 const REQUIRED_DOCS = [
-    { id: "aadhaar", name: "Aadhaar Card (Front & Back)", icon: "card-account-details-outline", color: "#2196F3" },
-    { id: "pan", name: "PAN Card", icon: "card-bulleted-outline", color: "#4CAF50" },
-    { id: "address", name: "Business Address Proof", icon: "home-city-outline", color: "#FF9800" },
-    { id: "cheque", name: "Bank Cancelled Cheque", icon: "bank-outline", color: "#673AB7" },
+    { id: "aadhaar_card", name: "Aadhaar Card (Front & Back)", icon: "card-account-details-outline", color: "#2196F3" },
+    { id: "pan_card", name: "PAN Card", icon: "card-bulleted-outline", color: "#4CAF50" },
+    { id: "bank_passbook", name: "Bank Passbook", icon: "bank-outline", color: "#673AB7" },
     { id: "photo", name: "Photograph of Owner", icon: "account-box-outline", color: "#E53935" },
 ];
 
@@ -38,10 +41,10 @@ export default function NewUdyamRegistrationScreen() {
         aadhaar: "", name: "", mobile: "", orgType: "", pan: "", enterpriseName: "", dateOfCommencement: "",
         previousUA: "", flat: "", street: "", city: "", district: "", state: "Maharashtra", pincode: "",
         bankName: "", accountNumber: "", ifsc: "", activity: "", nicCode: "", employees: "", investment: "", turnover: "",
+        email: "", gender: "Male", category: "General", disability: "No"
     });
     const [docs, setDocs] = useState<Record<string, any>>({});
     const [showOrgModal, setShowOrgModal] = useState(false);
-    const [showActivityModal, setShowActivityModal] = useState(false);
     const [showStateModal, setShowStateModal] = useState(false);
     const [agreedDeclaration, setAgreedDeclaration] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,6 +53,8 @@ export default function NewUdyamRegistrationScreen() {
     const [isOtpSent, setIsOtpSent] = useState(false);
     const [otp, setOtp] = useState("");
     const [isVerified, setIsVerified] = useState(false);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [showCopied, setShowCopied] = useState(false);
 
     useEffect(() => {
         const backAction = () => {
@@ -87,17 +92,57 @@ export default function NewUdyamRegistrationScreen() {
         return formatted;
     };
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async () => {
         if (form.aadhaar.replace(/\s/g, "").length !== 12) return Alert.alert("Error", "Enter valid 12-digit Aadhaar");
         if (form.mobile.length !== 10) return Alert.alert("Error", "Enter valid 10-digit mobile");
-        setIsOtpSent(true);
-        Alert.alert("Success", "OTP sent to registered mobile");
+
+        setIsVerifying(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.UDYAM_SEND_OTP, {
+                mobile_number: form.mobile,
+                aadhaar_number: form.aadhaar.replace(/\s/g, ""),
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to registered mobile");
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to send OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred");
+        } finally {
+            setIsVerifying(false);
+        }
     };
 
-    const handleVerifyOtp = () => {
+    const handleVerifyOtp = async () => {
         if (otp.length !== 6) return Alert.alert("Error", "Enter 6-digit OTP");
-        setIsVerified(true);
-        Alert.alert("Success", "Aadhaar verified successfully");
+
+        setIsVerifying(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.UDYAM_VERIFY_OTP, {
+                mobile_number: form.mobile,
+                otp_code: otp,
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsVerified(true);
+                Alert.alert("Success", "Aadhaar verified successfully");
+            } else {
+                Alert.alert("Error", response.data.message || "Invalid or expired OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred");
+        } finally {
+            setIsVerifying(false);
+        }
     };
 
     const validateStep1 = () => {
@@ -107,6 +152,7 @@ export default function NewUdyamRegistrationScreen() {
         if (!form.orgType) return Alert.alert("Required", "Select organization type");
         if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(form.pan)) return Alert.alert("Invalid", "Enter valid PAN (e.g., ABCDE1234F)");
         if (!form.enterpriseName.trim()) return Alert.alert("Required", "Enter enterprise name");
+        if (!form.email.trim() || !/^\S+@\S+\.\S+$/.test(form.email)) return Alert.alert("Required", "Enter valid email address");
         if (!form.flat.trim() || !form.city.trim() || !form.district.trim()) return Alert.alert("Required", "Complete address");
         if (form.pincode.length !== 6) return Alert.alert("Required", "Enter valid 6-digit PIN code");
         if (!form.bankName.trim() || !form.accountNumber.trim()) return Alert.alert("Required", "Enter bank details");
@@ -119,7 +165,7 @@ export default function NewUdyamRegistrationScreen() {
             const r = await DocumentPicker.getDocumentAsync({ type: ["application/pdf", "image/*"] });
             if (!r.canceled && r.assets?.[0]) {
                 const f = r.assets[0];
-                if (f.size && f.size > 2 * 1024 * 1024) return Alert.alert("Too Large", "Max 2MB");
+                if (f.size && f.size > 5 * 1024 * 1024) return Alert.alert("Too Large", "Max 5MB");
                 setDocs({ ...docs, [id]: f });
             }
         } catch (e) {
@@ -133,16 +179,70 @@ export default function NewUdyamRegistrationScreen() {
         setStep(3);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!agreedDeclaration) return Alert.alert("Required", "Please agree to the declaration");
+
         setIsSubmitting(true);
-        // Simulate API call
-        setTimeout(() => {
-            const refId = "UD2026" + Math.random().toString(36).substring(2, 9).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const formData = new FormData();
+
+            // Mapping basic fields
+            formData.append("full_name", form.name);
+            formData.append("aadhaar_number", form.aadhaar.replace(/\s/g, ""));
+            formData.append("pan_number", form.pan);
+            formData.append("mobile_number", form.mobile);
+            formData.append("email", form.email || "notprovided@example.com");
+            formData.append("organization_type", form.orgType);
+            formData.append("gender", form.gender);
+            formData.append("category", form.category);
+            formData.append("disability", form.disability);
+            formData.append("unit_name", form.enterpriseName);
+            formData.append("location", form.state);
+            formData.append("office_address", `${form.flat}, ${form.street}, ${form.city}, ${form.district}, ${form.state} - ${form.pincode}`);
+            formData.append("bank_name", form.bankName);
+            formData.append("ifsc", form.ifsc);
+            formData.append("account_number", form.accountNumber);
+            formData.append("business_activity", form.activity);
+            formData.append("employees_count", form.employees || "0");
+            formData.append("investment", form.investment || "0");
+            formData.append("turnover", form.turnover || "0");
+            formData.append("registration_date", form.dateOfCommencement);
+
+            // Appending files
+            Object.keys(docs).forEach(key => {
+                const doc = docs[key];
+                formData.append(key, {
+                    uri: doc.uri,
+                    name: doc.name,
+                    type: doc.mimeType || "application/octet-stream",
+                } as any);
+            });
+
+            const response = await axios.post(API_ENDPOINTS.UDYAM_APPLY, formData, {
+                headers: {
+                    "Authorization": `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.reference_id);
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
+    };
+
+    const copyToClipboard = () => {
+        Clipboard.setString(applicationId);
+        setShowCopied(true);
+        setTimeout(() => setShowCopied(false), 3000);
     };
 
     const handleBack = () => {
@@ -164,26 +264,13 @@ export default function NewUdyamRegistrationScreen() {
                     <Text style={s.successTitle}>Registration Submitted!</Text>
                     <Text style={s.successSubtitle}>Your Udyam Registration application has been received successfully.</Text>
 
-                    <View style={s.idCard}>
+                    <TouchableOpacity style={s.idCard} onPress={copyToClipboard} activeOpacity={0.7}>
                         <Text style={s.idLabel}>Reference ID</Text>
-                        <Text style={s.idValue}>{applicationId}</Text>
-                    </View>
-
-                    <View style={s.successActions}>
-                        <TouchableOpacity style={s.actionBtn}>
-                            <View style={[s.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                            </View>
-                            <Text style={s.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={s.actionBtn}>
-                            <View style={[s.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={s.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={s.idValue}>{applicationId}</Text>
+                            <Ionicons name="copy-outline" size={20} color="#0D47A1" />
+                        </View>
+                    </TouchableOpacity>
 
                     <TouchableOpacity style={s.mainBtn} onPress={() => router.replace("/udyam-services")}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}>
@@ -191,6 +278,12 @@ export default function NewUdyamRegistrationScreen() {
                             <Ionicons name="arrow-forward" size={18} color="#FFF" />
                         </LinearGradient>
                     </TouchableOpacity>
+
+                    {showCopied && (
+                        <View style={s.toast}>
+                            <Text style={s.toastText}>Copied to clipboard</Text>
+                        </View>
+                    )}
                 </SafeAreaView>
             </View>
         );
@@ -274,32 +367,40 @@ export default function NewUdyamRegistrationScreen() {
                                             onChangeText={handleAadhaarChange}
                                             keyboardType="number-pad"
                                             maxLength={14}
+                                            editable={!isVerified}
                                         />
+                                        {isVerified && <Ionicons name="checkmark-circle" size={18} color="#2E7D32" style={{ marginLeft: 8 }} />}
                                     </View>
 
-                                    <Text style={s.inputLabel}>Entrepreneur Name (as per Aadhaar) *</Text>
-                                    <View style={s.inputContainer}>
-                                        <Ionicons name="person-outline" size={18} color="#94A3B8" />
-                                        <TextInput style={s.field} placeholder="Full name" value={form.name} onChangeText={v => update('name', v)} />
-                                    </View>
-
-                                    <View style={s.otpRow}>
-                                        <TouchableOpacity
-                                            style={[s.otpBtn, { flex: 1, marginTop: 0 }, isVerified && { backgroundColor: '#E8F5E9' }]}
-                                            onPress={handleSendOtp}
-                                            disabled={isVerified}
-                                        >
-                                            <Text style={[s.otpBtnText, isVerified && { color: '#2E7D32' }]}>
-                                                {isVerified ? "Aadhaar Verified" : isOtpSent ? "Resend OTP" : "Verify with Aadhaar OTP"}
-                                            </Text>
-                                            {isVerified && <Ionicons name="checkmark-circle" size={16} color="#2E7D32" style={{ marginLeft: 8 }} />}
-                                        </TouchableOpacity>
+                                    <Text style={[s.inputLabel, { marginTop: 16 }]}>Registered Mobile *</Text>
+                                    <View style={s.verifyRow}>
+                                        <View style={[s.inputContainer, { flex: 1 }]}>
+                                            <Text style={s.dial}>+91</Text>
+                                            <TextInput
+                                                style={s.field}
+                                                placeholder="10-digit mobile"
+                                                value={form.mobile}
+                                                onChangeText={v => update('mobile', v.replace(/\D/g, '').substring(0, 10))}
+                                                keyboardType="phone-pad"
+                                                maxLength={10}
+                                                editable={!isVerified}
+                                            />
+                                        </View>
+                                        {!isVerified && (
+                                            <TouchableOpacity
+                                                style={[s.verifyBtn, (form.mobile.length !== 10 || form.aadhaar.replace(/\s/g, "").length !== 12) && { opacity: 0.5 }]}
+                                                onPress={handleSendOtp}
+                                                disabled={isVerifying || form.mobile.length !== 10}
+                                            >
+                                                <Text style={s.verifyBtnText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                            </TouchableOpacity>
+                                        )}
                                     </View>
 
                                     {isOtpSent && !isVerified && (
-                                        <View style={{ marginTop: 16 }}>
+                                        <View>
                                             <Text style={s.inputLabel}>Enter 6-digit OTP *</Text>
-                                            <View style={s.inputRow}>
+                                            <View style={s.inputContainer}>
                                                 <Ionicons name="key-outline" size={18} color="#94A3B8" />
                                                 <TextInput
                                                     style={s.field}
@@ -309,24 +410,19 @@ export default function NewUdyamRegistrationScreen() {
                                                     keyboardType="number-pad"
                                                     maxLength={6}
                                                 />
-                                                <TouchableOpacity onPress={handleVerifyOtp}>
-                                                    <Text style={{ color: '#0D47A1', fontWeight: '700' }}>Verify</Text>
+                                                <TouchableOpacity onPress={handleVerifyOtp} disabled={isVerifying || otp.length !== 6}>
+                                                    {isVerifying ? <ActivityIndicator size="small" color="#0D47A1" /> : (
+                                                        <Text style={{ color: '#0D47A1', fontWeight: '700' }}>Verify</Text>
+                                                    )}
                                                 </TouchableOpacity>
                                             </View>
                                         </View>
                                     )}
 
-                                    <Text style={s.inputLabel}>Mobile Number *</Text>
+                                    <Text style={[s.inputLabel, { marginTop: 16 }]}>Entrepreneur Name (as per Aadhaar) *</Text>
                                     <View style={s.inputContainer}>
-                                        <Text style={s.dial}>+91</Text>
-                                        <TextInput
-                                            style={s.field}
-                                            placeholder="10-digit mobile"
-                                            value={form.mobile}
-                                            onChangeText={v => update('mobile', v.replace(/\D/g, '').substring(0, 10))}
-                                            keyboardType="phone-pad"
-                                            maxLength={10}
-                                        />
+                                        <Ionicons name="person-outline" size={18} color="#94A3B8" />
+                                        <TextInput style={s.field} placeholder="Full name" value={form.name} onChangeText={v => update('name', v)} />
                                     </View>
                                 </View>
 
@@ -367,6 +463,11 @@ export default function NewUdyamRegistrationScreen() {
                                     <Text style={s.inputLabel}>Enterprise Name *</Text>
                                     <View style={s.inputContainer}>
                                         <TextInput style={s.field} placeholder="Name of your business" value={form.enterpriseName} onChangeText={v => update('enterpriseName', v)} />
+                                    </View>
+
+                                    <Text style={s.inputLabel}>Mail ID *</Text>
+                                    <View style={s.inputContainer}>
+                                        <TextInput style={s.field} placeholder="example@email.com" value={form.email} onChangeText={v => update('email', v.toLowerCase())} keyboardType="email-address" autoCapitalize="none" />
                                     </View>
 
                                     <Text style={s.inputLabel}>Previous Udyog Aadhaar (if any)</Text>
@@ -468,10 +569,9 @@ export default function NewUdyamRegistrationScreen() {
 
                                 <View style={s.formCard}>
                                     <Text style={s.inputLabel}>Major Activity *</Text>
-                                    <TouchableOpacity style={s.inputContainer} onPress={() => setShowActivityModal(true)}>
-                                        <Text style={[s.field, !form.activity && { color: '#94A3B8' }]}>{form.activity || 'Select Activity'}</Text>
-                                        <Ionicons name="chevron-down" size={16} color="#94A3B8" />
-                                    </TouchableOpacity>
+                                    <View style={s.inputContainer}>
+                                        <TextInput style={s.field} placeholder="Describe your major activity" value={form.activity} onChangeText={v => update('activity', v)} />
+                                    </View>
 
                                     <View style={s.inputRow}>
                                         <View style={{ flex: 1, marginRight: 10 }}>
@@ -650,20 +750,7 @@ export default function NewUdyamRegistrationScreen() {
                 </View>
             </Modal>
 
-            <Modal visible={showActivityModal} transparent animationType="slide">
-                <View style={s.modalBack}>
-                    <View style={s.modal}>
-                        <View style={s.modalHandle} />
-                        <Text style={s.modalTitle}>Business Activity</Text>
-                        {ACTIVITIES.map(a => (
-                            <TouchableOpacity key={a} style={s.option} onPress={() => { update('activity', a); setShowActivityModal(false); }}>
-                                <Text style={s.optionText}>{a}</Text>
-                                {form.activity === a && <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />}
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
-            </Modal>
+
 
             <Modal visible={showStateModal} transparent animationType="slide">
                 <View style={s.modalBack}>
@@ -1011,6 +1098,23 @@ const s = StyleSheet.create({
         fontWeight: '600',
         marginLeft: 8,
     },
+    verifyRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 8,
+    },
+    verifyBtn: {
+        backgroundColor: '#E3F2FD',
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        justifyContent: 'center',
+        height: 48,
+    },
+    verifyBtnText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#0D47A1',
+    },
     // Success Screen
     successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20, backgroundColor: '#FFF' },
     successIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F8E9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
@@ -1019,13 +1123,23 @@ const s = StyleSheet.create({
     idCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#E2E8F0' },
     idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
     idValue: { fontSize: 24, fontWeight: '800', color: '#0D47A1' },
-    successActions: { flexDirection: 'row', gap: 15, marginBottom: 30 },
-    actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
-    actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-    actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
     mainBtn: { borderRadius: 16, overflow: 'hidden', width: '100%' },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
     mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+    toast: {
+        position: 'absolute',
+        bottom: 120,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 25,
+        alignSelf: 'center',
+    },
+    toastText: {
+        color: '#FFF',
+        fontSize: 14,
+        fontWeight: '500',
+    },
 
     // Bottom Bar
     bottomBar: {

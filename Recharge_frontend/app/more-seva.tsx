@@ -69,8 +69,12 @@ export default function MoreSevaScreen() {
                                 instantly.
                             </Text>
                             <TouchableOpacity style={styles.trackNowButton}
+<<<<<<< HEAD
                                 onPress={() => router.push("/track-status")}
                             >
+=======
+                                onPress={() => router.push("/track-status")}>
+>>>>>>> 3f51a0a9e3436602958ad3cbde5ea886524f3d13
                                 <Text style={styles.trackNowButtonText}>Track Status</Text>
                             </TouchableOpacity>
                             <Text style={styles.trackingFootnote}>

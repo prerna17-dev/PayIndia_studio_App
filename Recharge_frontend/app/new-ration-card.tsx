@@ -1,10 +1,12 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
+import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     BackHandler,
     SafeAreaView,
@@ -14,8 +16,10 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface MemberType {
     id: string;
@@ -24,6 +28,9 @@ interface MemberType {
     dob: string;
     relationship: string;
     gender: string;
+    isOtpSent: boolean;
+    isOtpVerified: boolean;
+    otp: string;
 }
 
 interface DocumentType {
@@ -73,6 +80,17 @@ export default function NewRationCardScreen() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
 
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+    const [otp, setOtp] = useState("");
+    const [showToast, setShowToast] = useState(false);
+
+    const copyToClipboard = () => {
+        Clipboard.setString(applicationId);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+    };
+
     const [formData, setFormData] = useState<FormDataType>({
         fullName: "",
         aadhaarNumber: "",
@@ -91,7 +109,7 @@ export default function NewRationCardScreen() {
         occupation: "",
         gasConsumerNo: "",
         gasAgencyName: "",
-        gasStatus: "Not Available",
+        gasStatus: "",
     });
 
     const [members, setMembers] = useState<MemberType[]>([]);
@@ -152,6 +170,9 @@ export default function NewRationCardScreen() {
             dob: "",
             relationship: "",
             gender: "",
+            isOtpSent: false,
+            isOtpVerified: false,
+            otp: ""
         };
         setMembers([...members, newMember]);
     };
@@ -164,10 +185,143 @@ export default function NewRationCardScreen() {
         setMembers(members.filter(m => m.id !== id));
     };
 
+    const handleSendOtp = async () => {
+        if (formData.aadhaarNumber.replace(/\s/g, "").length !== 12) {
+            Alert.alert("Error", "Please enter valid 12-digit Aadhaar number");
+            return;
+        }
+        if (formData.mobileNumber.length !== 10) {
+            Alert.alert("Error", "Please enter a valid 10-digit mobile number");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.RATION_CARD_APPLY_OTP_SEND,
+                { mobile_number: formData.mobileNumber, aadhar_number: formData.aadhaarNumber.replace(/\s/g, "") },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to registered mobile number");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        }
+    };
+
+    const handleDOBChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, "");
+        let formatted = cleaned;
+        if (cleaned.length > 2) {
+            formatted = cleaned.slice(0, 2) + "/" + cleaned.slice(2);
+        }
+        if (cleaned.length > 4) {
+            formatted = formatted.slice(0, 5) + "/" + cleaned.slice(4, 8);
+        }
+        setFormData({ ...formData, dob: formatted });
+    };
+
+    const handleVerifyOtp = async () => {
+        if (otp.length !== 6) {
+            Alert.alert("Error", "Please enter valid 6-digit OTP");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.RATION_CARD_APPLY_OTP_VERIFY,
+                { mobile_number: formData.mobileNumber, otp_code: otp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpVerified(true);
+                Alert.alert("Verified", "Aadhaar OTP verified successfully");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Invalid or expired OTP");
+        }
+    };
+
+    const handleMemberSendOtp = async (memberId: string, memberAadhaar: string) => {
+        if (memberAadhaar.replace(/\s/g, "").length !== 12) {
+            Alert.alert("Error", "Please enter valid 12-digit Aadhaar number for member");
+            return;
+        }
+        if (formData.mobileNumber.length !== 10) {
+            Alert.alert("Error", "Applicant mobile number is missing or invalid");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.RATION_CARD_APPLY_OTP_SEND,
+                { mobile_number: formData.mobileNumber, aadhar_number: memberAadhaar.replace(/\s/g, "") },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                updateMember(memberId, { isOtpSent: true });
+                Alert.alert("Success", "OTP sent to applicant registered mobile number");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP for member");
+        }
+    };
+
+    const handleMemberVerifyOtp = async (memberId: string, memberOtp: string) => {
+        if (memberOtp.length !== 6) {
+            Alert.alert("Error", "Please enter valid 6-digit OTP");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.RATION_CARD_APPLY_OTP_VERIFY,
+                { mobile_number: formData.mobileNumber, otp_code: memberOtp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                updateMember(memberId, { isOtpVerified: true });
+                Alert.alert("Verified", "Member Aadhaar OTP verified successfully");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Invalid or expired member OTP");
+        }
+    };
+
     const handleContinue = () => {
         if (currentStep === 1) {
-            if (!formData.fullName || !formData.aadhaarNumber || !formData.mobileNumber) {
-                Alert.alert("Required", "Please fill Head of Family details");
+            if (
+                !formData.fullName ||
+                !formData.aadhaarNumber ||
+                !formData.mobileNumber ||
+                !formData.dob ||
+                !formData.gender ||
+                !formData.houseNo ||
+                !formData.village ||
+                !formData.district ||
+                !formData.state ||
+                !formData.pincode ||
+                !formData.totalIncome ||
+                !formData.occupation ||
+                !formData.incomeCategory ||
+                !isOtpVerified
+            ) {
+                Alert.alert("Required", "Please fill all mandatory personal, address, and income details (*) and verify Aadhaar");
+                return;
+            }
+
+            const unverifiedMembers = members.filter(m => !m.isOtpVerified);
+            if (unverifiedMembers.length > 0) {
+                Alert.alert("Required", `Please verify Aadhaar OTP for ${unverifiedMembers.length} family member(s)`);
                 return;
             }
             if (formData.aadhaarNumber.length !== 12) {
@@ -186,13 +340,73 @@ export default function NewRationCardScreen() {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            setApplicationId("RAT-" + Math.random().toString(36).substr(2, 6).toUpperCase());
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const data = new FormData();
+
+            // Append form data
+            data.append("full_name", formData.fullName);
+            data.append("aadhaar_number", formData.aadhaarNumber);
+            data.append("mobile_number", formData.mobileNumber);
+            data.append("dob", formData.dob);
+            data.append("gender", formData.gender);
+            data.append("house_no", formData.houseNo);
+            data.append("street", formData.street);
+            data.append("village", formData.village);
+            data.append("district", formData.district);
+            data.append("state", formData.state);
+            data.append("pincode", formData.pincode);
+            data.append("duration_of_stay", formData.durationOfStay);
+            data.append("total_income", formData.totalIncome);
+            data.append("income_category", formData.incomeCategory);
+            data.append("occupation", formData.occupation);
+            data.append("gas_consumer_no", formData.gasConsumerNo);
+            data.append("gas_agency_name", formData.gasAgencyName);
+            data.append("gas_status", formData.gasStatus);
+            data.append("members", JSON.stringify(members));
+
+            // Append documents
+            if (documents.addressProof) {
+                data.append("address_proof", {
+                    uri: documents.addressProof.uri,
+                    name: documents.addressProof.name,
+                    type: "application/pdf", // or detect by extension
+                } as any);
+            }
+            if (documents.incomeCert) {
+                data.append("income_cert", {
+                    uri: documents.incomeCert.uri,
+                    name: documents.incomeCert.name,
+                    type: "application/pdf",
+                } as any);
+            }
+            if (documents.headId) {
+                data.append("head_id", {
+                    uri: documents.headId.uri,
+                    name: documents.headId.name,
+                    type: "application/pdf",
+                } as any);
+            }
+
+            const response = await axios.post(API_ENDPOINTS.RATION_CARD_APPLY, data, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            });
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.applicationId?.toString() || ("RAT" + Math.random().toString(36).substr(2, 6).toUpperCase()));
+                setIsSubmitted(true);
+            }
+        } catch (error: any) {
+            console.error(error);
+            Alert.alert("Error", error.response?.data?.message || "Failed to submit application");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
     };
 
     const renderStepIndicator = () => (
@@ -237,24 +451,27 @@ export default function NewRationCardScreen() {
 
                     <View style={styles.idCard}>
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <TouchableOpacity onPress={copyToClipboard} style={{ padding: 4 }}>
+                                <Ionicons name="copy-outline" size={24} color="#0D47A1" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                            </View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {showToast && (
+                        <View style={{
+                            position: 'absolute',
+                            bottom: 120,
+                            backgroundColor: '#333',
+                            paddingHorizontal: 20,
+                            paddingVertical: 10,
+                            borderRadius: 20,
+                            zIndex: 100
+                        }}>
+                            <Text style={{ color: '#FFF', fontSize: 14 }}>Reference ID Copied!</Text>
+                        </View>
+                    )}
 
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
@@ -298,19 +515,135 @@ export default function NewRationCardScreen() {
                             </View>
 
                             <View style={styles.formCard}>
-                                <Text style={styles.inputLabel}>Full Name *</Text>
+                                <Text style={[styles.inputLabel, { marginTop: 0 }]}>Full Name *</Text>
                                 <View style={styles.inputContainer}>
+                                    <Ionicons name="person-outline" size={18} color="#94A3B8" />
                                     <TextInput style={styles.input} placeholder="As per Aadhaar" value={formData.fullName} onChangeText={t => setFormData({ ...formData, fullName: t })} />
-                                </View>
-
-                                <Text style={styles.inputLabel}>Aadhaar Number *</Text>
-                                <View style={styles.inputContainer}>
-                                    <TextInput style={styles.input} placeholder="12 digit number" keyboardType="number-pad" maxLength={12} value={formData.aadhaarNumber} onChangeText={t => setFormData({ ...formData, aadhaarNumber: t })} />
                                 </View>
 
                                 <Text style={styles.inputLabel}>Mobile Number *</Text>
                                 <View style={styles.inputContainer}>
+                                    <Ionicons name="call-outline" size={18} color="#94A3B8" />
                                     <TextInput style={styles.input} placeholder="10 digit mobile" keyboardType="phone-pad" maxLength={10} value={formData.mobileNumber} onChangeText={t => setFormData({ ...formData, mobileNumber: t })} />
+                                </View>
+
+                                <Text style={styles.inputLabel}>Aadhaar Number *</Text>
+                                <View style={styles.otpSection}>
+                                    <View style={[styles.inputContainer, { flex: 1, marginBottom: 0 }]}>
+                                        <Ionicons name="finger-print-outline" size={18} color="#94A3B8" />
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="XXXX XXXX XXXX"
+                                            keyboardType="number-pad"
+                                            maxLength={12}
+                                            value={formData.aadhaarNumber}
+                                            onChangeText={(text) => setFormData({ ...formData, aadhaarNumber: text })}
+                                            editable={!isOtpVerified}
+                                        />
+                                    </View>
+                                    {!isOtpVerified && (
+                                        <TouchableOpacity
+                                            style={[styles.otpButton, (formData.aadhaarNumber.replace(/\s/g, "").length !== 12 || formData.mobileNumber.length !== 10) && styles.otpButtonDisabled]}
+                                            onPress={handleSendOtp}
+                                            disabled={formData.aadhaarNumber.replace(/\s/g, "").length !== 12 || formData.mobileNumber.length !== 10}
+                                        >
+                                            <Text style={styles.otpButtonText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                        </TouchableOpacity>
+                                    )}
+                                    {isOtpVerified && (
+                                        <View style={styles.verifiedBadge}>
+                                            <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                                            <Text style={styles.verifiedText}>Verified</Text>
+                                        </View>
+                                    )}
+                                </View>
+
+                                {isOtpSent && !isOtpVerified && (
+                                    <View style={styles.otpVerifyContainer}>
+                                        <View style={[styles.inputContainer, { flex: 1, marginBottom: 0 }]}>
+                                            <Ionicons name="key-outline" size={18} color="#94A3B8" />
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Enter 6-digit OTP"
+                                                keyboardType="number-pad"
+                                                maxLength={6}
+                                                value={otp}
+                                                onChangeText={setOtp}
+                                            />
+                                        </View>
+                                        <TouchableOpacity
+                                            style={[styles.verifyButton, otp.length !== 6 && styles.otpButtonDisabled]}
+                                            onPress={handleVerifyOtp}
+                                            disabled={otp.length !== 6}
+                                        >
+                                            <Text style={styles.verifyButtonText}>Verify</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+
+
+                                <Text style={styles.inputLabel}>Date of Birth *</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
+                                    <TextInput
+                                        style={styles.input}
+                                        placeholder="DD/MM/YYYY"
+                                        keyboardType="number-pad"
+                                        maxLength={10}
+                                        value={formData.dob}
+                                        onChangeText={handleDOBChange}
+                                    />
+                                </View>
+
+                                <Text style={styles.inputLabel}>Gender *</Text>
+                                <View style={styles.genderContainer}>
+                                    {["Male", "Female", "Other"].map((g) => (
+                                        <TouchableOpacity
+                                            key={g}
+                                            style={[styles.genderBox, formData.gender === g && styles.genderBoxActive]}
+                                            onPress={() => setFormData({ ...formData, gender: g })}
+                                        >
+                                            <MaterialCommunityIcons
+                                                name={g === 'Male' ? 'gender-male' : g === 'Female' ? 'gender-female' : 'gender-transgender'}
+                                                size={20}
+                                                color={formData.gender === g ? '#0D47A1' : '#64748B'}
+                                            />
+                                            <Text style={[styles.genderText, formData.gender === g && styles.genderTextActive]}>{g}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+
+                            <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+                                <View style={styles.iconBadge}><Ionicons name="wallet" size={20} color="#0D47A1" /></View>
+                                <View>
+                                    <Text style={styles.sectionTitle}>Income & Employment</Text>
+                                    <Text style={styles.sectionSub}>Financial details</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.formCard}>
+                                <Text style={[styles.inputLabel, { marginTop: 0 }]}>Occupation *</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="briefcase-outline" size={18} color="#94A3B8" />
+                                    <TextInput style={styles.input} placeholder="e.g. Farmer, Shopkeeper" value={formData.occupation} onChangeText={t => setFormData({ ...formData, occupation: t })} />
+                                </View>
+
+                                <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>Total Income *</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="cash-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="Yearly income" keyboardType="numeric" value={formData.totalIncome} onChangeText={t => setFormData({ ...formData, totalIncome: t })} />
+                                        </View>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>Category *</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="list-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="APL / BPL" value={formData.incomeCategory} onChangeText={t => setFormData({ ...formData, incomeCategory: t })} />
+                                        </View>
+                                    </View>
                                 </View>
                             </View>
 
@@ -323,14 +656,97 @@ export default function NewRationCardScreen() {
                             </View>
 
                             <View style={styles.formCard}>
-                                <Text style={styles.inputLabel}>Village / City *</Text>
+                                <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[styles.inputLabel, { marginTop: 0 }]}>House No. *</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="home-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="No." value={formData.houseNo} onChangeText={t => setFormData({ ...formData, houseNo: t })} />
+                                        </View>
+                                    </View>
+                                    <View style={{ flex: 2 }}>
+                                        <Text style={[styles.inputLabel, { marginTop: 0 }]}>Street / Area</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="map-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="Street name" value={formData.street} onChangeText={t => setFormData({ ...formData, street: t })} />
+                                        </View>
+                                    </View>
+                                </View>
+
+                                <Text style={styles.inputLabel}>Village / Locality *</Text>
                                 <View style={styles.inputContainer}>
+                                    <Ionicons name="business-outline" size={18} color="#94A3B8" />
                                     <TextInput style={styles.input} placeholder="Enter locality" value={formData.village} onChangeText={t => setFormData({ ...formData, village: t })} />
                                 </View>
-                                <Text style={styles.inputLabel}>Pincode *</Text>
-                                <View style={styles.inputContainer}>
-                                    <TextInput style={styles.input} placeholder="6 digit area code" keyboardType="number-pad" maxLength={6} value={formData.pincode} onChangeText={t => setFormData({ ...formData, pincode: t })} />
+
+                                <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>District *</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="location-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="District" value={formData.district} onChangeText={t => setFormData({ ...formData, district: t })} />
+                                        </View>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>State *</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="map-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="State" value={formData.state} onChangeText={t => setFormData({ ...formData, state: t })} />
+                                        </View>
+                                    </View>
                                 </View>
+
+                                <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>Pincode *</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="pin-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="6 digit area code" keyboardType="number-pad" maxLength={6} value={formData.pincode} onChangeText={t => setFormData({ ...formData, pincode: t })} />
+                                        </View>
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={styles.inputLabel}>Stay Duration</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="time-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="e.g. 5 Years" value={formData.durationOfStay} onChangeText={t => setFormData({ ...formData, durationOfStay: t })} />
+                                        </View>
+                                    </View>
+                                </View>
+                            </View>
+
+                            <View style={[styles.sectionHeader, { marginTop: 24 }]}>
+                                <View style={styles.iconBadge}><Ionicons name="flame" size={20} color="#0D47A1" /></View>
+                                <View>
+                                    <Text style={styles.sectionTitle}>Gas Connection Details</Text>
+                                    <Text style={styles.sectionSub}>LPG provider specifics</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.formCard}>
+                                <Text style={[styles.inputLabel, { marginTop: 0 }]}>Gas Status *</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="flame-outline" size={18} color="#94A3B8" />
+                                    <TextInput 
+                                        style={styles.input} 
+                                        placeholder="Enter status (e.g. Available, Not Available)" 
+                                        value={formData.gasStatus} 
+                                        onChangeText={t => setFormData({ ...formData, gasStatus: t })} 
+                                    />
+                                </View>
+                                {formData.gasStatus.toLowerCase() === 'available' && (
+                                    <>
+                                        <Text style={styles.inputLabel}>Agency Name</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="business-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="e.g. Bharat Gas" value={formData.gasAgencyName} onChangeText={t => setFormData({ ...formData, gasAgencyName: t })} />
+                                        </View>
+                                        <Text style={styles.inputLabel}>Consumer Number</Text>
+                                        <View style={styles.inputContainer}>
+                                            <Ionicons name="pricetag-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="Enter consumer ID" value={formData.gasConsumerNo} onChangeText={t => setFormData({ ...formData, gasConsumerNo: t })} />
+                                        </View>
+                                    </>
+                                )}
                             </View>
 
                             <View style={styles.memberSectionHeader}>
@@ -356,10 +772,70 @@ export default function NewRationCardScreen() {
                                         </TouchableOpacity>
                                     </View>
                                     <View style={styles.inputContainer}>
+                                        <Ionicons name="person-outline" size={18} color="#94A3B8" />
                                         <TextInput style={styles.input} placeholder="Member Name" value={m.name} onChangeText={t => updateMember(m.id, { name: t })} />
                                     </View>
+                                    <View style={styles.otpSection}>
+                                        <View style={[styles.inputContainer, { flex: 1, marginBottom: 0, marginTop: 10 }]}>
+                                            <Ionicons name="finger-print-outline" size={18} color="#94A3B8" />
+                                            <TextInput style={styles.input} placeholder="Aadhaar" keyboardType="number-pad" maxLength={12} value={m.aadhaar} onChangeText={t => updateMember(m.id, { aadhaar: t })} editable={!m.isOtpVerified} />
+                                        </View>
+                                        {!m.isOtpVerified && (
+                                            <TouchableOpacity
+                                                style={[styles.otpButton, { marginTop: 10 }, (m.aadhaar.replace(/\s/g, "").length !== 12 || formData.mobileNumber.length !== 10) && styles.otpButtonDisabled]}
+                                                onPress={() => handleMemberSendOtp(m.id, m.aadhaar)}
+                                                disabled={m.aadhaar.replace(/\s/g, "").length !== 12 || formData.mobileNumber.length !== 10}
+                                            >
+                                                <Text style={styles.otpButtonText}>{m.isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                            </TouchableOpacity>
+                                        )}
+                                        {m.isOtpVerified && (
+                                            <View style={[styles.verifiedBadge, { marginTop: 10 }]}>
+                                                <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                                                <Text style={styles.verifiedText}>Verified</Text>
+                                            </View>
+                                        )}
+                                    </View>
+
+                                    {m.isOtpSent && !m.isOtpVerified && (
+                                        <View style={styles.otpVerifyContainer}>
+                                            <View style={[styles.inputContainer, { flex: 1, marginBottom: 0 }]}>
+                                                <Ionicons name="key-outline" size={18} color="#94A3B8" />
+                                                <TextInput
+                                                    style={styles.input}
+                                                    placeholder="Enter 6-digit OTP"
+                                                    keyboardType="number-pad"
+                                                    maxLength={6}
+                                                    value={m.otp}
+                                                    onChangeText={t => updateMember(m.id, { otp: t })}
+                                                />
+                                            </View>
+                                            <TouchableOpacity
+                                                style={[styles.verifyButton, m.otp.length !== 6 && styles.otpButtonDisabled]}
+                                                onPress={() => handleMemberVerifyOtp(m.id, m.otp)}
+                                                disabled={m.otp.length !== 6}
+                                            >
+                                                <Text style={styles.verifyButtonText}>Verify</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )}
+
                                     <View style={[styles.inputContainer, { marginTop: 10 }]}>
-                                        <TextInput style={styles.input} placeholder="Aadhaar" keyboardType="number-pad" maxLength={12} value={m.aadhaar} onChangeText={t => updateMember(m.id, { aadhaar: t })} />
+                                        <Ionicons name="calendar-outline" size={18} color="#94A3B8" />
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Date of Birth (DD/MM/YYYY)"
+                                            keyboardType="number-pad"
+                                            maxLength={10}
+                                            value={m.dob || ""}
+                                            onChangeText={t => {
+                                                const cleaned = t.replace(/[^0-9]/g, "");
+                                                let formatted = cleaned;
+                                                if (cleaned.length > 2) formatted = cleaned.slice(0, 2) + "/" + cleaned.slice(2);
+                                                if (cleaned.length > 4) formatted = formatted.slice(0, 5) + "/" + cleaned.slice(4, 9); // Corrected to 10 chars total
+                                                updateMember(m.id, { dob: formatted });
+                                            }}
+                                        />
                                     </View>
                                 </View>
                             ))}
@@ -436,7 +912,23 @@ export default function NewRationCardScreen() {
                                 </View>
                                 <View style={styles.divider} />
                                 <Text style={styles.reviewSectionTitle}>Address</Text>
-                                <Text style={styles.addressText}>{formData.village}, {formData.pincode}</Text>
+                                <Text style={styles.addressText}>
+                                    {formData.houseNo}{formData.street ? `, ${formData.street}` : ""}, {formData.village}, {formData.district}, {formData.state} - {formData.pincode}
+                                </Text>
+                                <View style={styles.divider} />
+                                <Text style={styles.reviewSectionTitle}>Income & Gas</Text>
+                                <View style={styles.reviewItem}>
+                                    <Text style={styles.reviewLabel}>Occupation</Text>
+                                    <Text style={styles.reviewValue}>{formData.occupation}</Text>
+                                </View>
+                                <View style={styles.reviewItem}>
+                                    <Text style={styles.reviewLabel}>Category</Text>
+                                    <Text style={styles.reviewValue}>{formData.incomeCategory}</Text>
+                                </View>
+                                <View style={styles.reviewItem}>
+                                    <Text style={styles.reviewLabel}>Gas Status</Text>
+                                    <Text style={styles.reviewValue}>{formData.gasStatus}</Text>
+                                </View>
                             </View>
 
                             <View style={styles.declarationBox}>
@@ -577,8 +1069,14 @@ const styles = StyleSheet.create({
 
     formCard: { backgroundColor: '#FFF', borderRadius: 20, padding: 20, elevation: 4, shadowColor: '#64748B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 12 },
     inputLabel: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8, marginTop: 16 },
-    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, height: 48 },
-    input: { flex: 1, fontSize: 15, color: '#1E293B' },
+    inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 16, height: 48 },
+    input: { flex: 1, fontSize: 15, color: '#1E293B', padding: 0, marginLeft: 10 },
+
+    genderContainer: { flexDirection: 'row', gap: 10, marginTop: 4 },
+    genderBox: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', height: 46 },
+    genderBoxActive: { borderColor: '#0D47A1', backgroundColor: '#E3F2FD' },
+    genderText: { fontSize: 14, fontWeight: '600', color: '#64748B' },
+    genderTextActive: { color: '#0D47A1' },
 
     memberSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 10 },
     addBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#0D47A1", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, gap: 6 },
@@ -653,5 +1151,15 @@ const styles = StyleSheet.create({
     actionText: { fontSize: 12, color: '#475569', fontWeight: '600', textAlign: 'center' },
     mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
-    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" }
+    mainBtnText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
+
+    otpSection: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+    otpButton: { backgroundColor: '#0D47A1', paddingHorizontal: 16, height: 48, borderRadius: 12, justifyContent: 'center' },
+    otpButtonDisabled: { opacity: 0.5 },
+    otpButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' },
+    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E8F5E9', paddingHorizontal: 12, height: 48, borderRadius: 12 },
+    verifiedText: { color: '#2E7D32', fontSize: 14, fontWeight: '700' },
+    otpVerifyContainer: { flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: 12 },
+    verifyButton: { backgroundColor: '#2E7D32', paddingHorizontal: 24, height: 48, borderRadius: 12, justifyContent: 'center' },
+    verifyButtonText: { color: '#FFF', fontSize: 14, fontWeight: '700' }
 });

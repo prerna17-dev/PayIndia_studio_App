@@ -1,5 +1,6 @@
 const DomicileModel = require("../models/domicile.model");
 const path = require("path");
+const SmsService = require("../services/sms.service");
 const { formatDateToMySQL } = require("../utils/date.helper");
 
 /**
@@ -24,7 +25,10 @@ exports.createApplication = async (req, res, next) => {
             taluka,
             district,
             state,
-            pincode
+            pincode,
+            is_student,
+            school_name,
+            standard
         } = req.body;
 
         // Basic validation
@@ -63,6 +67,9 @@ exports.createApplication = async (req, res, next) => {
             district,
             state,
             pincode,
+            is_student,
+            school_name,
+            standard,
             reference_id,
             aadhaar_card_url: getFilePath('aadhaar_card'),
             ration_card_url: getFilePath('ration_card'),
@@ -152,6 +159,42 @@ exports.updateStatus = async (req, res, next) => {
             success: true,
             message: `Application status updated to ${status}`,
         });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/* --- DOMICILE OTP CONTROLLERS --- */
+
+exports.sendOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, aadhar_number } = req.body;
+        if (!mobile_number || !aadhar_number) {
+            return res.status(400).json({ success: false, message: "Mobile and Aadhaar are required" });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        await DomicileModel.storeOTP(mobile_number, otpCode, "DOMICILE_APPLY");
+
+        await SmsService.sendSMS(mobile_number, `Your OTP for Domicile Certificate Application (Aadhaar: ****${aadhar_number.slice(-4)}) is ${otpCode}. Valid for 10 mins.`);
+
+        res.json({ success: true, message: "OTP sent successfully" });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.verifyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, otp_code } = req.body;
+        if (!mobile_number || !otp_code) {
+            return res.status(400).json({ success: false, message: "Mobile and OTP are required" });
+        }
+
+        const isValid = await DomicileModel.verifyOTP(mobile_number, otp_code, "DOMICILE_APPLY");
+        if (!isValid) return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+
+        res.json({ success: true, message: "OTP verified successfully" });
     } catch (err) {
         next(err);
     }

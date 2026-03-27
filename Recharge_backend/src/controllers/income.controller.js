@@ -13,13 +13,20 @@ exports.createApplication = async (req, res, next) => {
             aadhaar_number,
             mobile_number,
             email,
+            father_name,
+            mother_name,
+            spouse_name,
+            family_members_count,
             pan_number,
             dob,
             gender,
             occupation,
             annual_income,
+            monthly_income,
             income_source,
+            employer_name,
             purpose,
+            required_for,
             house_no,
             street,
             village,
@@ -53,13 +60,20 @@ exports.createApplication = async (req, res, next) => {
             aadhaar_number,
             mobile_number,
             email,
+            father_name,
+            mother_name,
+            spouse_name,
+            family_members_count,
             pan_number,
             dob: formatDateToMySQL(dob),
             gender,
             occupation,
             annual_income,
+            monthly_income,
             income_source,
+            employer_name,
             purpose,
+            required_for,
             house_no,
             street,
             village,
@@ -70,10 +84,10 @@ exports.createApplication = async (req, res, next) => {
             reference_id,
             aadhaar_card_url: getFilePath('aadhaar_card'),
             ration_card_url: getFilePath('ration_card'),
-            tax_receipt_url: getFilePath('tax_receipt'),
+            address_proof_url: getFilePath('address_proof'),
             income_proof_url: getFilePath('income_proof'),
             self_declaration_url: getFilePath('self_declaration'),
-            photo_url: getFilePath('photo'),
+            passport_photo_url: getFilePath('passport_photo'),
             other_docs_url: getFilePath('other_docs')
         };
 
@@ -156,6 +170,43 @@ exports.updateStatus = async (req, res, next) => {
             success: true,
             message: `Application status updated to ${status}`,
         });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/* --- INCOME OTP CONTROLLERS --- */
+
+exports.sendOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, aadhar_number } = req.body;
+        if (!mobile_number || !aadhar_number) {
+            return res.status(400).json({ success: false, message: "Mobile and Aadhaar are required" });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        await IncomeModel.storeOTP(mobile_number, otpCode, "INCOME_APPLY");
+
+        const SmsService = require("../services/sms.service");
+        await SmsService.sendSMS(mobile_number, `Your OTP for Income Certificate Verification (Aadhaar: ****${aadhar_number.slice(-4)}) is ${otpCode}. Valid for 10 mins.`);
+
+        res.json({ success: true, message: "OTP sent successfully" });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.verifyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, otp_code } = req.body;
+        if (!mobile_number || !otp_code) {
+            return res.status(400).json({ success: false, message: "Mobile and OTP are required" });
+        }
+
+        const isValid = await IncomeModel.verifyOTP(mobile_number, otp_code, "INCOME_APPLY");
+        if (!isValid) return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+
+        res.json({ success: true, message: "OTP verified successfully" });
     } catch (err) {
         next(err);
     }

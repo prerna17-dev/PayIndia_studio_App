@@ -32,6 +32,10 @@ const panUpload = upload.fields([
 // All routes require authentication
 router.use(authMiddleware);
 
+// User: Send and Verify OTP for New Application
+router.post("/apply/send-otp", panController.sendApplyOTP);
+router.post("/apply/verify-otp", panController.verifyApplyOTP);
+
 // User: Submit application with documents
 router.post("/apply", panUpload, panController.createApplication);
 
@@ -69,6 +73,13 @@ const panCorrectionUpload = uploadCorrection.fields([
     { name: "identity_proof", maxCount: 1 },
     { name: "proof_of_dob", maxCount: 1 },
     { name: "photo_sign", maxCount: 1 },
+    { name: "father_proof", maxCount: 1 },
+    { name: "father_declare", maxCount: 1 },
+    { name: "contact_proof", maxCount: 1 },
+    { name: "address_proof", maxCount: 1 },
+    { name: "address_id", maxCount: 1 },
+    { name: "photo_passport", maxCount: 1 },
+    { name: "photo_id", maxCount: 1 },
 ]);
 
 // User: Send and Verify OTP for Correction

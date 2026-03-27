@@ -186,10 +186,16 @@ exports.getCorrectionById = async (correctionId) => {
  * Store OTP for verification
  */
 exports.storeOTP = async (mobileNumber, otpCode, purpose) => {
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+    // Delete any existing unverified OTP for this mobile and purpose
     await pool.query(
-        `INSERT INTO verification_otps (mobile_number, otp_code, purpose, expires_at) VALUES (?, ?, ?, ?)`,
-        [mobileNumber, otpCode, purpose, expiresAt]
+        "DELETE FROM verification_otps WHERE mobile_number = ? AND purpose = ? AND is_verified = FALSE",
+        [mobileNumber, purpose]
+    );
+
+    // Store new OTP (expires in 10 mins)
+    await pool.query(
+        "INSERT INTO verification_otps (mobile_number, otp_code, purpose, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))",
+        [mobileNumber, otpCode, purpose]
     );
 };
 

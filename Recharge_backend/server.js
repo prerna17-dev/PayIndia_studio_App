@@ -1,6 +1,7 @@
 const http = require("http");
 const app = require("./src/app");
 const pool = require("./src/config/db");
+const fs = require("fs");
 
 const PORT = process.env.PORT || 5000;
 
@@ -14,6 +15,24 @@ server.listen(PORT, async () => {
     const conn = await pool.getConnection();
     console.log("✅ Database connected successfully");
     conn.release();
+
+    // Ensure upload directories exist
+    const uploadDirs = [
+      "src/uploads/certificates/domicile",
+      "src/uploads/certificates/income",
+      "src/uploads/certificates/marriage",
+      "src/uploads/certificates/birth",
+      "src/uploads/certificates/death",
+      "src/uploads/certificates/caste",
+      "src/uploads/profiles"
+    ];
+
+    uploadDirs.forEach(dir => {
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+        console.log(`📁 Created missing directory: ${dir}`);
+      }
+    });
 
     console.log(`🚀 Server running on port ${PORT}`);
   } catch (err) {

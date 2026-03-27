@@ -40,4 +40,8 @@ router.get("/list", ewsController.getApplications);
 router.get("/:referenceId", ewsController.getApplicationByRef);
 router.put("/update-status/:id", ewsController.updateStatus);
 
+// OTP Routes
+router.post("/send-otp", ewsController.sendOTP);
+router.post("/verify-otp", ewsController.verifyOTP);
+
 module.exports = router;

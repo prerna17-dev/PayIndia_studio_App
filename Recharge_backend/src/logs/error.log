@@ -226,3 +226,322 @@ STACK: Error: Table 'payindia_studio.aadhar_corrections' doesn't exist
     at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
     at WriteStream.emit (node:events:520:35)
 ----------------------------------
+
+[2026-03-18T05:42:27.220Z]
+METHOD: POST
+URL: /api/pan/correction/submit
+MESSAGE: Unknown column 'corrected_father_name' in 'field list'
+STACK: Error: Unknown column 'corrected_father_name' in 'field list'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\pan.model.js:193:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\pan.controller.js:260:45)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-18T06:35:09.458Z]
+METHOD: POST
+URL: /api/business/udyam/correction/submit
+MESSAGE: Cannot read properties of undefined (reading 'path')
+STACK: TypeError: Cannot read properties of undefined (reading 'path')
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\udyam.controller.js:176:107
+    at Array.forEach (<anonymous>)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\udyam.controller.js:174:28)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+----------------------------------
+
+[2026-03-18T06:35:13.984Z]
+METHOD: POST
+URL: /api/business/udyam/correction/submit
+MESSAGE: Cannot read properties of undefined (reading 'path')
+STACK: TypeError: Cannot read properties of undefined (reading 'path')
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\udyam.controller.js:176:107
+    at Array.forEach (<anonymous>)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\udyam.controller.js:174:28)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+----------------------------------
+
+[2026-03-18T07:24:01.336Z]
+METHOD: POST
+URL: /api/certificate/income/apply
+MESSAGE: Column 'user_id' cannot be null
+STACK: Error: Column 'user_id' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\income.model.js:44:33)
+    at exports.createApplication (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\income.controller.js:93:49)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-18T07:24:13.125Z]
+METHOD: POST
+URL: /api/certificate/income/apply
+MESSAGE: Column 'user_id' cannot be null
+STACK: Error: Column 'user_id' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\income.model.js:44:33)
+    at exports.createApplication (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\income.controller.js:93:49)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-23T04:48:15.814Z]
+METHOD: POST
+URL: /api/voter/correction/submit
+MESSAGE: Unknown column 'corrected_name' in 'field list'
+STACK: Error: Unknown column 'corrected_name' in 'field list'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\voter.model.js:197:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\voter.controller.js:312:47)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-23T04:48:20.367Z]
+METHOD: POST
+URL: /api/voter/correction/submit
+MESSAGE: Unknown column 'corrected_name' in 'field list'
+STACK: Error: Unknown column 'corrected_name' in 'field list'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\voter.model.js:197:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\voter.controller.js:312:47)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-23T08:49:47.341Z]
+METHOD: POST
+URL: /api/certificate/caste/apply
+MESSAGE: district is not defined
+STACK: ReferenceError: district is not defined
+    at exports.create (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\caste.model.js:51:97)
+    at exports.createApplication (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\caste.controller.js:92:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+    at finish (node:internal/streams/writable:953:10)
+----------------------------------
+
+[2026-03-23T08:50:11.345Z]
+METHOD: POST
+URL: /api/certificate/caste/apply
+MESSAGE: district is not defined
+STACK: ReferenceError: district is not defined
+    at exports.create (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\caste.model.js:51:97)
+    at exports.createApplication (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\caste.controller.js:92:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+    at finish (node:internal/streams/writable:953:10)
+----------------------------------
+
+[2026-03-23T09:09:50.412Z]
+METHOD: POST
+URL: /api/certificate/domicile/send-otp
+MESSAGE: Table 'payindia_studio.otp_verifications' doesn't exist
+STACK: Error: Table 'payindia_studio.otp_verifications' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\domicile.model.js:105:16)
+    at exports.sendOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\domicile.controller.js:176:29)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-23T09:09:56.055Z]
+METHOD: POST
+URL: /api/certificate/domicile/send-otp
+MESSAGE: Table 'payindia_studio.otp_verifications' doesn't exist
+STACK: Error: Table 'payindia_studio.otp_verifications' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\domicile.model.js:105:16)
+    at exports.sendOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\domicile.controller.js:176:29)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-23T09:10:01.609Z]
+METHOD: POST
+URL: /api/certificate/domicile/send-otp
+MESSAGE: Table 'payindia_studio.otp_verifications' doesn't exist
+STACK: Error: Table 'payindia_studio.otp_verifications' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\domicile.model.js:105:16)
+    at exports.sendOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\domicile.controller.js:176:29)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-23T11:06:07.468Z]
+METHOD: POST
+URL: /api/aadhar/enroll
+MESSAGE: Unknown column 'birth_certificate_url' in 'field list'
+STACK: Error: Unknown column 'birth_certificate_url' in 'field list'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:25:33)
+    at exports.createEnrollment (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:16:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-23T11:06:11.303Z]
+METHOD: POST
+URL: /api/aadhar/enroll
+MESSAGE: Unknown column 'birth_certificate_url' in 'field list'
+STACK: Error: Unknown column 'birth_certificate_url' in 'field list'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:25:33)
+    at exports.createEnrollment (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:16:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-23T11:33:32.749Z]
+METHOD: POST
+URL: /api/aadhar/enroll
+MESSAGE: Unknown column 'birth_certificate_url' in 'field list'
+STACK: Error: Unknown column 'birth_certificate_url' in 'field list'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:25:33)
+    at exports.createEnrollment (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:16:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-26T06:39:16.679Z]
+METHOD: POST
+URL: /api/certificate/marriage/apply
+MESSAGE: ENOENT: no such file or directory, open 'C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\uploads\certificates\marriage\groom_aadhaar-1774507156676-975133496.jpg'
+STACK: Error: ENOENT: no such file or directory, open 'C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\uploads\certificates\marriage\groom_aadhaar-1774507156676-975133496.jpg'
+----------------------------------
+
+[2026-03-26T06:58:56.901Z]
+METHOD: POST
+URL: /api/certificate/ews/send-otp
+MESSAGE: Table 'payindia_studio.otps' doesn't exist
+STACK: Error: Table 'payindia_studio.otps' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\ews.model.js:112:16)
+    at exports.sendOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\ews.controller.js:187:24)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-26T06:59:04.741Z]
+METHOD: POST
+URL: /api/certificate/ews/send-otp
+MESSAGE: Table 'payindia_studio.otps' doesn't exist
+STACK: Error: Table 'payindia_studio.otps' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\ews.model.js:112:16)
+    at exports.sendOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\ews.controller.js:187:24)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-26T07:28:18.945Z]
+METHOD: POST
+URL: /api/certificate/ews/send-otp
+MESSAGE: Unknown column 'type' in 'field list'
+STACK: Error: Unknown column 'type' in 'field list'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\ews.model.js:102:16)
+    at exports.sendOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\ews.controller.js:186:24)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-26T07:54:06.474Z]
+METHOD: POST
+URL: /api/certificate/ews/verify-otp
+MESSAGE: Unknown column 'id' in 'where clause'
+STACK: Error: Unknown column 'id' in 'where clause'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.verifyOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\ews.model.js:128:20)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async exports.verifyOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\ews.controller.js:204:25)
+----------------------------------
+
+[2026-03-26T08:20:23.745Z]
+METHOD: POST
+URL: /api/certificate/ncl/apply
+MESSAGE: ENOENT: no such file or directory, open 'C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\uploads\certificates\ncl\id_proof-1774513223738-235499840.jpg'
+STACK: Error: ENOENT: no such file or directory, open 'C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\uploads\certificates\ncl\id_proof-1774513223738-235499840.jpg'
+----------------------------------

@@ -1,6 +1,7 @@
 const DeathModel = require("../models/death.model");
 const path = require("path");
 const { formatDateToMySQL } = require("../utils/date.helper");
+const SmsService = require("../services/sms.service");
 
 /**
  * Submit a new Death Certificate application
@@ -162,6 +163,44 @@ exports.updateStatus = async (req, res, next) => {
             success: true,
             message: `Application status updated to ${status}`,
         });
+    } catch (err) {
+        next(err);
+    }
+};
+
+/* --- DEATH OTP CONTROLLERS --- */
+
+exports.sendOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, aadhar_number } = req.body;
+        if (!mobile_number || !aadhar_number) {
+            return res.status(400).json({ success: false, message: "Mobile and Aadhaar are required" });
+        }
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const purpose = req.body.purpose || "DEATH_APPLY";
+        await DeathModel.storeOTP(mobile_number, otpCode, purpose);
+
+        await SmsService.sendSMS(mobile_number, `Your OTP for Death Certificate Verification (Aadhaar: ****${aadhar_number.slice(-4)}) is ${otpCode}. Valid for 10 mins.`);
+
+        res.json({ success: true, message: "OTP sent successfully" });
+    } catch (err) {
+        next(err);
+    }
+};
+
+exports.verifyOTP = async (req, res, next) => {
+    try {
+        const { mobile_number, otp_code } = req.body;
+        if (!mobile_number || !otp_code) {
+            return res.status(400).json({ success: false, message: "Mobile and OTP are required" });
+        }
+
+        const purpose = req.body.purpose || "DEATH_APPLY";
+        const isValid = await DeathModel.verifyOTP(mobile_number, otp_code, purpose);
+        if (!isValid) return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+
+        res.json({ success: true, message: "OTP verified successfully" });
     } catch (err) {
         next(err);
     }

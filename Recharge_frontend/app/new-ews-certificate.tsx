@@ -14,8 +14,12 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator
+    ActivityIndicator,
+    Clipboard
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -80,6 +84,27 @@ export default function NewEWSCertificateScreen() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
     const [isEditingMode, setIsEditingMode] = useState(false);
+    const [showCopied, setShowCopied] = useState(false);
+
+    // OTP States
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+    const [otpCode, setOtpCode] = useState("");
+    const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+
+    useEffect(() => {
+        checkAuth();
+    }, []);
+
+    const checkAuth = async () => {
+        const token = await AsyncStorage.getItem("userToken");
+        if (!token) {
+            Alert.alert("Session Expired", "Please login again to continue.", [
+                { text: "OK", onPress: () => router.replace("/auth/login") }
+            ]);
+        }
+    };
 
     const [documents, setDocuments] = useState<DocumentsState>({
         incomeCert: null,
@@ -200,12 +225,74 @@ export default function NewEWSCertificateScreen() {
         }
     };
 
-    const formatDob = (text: string) => {
+    const handleSendOTP = async () => {
+        if (formData.aadhaarNumber.length !== 12) {
+            Alert.alert("Error", "Please enter a valid 12-digit Aadhaar number");
+            return;
+        }
+        if (formData.mobileNumber.length !== 10) {
+            Alert.alert("Error", "Please enter a valid 10-digit mobile number");
+            return;
+        }
+
+        setIsSendingOtp(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.EWS_OTP_SEND, {
+                mobile_number: formData.mobileNumber,
+                aadhar_number: formData.aadhaarNumber
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("OTP Sent", "Verification code sent to your mobile.");
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to send OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Service temporarily unavailable.");
+        } finally {
+            setIsSendingOtp(false);
+        }
+    };
+
+    const handleVerifyOTP = async () => {
+        if (otpCode.length !== 6) {
+            Alert.alert("Error", "Please enter 6-digit OTP");
+            return;
+        }
+
+        setIsVerifyingOtp(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.EWS_OTP_VERIFY, {
+                mobile_number: formData.mobileNumber,
+                otp_code: otpCode
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsOtpVerified(true);
+                Alert.alert("Success", "Aadhaar verified successfully!");
+            } else {
+                Alert.alert("Error", response.data.message || "Invalid OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Verification failed.");
+        } finally {
+            setIsVerifyingOtp(false);
+        }
+    };
+
+    const handleDOBChange = (text: string) => {
         const cleaned = text.replace(/[^0-9]/g, "");
         let formatted = cleaned;
         if (cleaned.length > 2) formatted = cleaned.slice(0, 2) + "/" + cleaned.slice(2);
         if (cleaned.length > 4) formatted = formatted.slice(0, 5) + "/" + cleaned.slice(4, 8);
-        return formatted;
+        setFormData(prev => ({ ...prev, dob: formatted }));
     };
 
     const handleContinue = () => {
@@ -213,6 +300,11 @@ export default function NewEWSCertificateScreen() {
             // Validation
             if (!formData.fullName || formData.aadhaarNumber.length !== 12 || !formData.dob || !formData.category || !formData.declaration) {
                 Alert.alert("Required", "Please fill all mandatory details and accept declaration");
+                return;
+            }
+
+            if (!isOtpVerified) {
+                Alert.alert("Required", "Please verify your Aadhaar with OTP to proceed");
                 return;
             }
 
@@ -259,12 +351,72 @@ export default function NewEWSCertificateScreen() {
             }
 
             setIsSubmitting(true);
-            setTimeout(() => {
-                const refId = "EWS" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                setApplicationId(refId);
-                setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+
+            const submitApplication = async () => {
+                try {
+                    const token = await AsyncStorage.getItem("userToken");
+                    if (!token) {
+                        setIsSubmitting(false);
+                        Alert.alert("Session Expired", "Please login again.");
+                        return;
+                    }
+
+                    const formDataToSend = new FormData();
+                    formDataToSend.append("full_name", formData.fullName);
+                    formDataToSend.append("aadhaar_number", formData.aadhaarNumber);
+                    formDataToSend.append("dob", formData.dob);
+                    formDataToSend.append("gender", formData.gender);
+                    formDataToSend.append("mobile_number", formData.mobileNumber);
+                    formDataToSend.append("email", formData.email);
+                    formDataToSend.append("category", formData.category);
+                    formDataToSend.append("father_name", formData.fatherName);
+                    formDataToSend.append("mother_name", formData.motherName);
+                    formDataToSend.append("spouse_name", formData.spouseName);
+                    formDataToSend.append("family_members_count", formData.familyMembersCount);
+                    formDataToSend.append("family_occupation", formData.familyOccupation);
+                    formDataToSend.append("income_salary", formData.incomeSalary);
+                    formDataToSend.append("income_agri", formData.incomeAgri);
+                    formDataToSend.append("income_business", formData.incomeBusiness);
+                    formDataToSend.append("income_other", formData.incomeOther);
+                    formDataToSend.append("total_annual_income", formData.totalAnnualIncome.toString());
+                    formDataToSend.append("flat_size", formData.flatSize);
+                    formDataToSend.append("plot_size", formData.plotSize);
+                    formDataToSend.append("location_type", formData.locationType);
+                    formDataToSend.append("agri_land_details", formData.agriLandDetails);
+                    formDataToSend.append("ownership_status", formData.ownershipStatus);
+
+                    // Map documents
+                    if (documents.incomeCert) formDataToSend.append("income_cert", { uri: documents.incomeCert.uri, name: documents.incomeCert.name, type: "application/pdf" } as any);
+                    if (documents.idProof) formDataToSend.append("id_proof", { uri: documents.idProof.uri, name: documents.idProof.name, type: "application/pdf" } as any);
+                    if (documents.residenceProof) formDataToSend.append("residence_proof", { uri: documents.residenceProof.uri, name: documents.residenceProof.name, type: "application/pdf" } as any);
+                    if (documents.selfDeclaration) formDataToSend.append("self_declaration", { uri: documents.selfDeclaration.uri, name: documents.selfDeclaration.name, type: "application/pdf" } as any);
+                    if (documents.photo) formDataToSend.append("photo", { uri: documents.photo.uri, name: documents.photo.name, type: "image/jpeg" } as any);
+                    if (documents.casteCert) formDataToSend.append("caste_cert", { uri: documents.casteCert.uri, name: documents.casteCert.name, type: "application/pdf" } as any);
+
+                    documents.proofOfIncome.forEach((doc, index) => {
+                        formDataToSend.append("proof_of_income", { uri: doc.uri, name: doc.name, type: "application/pdf" } as any);
+                    });
+                    documents.propertyDocs.forEach((doc, index) => {
+                        formDataToSend.append("property_docs", { uri: doc.uri, name: doc.name, type: "application/pdf" } as any);
+                    });
+
+                    const response = await axios.post(API_ENDPOINTS.EWS_APPLY, formDataToSend, {
+                        headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${token}` }
+                    });
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id);
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Failed to submit application");
+                    }
+                } catch (error: any) {
+                    Alert.alert("Error", error.response?.data?.message || "An error occurred during submission");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+            submitApplication();
         }
     };
 
@@ -298,20 +450,28 @@ export default function NewEWSCertificateScreen() {
                     </View>
                     <Text style={styles.successTitle}>Application Submitted!</Text>
                     <Text style={styles.successSubtitle}>Your EWS Certificate application has been received successfully.</Text>
-                    <View style={styles.idCard}>
+
+                    <TouchableOpacity
+                        style={styles.idCard}
+                        onPress={() => {
+                            Clipboard.setString(applicationId);
+                            setShowCopied(true);
+                            setTimeout(() => setShowCopied(false), 2000);
+                        }}
+                    >
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
-                    </View>
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}><Ionicons name="download-outline" size={24} color="#0D47A1" /></View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}><Ionicons name="time-outline" size={24} color="#2E7D32" /></View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <Ionicons name="copy-outline" size={20} color="#0D47A1" />
+                        </View>
+                    </TouchableOpacity>
+
+                    {showCopied && (
+                        <View style={styles.toast}>
+                            <Text style={styles.toastText}>Copied to clipboard</Text>
+                        </View>
+                    )}
+
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
@@ -358,11 +518,68 @@ export default function NewEWSCertificateScreen() {
                                 <Label text="Full Name (as per Aadhaar) *" />
                                 <Input value={formData.fullName} onChangeText={(v: string) => setFormData({ ...formData, fullName: v })} placeholder="Enter full name" icon="person-outline" />
 
+                                <Label text="Mobile Number *" />
+                                <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} editable={!isOtpVerified} />
+
                                 <Label text="Aadhaar Number *" />
-                                <Input value={formData.aadhaarNumber} onChangeText={(v: string) => setFormData({ ...formData, aadhaarNumber: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} />
+                                <View style={styles.otpRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Input
+                                            value={formData.aadhaarNumber}
+                                            onChangeText={(v: string) => setFormData({ ...formData, aadhaarNumber: v.replace(/\D/g, '').substring(0, 12) })}
+                                            placeholder="12-digit Aadhaar"
+                                            keyboardType="number-pad"
+                                            maxLength={12}
+                                            icon="card-outline"
+                                            editable={!isOtpVerified}
+                                        />
+                                    </View>
+                                    {!isOtpVerified && (
+                                        <TouchableOpacity 
+                                            style={[styles.otpBtn, isSendingOtp && styles.btnDisabled]} 
+                                            onPress={handleSendOTP} 
+                                            disabled={isSendingOtp}
+                                        >
+                                            {isSendingOtp ? <ActivityIndicator size="small" color="#FFF" /> : (
+                                                <Text style={styles.otpBtnText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+
+                                {isOtpSent && !isOtpVerified && (
+                                    <View style={styles.otpVerifyContainer}>
+                                        <View style={{ flex: 1 }}>
+                                            <Input
+                                                value={otpCode}
+                                                onChangeText={setOtpCode}
+                                                placeholder="Enter 6-digit OTP"
+                                                keyboardType="number-pad"
+                                                maxLength={6}
+                                                icon="shield-checkmark-outline"
+                                            />
+                                        </View>
+                                        <TouchableOpacity 
+                                            style={[styles.otpBtn, isVerifyingOtp && styles.btnDisabled, { backgroundColor: '#2E7D32' }]} 
+                                            onPress={handleVerifyOTP} 
+                                            disabled={isVerifyingOtp}
+                                        >
+                                            {isVerifyingOtp ? <ActivityIndicator size="small" color="#FFF" /> : (
+                                                <Text style={styles.otpBtnText}>Verify</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+
+                                {isOtpVerified && (
+                                    <View style={styles.verifiedBadge}>
+                                        <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                                        <Text style={styles.verifiedText}>Aadhaar Verified</Text>
+                                    </View>
+                                )}
 
                                 <Label text="Date of Birth *" />
-                                <Input value={formData.dob} onChangeText={(v: string) => setFormData({ ...formData, dob: formatDob(v) })} placeholder="DD/MM/YYYY" keyboardType="number-pad" maxLength={10} icon="calendar-outline" />
+                                <Input value={formData.dob} onChangeText={handleDOBChange} placeholder="DD/MM/YYYY" keyboardType="number-pad" maxLength={10} icon="calendar-outline" />
 
                                 <Label text="Gender *" />
                                 <View style={styles.genderRow}>
@@ -372,9 +589,6 @@ export default function NewEWSCertificateScreen() {
                                         </TouchableOpacity>
                                     ))}
                                 </View>
-
-                                <Label text="Mobile Number *" />
-                                <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} />
 
                                 <Label text="Email (Optional)" />
                                 <Input value={formData.email} onChangeText={(v: string) => setFormData({ ...formData, email: v })} placeholder="Email address" icon="mail-outline" />
@@ -530,21 +744,20 @@ export default function NewEWSCertificateScreen() {
                         </View>
                     )}
 
-                    <View style={{ height: 100 }} />
+                    <View style={{ height: 40 }} />
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
+                            <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
+                                {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
+                                    <>
+                                        <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
+                                        <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
-
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
-                            {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
-                                <>
-                                    <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
-                                    <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
-                                </>
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
             </SafeAreaView>
         </View >
     );
@@ -669,7 +882,7 @@ const styles = StyleSheet.create({
     reviewRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
     reviewLabel: { fontSize: 13, color: '#64748B' },
     reviewValue: { fontSize: 13, fontWeight: '700', color: '#1E293B', textAlign: 'right', flex: 1, marginLeft: 20 },
-    bottomBar: { backgroundColor: '#FFF', padding: 20, borderTopWidth: 1, borderTopColor: '#F0F0F0' },
+    bottomBar: { paddingVertical: 20 },
     continueButton: { borderRadius: 16, overflow: 'hidden' },
     buttonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
     buttonText: { fontSize: 16, fontWeight: '800', color: '#FFF' },
@@ -687,4 +900,13 @@ const styles = StyleSheet.create({
     mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
     mainBtnText: { fontSize: 16, fontWeight: '800', color: '#FFF' },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 12 },
+    otpRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    otpBtn: { backgroundColor: '#0D47A1', paddingHorizontal: 15, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', minWidth: 90 },
+    otpBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+    btnDisabled: { opacity: 0.7 },
+    otpVerifyContainer: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 10 },
+    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#F1F8E9', padding: 10, borderRadius: 8, marginTop: 10 },
+    verifiedText: { color: '#2E7D32', fontSize: 13, fontWeight: '700' },
+    toast: { position: 'absolute', bottom: 120, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, alignSelf: 'center' },
+    toastText: { color: '#FFF', fontSize: 14, fontWeight: '500' },
 });
