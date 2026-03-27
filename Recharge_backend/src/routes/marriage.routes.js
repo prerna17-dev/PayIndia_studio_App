@@ -38,6 +38,8 @@ const marriageUpload = upload.fields([
 router.use(authMiddleware);
 
 router.post("/apply", marriageUpload, marriageController.createApplication);
+router.post("/send-otp", marriageController.sendOTP);
+router.post("/verify-otp", marriageController.verifyOTP);
 router.get("/list", marriageController.getApplications);
 router.get("/:referenceId", marriageController.getApplicationByRef);
 router.put("/update-status/:id", marriageController.updateStatus);

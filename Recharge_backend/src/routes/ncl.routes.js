@@ -45,4 +45,8 @@ router.get("/list", nclController.getApplications);
 router.get("/:referenceId", nclController.getApplicationByRef);
 router.put("/update-status/:id", nclController.updateStatus);
 
+// OTP Routes
+router.post("/send-otp", nclController.sendOTP);
+router.post("/verify-otp", nclController.verifyOTP);
+
 module.exports = router;

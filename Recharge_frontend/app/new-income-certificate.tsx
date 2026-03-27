@@ -229,10 +229,12 @@ export default function NewIncomeCertificateScreen() {
 
         setIsSendingOtp(true);
         try {
-            const response = await axios.post(API_ENDPOINTS.SEND_OTP, {
-                mobile: formData.mobileNumber,
-                aadhaar_no: formData.aadhaarNumber,
-                type: 'income_certificate'
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.INCOME_OTP_SEND, {
+                mobile_number: formData.mobileNumber,
+                aadhar_number: formData.aadhaarNumber
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
             });
 
             if (response.data.success) {
@@ -241,10 +243,8 @@ export default function NewIncomeCertificateScreen() {
             } else {
                 Alert.alert("Error", response.data.message || "Failed to send OTP");
             }
-        } catch (error) {
-            // Alert.alert("Error", "Service temporarily unavailable. Please try later.");
-            // Mock success for testing as per user rule to minimize blockers
-            setIsOtpSent(true);
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Service temporarily unavailable. Please try later.");
         } finally {
             setIsSendingOtp(false);
         }
@@ -258,9 +258,12 @@ export default function NewIncomeCertificateScreen() {
 
         setIsVerifyingOtp(true);
         try {
-            const response = await axios.post(API_ENDPOINTS.VERIFY_OTP, {
-                mobile: formData.mobileNumber,
-                otp: otpCode
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.INCOME_OTP_VERIFY, {
+                mobile_number: formData.mobileNumber,
+                otp_code: otpCode
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
             });
 
             if (response.data.success) {
@@ -269,9 +272,8 @@ export default function NewIncomeCertificateScreen() {
             } else {
                 Alert.alert("Error", response.data.message || "Invalid OTP");
             }
-        } catch (error) {
-            // Mock success for testing if API fails
-            setIsOtpVerified(true);
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Verification failed. Please try again.");
         } finally {
             setIsVerifyingOtp(false);
         }

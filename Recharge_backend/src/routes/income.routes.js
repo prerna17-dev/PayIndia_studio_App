@@ -35,6 +35,8 @@ const incomeUpload = upload.fields([
 router.use(authMiddleware);
 
 router.post("/apply", incomeUpload, incomeController.createApplication);
+router.post("/send-otp", incomeController.sendOTP);
+router.post("/verify-otp", incomeController.verifyOTP);
 router.get("/list", incomeController.getApplications);
 router.get("/:referenceId", incomeController.getApplicationByRef);
 router.put("/update-status/:id", incomeController.updateStatus);

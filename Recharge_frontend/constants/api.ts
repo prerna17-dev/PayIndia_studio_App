@@ -66,6 +66,8 @@ export const API_ENDPOINTS = {
 
     // Certificates
     INCOME_APPLY: `${API_BASE_URL}/api/certificate/income/apply`,
+    INCOME_OTP_SEND: `${API_BASE_URL}/api/certificate/income/send-otp`,
+    INCOME_OTP_VERIFY: `${API_BASE_URL}/api/certificate/income/verify-otp`,
     CASTE_APPLY: `${API_BASE_URL}/api/certificate/caste/apply`,
     CASTE_OTP_SEND: `${API_BASE_URL}/api/certificate/caste/apply/send-otp`,
     CASTE_OTP_VERIFY: `${API_BASE_URL}/api/certificate/caste/apply/verify-otp`,
@@ -79,8 +81,14 @@ export const API_ENDPOINTS = {
     DEATH_OTP_SEND: `${API_BASE_URL}/api/certificate/death/send-otp`,
     DEATH_OTP_VERIFY: `${API_BASE_URL}/api/certificate/death/verify-otp`,
     MARRIAGE_APPLY: `${API_BASE_URL}/api/certificate/marriage/apply`,
+    MARRIAGE_OTP_SEND: `${API_BASE_URL}/api/certificate/marriage/send-otp`,
+    MARRIAGE_OTP_VERIFY: `${API_BASE_URL}/api/certificate/marriage/verify-otp`,
     EWS_APPLY: `${API_BASE_URL}/api/certificate/ews/apply`,
+    EWS_OTP_SEND: `${API_BASE_URL}/api/certificate/ews/send-otp`,
+    EWS_OTP_VERIFY: `${API_BASE_URL}/api/certificate/ews/verify-otp`,
     NCL_APPLY: `${API_BASE_URL}/api/certificate/ncl/apply`,
+    NCL_OTP_SEND: `${API_BASE_URL}/api/certificate/ncl/send-otp`,
+    NCL_OTP_VERIFY: `${API_BASE_URL}/api/certificate/ncl/verify-otp`,
 
     // Voter ID Services
     VOTER_APPLY: `${API_BASE_URL}/api/voter/apply`,

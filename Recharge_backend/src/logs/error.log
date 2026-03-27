@@ -469,3 +469,79 @@ STACK: Error: Unknown column 'birth_certificate_url' in 'field list'
     at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
     at WriteStream.emit (node:events:520:35)
 ----------------------------------
+
+[2026-03-26T06:39:16.679Z]
+METHOD: POST
+URL: /api/certificate/marriage/apply
+MESSAGE: ENOENT: no such file or directory, open 'C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\uploads\certificates\marriage\groom_aadhaar-1774507156676-975133496.jpg'
+STACK: Error: ENOENT: no such file or directory, open 'C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\uploads\certificates\marriage\groom_aadhaar-1774507156676-975133496.jpg'
+----------------------------------
+
+[2026-03-26T06:58:56.901Z]
+METHOD: POST
+URL: /api/certificate/ews/send-otp
+MESSAGE: Table 'payindia_studio.otps' doesn't exist
+STACK: Error: Table 'payindia_studio.otps' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\ews.model.js:112:16)
+    at exports.sendOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\ews.controller.js:187:24)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-26T06:59:04.741Z]
+METHOD: POST
+URL: /api/certificate/ews/send-otp
+MESSAGE: Table 'payindia_studio.otps' doesn't exist
+STACK: Error: Table 'payindia_studio.otps' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\ews.model.js:112:16)
+    at exports.sendOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\ews.controller.js:187:24)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-26T07:28:18.945Z]
+METHOD: POST
+URL: /api/certificate/ews/send-otp
+MESSAGE: Unknown column 'type' in 'field list'
+STACK: Error: Unknown column 'type' in 'field list'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\ews.model.js:102:16)
+    at exports.sendOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\ews.controller.js:186:24)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-26T07:54:06.474Z]
+METHOD: POST
+URL: /api/certificate/ews/verify-otp
+MESSAGE: Unknown column 'id' in 'where clause'
+STACK: Error: Unknown column 'id' in 'where clause'
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.verifyOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\ews.model.js:128:20)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async exports.verifyOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\ews.controller.js:204:25)
+----------------------------------
+
+[2026-03-26T08:20:23.745Z]
+METHOD: POST
+URL: /api/certificate/ncl/apply
+MESSAGE: ENOENT: no such file or directory, open 'C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\uploads\certificates\ncl\id_proof-1774513223738-235499840.jpg'
+STACK: Error: ENOENT: no such file or directory, open 'C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\uploads\certificates\ncl\id_proof-1774513223738-235499840.jpg'
+----------------------------------
