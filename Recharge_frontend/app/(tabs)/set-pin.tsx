@@ -14,15 +14,15 @@ import {
     View,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
 
-export default function ChangePinScreen() {
+export default function SetPinScreen() {
     const router = useRouter();
 
-    const [step, setStep] = useState<"CURRENT" | "NEW" | "CONFIRM">("CURRENT");
-    const [currentPin, setCurrentPin] = useState("");
-    const [newPin, setNewPin] = useState("");
+    const [step, setStep] = useState<"ENTER" | "CONFIRM">("ENTER");
+    const [pin, setPin] = useState("");
     const [confirmPin, setConfirmPin] = useState("");
 
     const shakeAnim = useRef(new Animated.Value(0)).current;
@@ -34,21 +34,16 @@ export default function ChangePinScreen() {
 
     useFocusEffect(
         React.useCallback(() => {
-            // Reset state when screen comes into focus
-            setStep("CURRENT");
-            setCurrentPin("");
-            setNewPin("");
+            // Reset state on focus
+            setStep("ENTER");
+            setPin("");
             setConfirmPin("");
 
             const backAction = () => {
                 const currentStep = stepRef.current;
                 if (currentStep === "CONFIRM") {
-                    setStep("NEW");
+                    setStep("ENTER");
                     setConfirmPin("");
-                    return true;
-                } else if (currentStep === "NEW") {
-                    setStep("CURRENT");
-                    setNewPin("");
                     return true;
                 } else {
                     router.push("/security");
@@ -70,78 +65,51 @@ export default function ChangePinScreen() {
     };
 
     useEffect(() => {
-        if (step === "CURRENT" && currentPin.length === 4) {
-            handleVerifyCurrentPin();
-        } else if (step === "NEW" && newPin.length === 4) {
+        if (step === "ENTER" && pin.length === 4) {
             setTimeout(() => setStep("CONFIRM"), 300);
         } else if (step === "CONFIRM" && confirmPin.length === 4) {
-            handleSetNewPin();
+            handleSetPin();
         }
-    }, [currentPin, newPin, confirmPin]);
+    }, [pin, confirmPin]);
 
-    const handleVerifyCurrentPin = async () => {
-        try {
-            const storedPin = await AsyncStorage.getItem("@user_app_pin");
-            if (storedPin && storedPin === currentPin) {
-                setTimeout(() => setStep("NEW"), 300);
-            } else {
-                shakeAnimation();
-                setTimeout(() => setCurrentPin(""), 400);
-            }
-        } catch (error) {
-            Alert.alert("Error", "Failed to verify PIN");
-        }
-    };
-
-    const handleSetNewPin = async () => {
-        if (newPin !== confirmPin) {
+    const handleSetPin = async () => {
+        if (pin !== confirmPin) {
             shakeAnimation();
-            setTimeout(() => setConfirmPin(""), 400);
+            setTimeout(() => {
+                setConfirmPin("");
+            }, 400);
             return;
         }
 
         try {
-            await AsyncStorage.setItem("@user_app_pin", newPin);
-            Alert.alert("Success! ✅", "Your App PIN has been updated.", [
+            await AsyncStorage.setItem("@user_app_pin", pin);
+            Alert.alert("Success! ✅", "Your App PIN has been set.", [
                 { text: "OK", onPress: () => router.replace("/security") },
             ]);
         } catch (error) {
-            Alert.alert("Error", "Failed to update PIN.");
+            Alert.alert("Error", "Failed to save PIN.");
         }
     };
 
     const handleNumberPress = (num: string) => {
-        if (step === "CURRENT") {
-            if (currentPin.length < 4) setCurrentPin(prev => prev + num);
-        } else if (step === "NEW") {
-            if (newPin.length < 4) setNewPin(prev => prev + num);
+        if (step === "ENTER") {
+            if (pin.length < 4) setPin(prev => prev + num);
         } else {
             if (confirmPin.length < 4) setConfirmPin(prev => prev + num);
         }
     };
 
     const handleBackspace = () => {
-        if (step === "CURRENT") {
-            setCurrentPin(prev => prev.slice(0, -1));
-        } else if (step === "NEW") {
-            setNewPin(prev => prev.slice(0, -1));
+        if (step === "ENTER") {
+            setPin(prev => prev.slice(0, -1));
         } else {
             setConfirmPin(prev => prev.slice(0, -1));
         }
     };
 
-    const getStepInfo = () => {
-        switch (step) {
-            case "CURRENT":
-                return { currentInput: currentPin, title: "Enter Current PIN", subtitle: "Verify it's you to continue" };
-            case "NEW":
-                return { currentInput: newPin, title: "Set New PIN", subtitle: "Create a new 4-digit PIN" };
-            case "CONFIRM":
-                return { currentInput: confirmPin, title: "Confirm New PIN", subtitle: "Re-enter your new 4-digit PIN" };
-        }
-    };
-
-    const { currentInput, title, subtitle } = getStepInfo();
+    const currentInput = step === "ENTER" ? pin : confirmPin;
+    const title = step === "ENTER" ? "Set App PIN" : "Confirm PIN";
+    const subtitle = step === "ENTER" ? "Create a 4-digit security PIN" : "Re-enter your 4-digit PIN";
 
     return (
         <View style={styles.container}>
@@ -153,11 +121,8 @@ export default function ChangePinScreen() {
                 <View style={styles.header}>
                     <TouchableOpacity style={styles.backButton} onPress={() => {
                         if (step === "CONFIRM") {
-                            setStep("NEW");
+                            setStep("ENTER");
                             setConfirmPin("");
-                        } else if (step === "NEW") {
-                            setStep("CURRENT");
-                            setNewPin("");
                         } else {
                             router.push("/security");
                         }
@@ -171,7 +136,7 @@ export default function ChangePinScreen() {
                 <View style={styles.content}>
                     <View style={styles.iconContainer}>
                         <View style={styles.iconCircle}>
-                            <MaterialCommunityIcons name="lock-reset" size={40} color="#0D47A1" />
+                            <MaterialCommunityIcons name="shield-lock-outline" size={40} color="#0D47A1" />
                         </View>
                     </View>
 
@@ -193,7 +158,7 @@ export default function ChangePinScreen() {
                         })}
                     </Animated.View>
 
-                    {step === "CONFIRM" && confirmPin.length === 4 && newPin !== confirmPin && (
+                    {step === "CONFIRM" && confirmPin.length === 4 && pin !== confirmPin && (
                         <Text style={styles.errorText}>PINs do not match. Try again.</Text>
                     )}
                 </View>
@@ -301,7 +266,7 @@ const styles = StyleSheet.create({
         alignItems: "center",
         gap: 20,
         marginBottom: 20,
-        height: 30,
+        height: 30, // reserved height
     },
     dot: {
         width: 16,

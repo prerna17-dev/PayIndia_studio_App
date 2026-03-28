@@ -326,19 +326,11 @@ export default function LPGCylinderScreen() {
                                             <Text style={styles.helperText}>
                                                 {(PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).hint}
                                             </Text>
-<<<<<<< HEAD
-                                            {consumerNumber.length > 0 && selectedProvider && !( PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).validate(consumerNumber) && (
-                                                <Text style={styles.errorText}>
-                                                    {selectedProvider === 'Indane Gas'
-                                                        ? 'Must be exactly 10 or 16 digits'
-                                                        : `Must be ${ (PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).min }–${ (PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).max } digits`
-=======
                                             {consumerNumber.length > 0 && selectedProvider && !(PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).validate(consumerNumber) && (
                                                 <Text style={styles.errorText}>
                                                     {selectedProvider === 'Indane Gas'
                                                         ? 'Must be exactly 10 or 16 digits'
                                                         : `Must be ${(PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).min}–${(PROVIDER_RULES[selectedProvider] ?? DEFAULT_PROVIDER_RULE).max} digits`
->>>>>>> 3f51a0a9e3436602958ad3cbde5ea886524f3d13
                                                     }
                                                 </Text>
                                             )}

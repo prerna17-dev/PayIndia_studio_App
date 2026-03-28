@@ -2050,3 +2050,4 @@
 2026-03-26T08:31:43.667Z | POST /api/land/712/send-otp | 200 | 242ms | ::ffff:192.168.1.5
 2026-03-26T08:32:00.363Z | POST /api/land/712/send-otp | 200 | 194ms | ::ffff:192.168.1.5
 >>>>>>> 3f51a0a9e3436602958ad3cbde5ea886524f3d13
+2026-03-27T11:38:06.522Z | GET /api/user/profile | 304 | 969ms | ::ffff:192.168.1.14

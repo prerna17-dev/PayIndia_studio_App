@@ -5,7 +5,7 @@
 
 // Replace this IP address with your computer's current IP address (IPv4)
 // Run 'ipconfig' in terminal to find your IPv4 address
-export const API_BASE_URL = "http://192.168.1.7:5000";
+export const API_BASE_URL = "http://192.168.1.8:5000";
 
 
 export const API_ENDPOINTS = {

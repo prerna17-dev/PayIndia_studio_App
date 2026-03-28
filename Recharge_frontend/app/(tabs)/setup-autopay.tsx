@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
     BackHandler,
     Modal,
@@ -14,6 +14,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SetupAutopayScreen() {
     const router = useRouter();
@@ -35,58 +36,52 @@ export default function SetupAutopayScreen() {
         }, [router]),
     );
 
-    // Step management
-    const [currentStep, setCurrentStep] = useState(1);
-
     // Form data
     const [selectedService, setSelectedService] = useState("");
-    const [mobileNumber, setMobileNumber] = useState("");
+    
+    // Step 2 & 3 Inputs
+    const [otherServiceName, setOtherServiceName] = useState("");
+    const [identifier, setIdentifier] = useState(""); // mobile/consumer numbmer
     const [operator, setOperator] = useState("Auto-detect");
     const [circle, setCircle] = useState("Auto-detect");
     const [selectedPlan, setSelectedPlan] = useState<number | null>(null);
     const [customAmount, setCustomAmount] = useState("");
+    
     const [frequency, setFrequency] = useState("every28days");
-    const [customDate, setCustomDate] = useState("");
-    const [paymentMethod, setPaymentMethod] = useState("wallet");
+    
+    // Payment State
+    const [paymentMethod, setPaymentMethod] = useState("");
+    const [cardHolder, setCardHolder] = useState("");
+    const [cardNumber, setCardNumber] = useState("");
+    const [expiryDate, setExpiryDate] = useState("");
+    const [cvv, setCvv] = useState("");
+    const [isConfirmedDecl, setIsConfirmedDecl] = useState(false);
 
     // Modals
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
 
+    // Dynamic reset when service changes
+    useEffect(() => {
+        setIdentifier("");
+        setSelectedPlan(null);
+        setCustomAmount("");
+        setOtherServiceName("");
+    }, [selectedService]);
+
     // Services data
     const services = [
-        {
-            id: "mobile",
-            name: "Mobile\nRecharge",
-            icon: "phone-portrait-outline",
-            color: "#0D47A1",
-        },
-        { id: "dth", name: "DTH\nRecharge", icon: "tv-outline", color: "#0D47A1" },
-        {
-            id: "electricity",
-            name: "Electricity\nBill",
-            icon: "bulb-outline",
-            color: "#0D47A1",
-        },
-        {
-            id: "water",
-            name: "Water\nBill",
-            icon: "water-outline",
-            color: "#0D47A1",
-        },
-        {
-            id: "ott",
-            name: "OTT\nSubscription",
-            icon: "play-circle-outline",
-            color: "#0D47A1",
-        },
-        {
-            id: "lpg",
-            name: "LPG\nCylinder",
-            icon: "flame-outline",
-            color: "#0D47A1",
-        },
+        { id: "mobile", name: "Mobile", icon: "phone-portrait-outline", label: "Mobile Number", hasPlans: true },
+        { id: "dth", name: "DTH", icon: "tv-outline", label: "Subscriber ID", hasPlans: true },
+        { id: "electricity", name: "Electricity", icon: "bulb-outline", label: "Consumer Number", hasPlans: false },
+        { id: "water", name: "Water", icon: "water-outline", label: "Account Number", hasPlans: false },
+        { id: "broadband", name: "Broadband", icon: "wifi-outline", label: "Landline Number", hasPlans: false },
+        { id: "landline", name: "Landline", icon: "call-outline", label: "Landline Number", hasPlans: false },
+        { id: "cable", name: "Cable TV", icon: "desktop-outline", label: "Subscriber ID", hasPlans: false },
+        { id: "other", name: "Other", icon: "grid-outline", label: "Consumer / Account Number", hasPlans: false },
     ];
+
+    const currentServiceData = services.find(s => s.id === selectedService);
 
     // Sample plans
     const plans = [
@@ -95,13 +90,100 @@ export default function SetupAutopayScreen() {
         { id: 3, amount: 599, validity: "84 Days", data: "2.5GB/day" },
     ];
 
+    const handleCardNumberChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = '';
+        for (let i = 0; i < cleaned.length && i < 16; i++) {
+            if (i > 0 && i % 4 === 0) formatted += ' ';
+            formatted += cleaned[i];
+        }
+        setCardNumber(formatted);
+    };
+
+    const handleExpiryChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = cleaned;
+        if (cleaned.length > 2) formatted = `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}`;
+        setExpiryDate(formatted);
+    };
+
+    const isReadyToEnable = () => {
+        if (!paymentMethod) return false;
+        
+        if (paymentMethod.includes('Card')) {
+            if (!isConfirmedDecl) return false;
+            if (cardNumber.replace(/\s/g, '').length !== 16) return false;
+            if (expiryDate.length !== 5) return false;
+            if (cvv.length !== 3) return false;
+            if (cardHolder.trim().length < 3) return false;
+        }
+
+        return true;
+    };
+
     const handleEnableAutopay = () => {
+        if (!isReadyToEnable()) return;
         setShowConfirmModal(true);
     };
 
-    const confirmSetup = () => {
+    const confirmSetup = async () => {
         setShowConfirmModal(false);
-        // Simulate success
+
+        // Build the mandate object
+        const iconMap: Record<string, string> = {
+            mobile: "phone-portrait-outline",
+            dth: "tv-outline",
+            electricity: "bulb-outline",
+            water: "water-outline",
+            broadband: "wifi-outline",
+            landline: "call-outline",
+            cable: "desktop-outline",
+            other: "grid-outline",
+        };
+        const colorMap: Record<string, string> = {
+            mobile: "#3B82F6",
+            dth: "#8B5CF6",
+            electricity: "#F59E0B",
+            water: "#06B6D4",
+            broadband: "#10B981",
+            landline: "#6366F1",
+            cable: "#EC4899",
+            other: "#64748B",
+        };
+        const freqLabel = frequency === "every28days" ? "Every 28 Days" : frequency === "monthly" ? "Monthly" : "Custom";
+        const amount = selectedPlan
+            ? plans.find((p) => p.id === selectedPlan)?.amount || 0
+            : Number(customAmount) || 0;
+        const serviceName = selectedService === "other"
+            ? (otherServiceName || "Other Service")
+            : (currentServiceData?.name || "Service");
+
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + (frequency === "every28days" ? 28 : 30));
+        const nextPaymentStr = nextDate.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+        const newMandate = {
+            id: Date.now(),
+            type: serviceName,
+            icon: iconMap[selectedService] || "grid-outline",
+            color: colorMap[selectedService] || "#64748B",
+            amount: amount.toString(),
+            frequency: freqLabel,
+            nextPayment: nextPaymentStr,
+            isPaused: false,
+            identifier: identifier,
+            paymentMethod: paymentMethod,
+        };
+
+        try {
+            const existing = await AsyncStorage.getItem("@autopay_mandates");
+            const list = existing ? JSON.parse(existing) : [];
+            list.push(newMandate);
+            await AsyncStorage.setItem("@autopay_mandates", JSON.stringify(list));
+        } catch (e) {
+            console.error("Failed to save mandate", e);
+        }
+
         setTimeout(() => {
             setShowSuccessModal(true);
         }, 300);
@@ -124,7 +206,7 @@ export default function SetupAutopayScreen() {
                         style={styles.backButton}
                         onPress={() => router.push("/autopay")}
                     >
-                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                        <Ionicons name="arrow-back" size={24} color="#0F172A" />
                     </TouchableOpacity>
                     <View style={styles.headerTextContainer}>
                         <Text style={styles.headerTitle}>Setup Autopay</Text>
@@ -133,79 +215,96 @@ export default function SetupAutopayScreen() {
                     <View style={styles.placeholder} />
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false}>
+                <ScrollView 
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                >
                     <View style={styles.content}>
                         {/* Step 1: Select Service */}
                         <View style={styles.stepSection}>
                             <Text style={styles.stepTitle}>Step 1: Select Service</Text>
+                            
                             <View style={styles.servicesGrid}>
                                 {services.map((service) => (
                                     <TouchableOpacity
                                         key={service.id}
-                                        style={[
-                                            styles.serviceCard,
-                                            selectedService === service.id &&
-                                            styles.serviceCardSelected,
-                                        ]}
+                                        style={styles.serviceItem}
                                         onPress={() => setSelectedService(service.id)}
                                     >
-                                        {selectedService === service.id && (
-                                            <View style={styles.checkmark}>
-                                                <Ionicons
-                                                    name="checkmark-circle"
-                                                    size={20}
-                                                    color="#1E88E5"
-                                                />
-                                            </View>
-                                        )}
-                                        <View style={styles.serviceIconCircle}>
+                                        <View style={[
+                                            styles.serviceIconWrapper,
+                                            selectedService === service.id && styles.serviceIconWrapperSelected
+                                        ]}>
                                             <Ionicons
                                                 name={service.icon as any}
-                                                size={28}
-                                                color={service.color}
+                                                size={30}
+                                                color="#0D47A1"
                                             />
                                         </View>
-                                        <Text style={styles.serviceName}>{service.name}</Text>
+                                        <Text style={[styles.serviceName, selectedService === service.id && styles.serviceNameSelected]}>
+                                            {service.name}
+                                        </Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                         </View>
 
-                        {/* Step 2: Enter Details (Show if service selected) */}
-                        {selectedService && (
+                        {/* Step 2: Enter Details */}
+                        {currentServiceData && (
                             <View style={styles.stepSection}>
                                 <Text style={styles.stepTitle}>Step 2: Enter Details</Text>
 
+                                {currentServiceData.id === 'other' && (
+                                    <View style={styles.inputCard}>
+                                        <Text style={styles.inputLabel}>Service Name</Text>
+                                        <View style={styles.inputRow}>
+                                            <Ionicons name="grid-outline" size={20} color="#94A3B8" />
+                                            <TextInput
+                                                style={styles.textInput}
+                                                placeholder="E.g., Gym Membership, Tuition Fee"
+                                                value={otherServiceName}
+                                                onChangeText={setOtherServiceName}
+                                            />
+                                        </View>
+                                    </View>
+                                )}
+
                                 <View style={styles.inputCard}>
-                                    <Text style={styles.inputLabel}>Mobile Number</Text>
+                                    <Text style={styles.inputLabel}>{currentServiceData.label}</Text>
                                     <View style={styles.inputRow}>
-                                        <Ionicons name="phone-portrait" size={20} color="#666" />
+                                        <Ionicons 
+                                            name={currentServiceData.id === 'mobile' ? "phone-portrait" : "document-text"} 
+                                            size={20} 
+                                            color="#94A3B8" 
+                                        />
                                         <TextInput
                                             style={styles.textInput}
-                                            placeholder="9XXXXXXXXX"
-                                            keyboardType="phone-pad"
-                                            value={mobileNumber}
-                                            onChangeText={setMobileNumber}
-                                            maxLength={10}
+                                            placeholder={`Enter ${currentServiceData.label}`}
+                                            keyboardType={currentServiceData.id === 'mobile' ? "phone-pad" : "default"}
+                                            value={identifier}
+                                            onChangeText={setIdentifier}
+                                            maxLength={currentServiceData.id === 'mobile' ? 10 : 30}
                                         />
                                     </View>
                                 </View>
 
-                                <View style={styles.detailsRow}>
-                                    <View style={styles.detailCard}>
-                                        <Text style={styles.detailLabel}>Operator</Text>
-                                        <Text style={styles.detailValue}>{operator}</Text>
+                                {(identifier.length > 5 && currentServiceData.id === 'mobile') && (
+                                    <View style={styles.detailsRow}>
+                                        <View style={styles.detailCard}>
+                                            <Text style={styles.detailLabel}>Operator</Text>
+                                            <Text style={styles.detailValue}>{operator}</Text>
+                                        </View>
+                                        <View style={styles.detailCard}>
+                                            <Text style={styles.detailLabel}>Circle</Text>
+                                            <Text style={styles.detailValue}>{circle}</Text>
+                                        </View>
                                     </View>
-                                    <View style={styles.detailCard}>
-                                        <Text style={styles.detailLabel}>Circle</Text>
-                                        <Text style={styles.detailValue}>{circle}</Text>
-                                    </View>
-                                </View>
+                                )}
                             </View>
                         )}
 
-                        {/* Step 3: Select Plan */}
-                        {mobileNumber.length === 10 && (
+                        {/* Step 3: Select Plan or Amount */}
+                        {(identifier.length > 4) && currentServiceData && currentServiceData.hasPlans && (
                             <View style={styles.stepSection}>
                                 <Text style={styles.stepTitle}>Step 3: Select Plan</Text>
 
@@ -228,7 +327,7 @@ export default function SetupAutopayScreen() {
                                             <Ionicons
                                                 name="checkmark-circle"
                                                 size={24}
-                                                color="#1E88E5"
+                                                color="#0F172A"
                                             />
                                         )}
                                     </TouchableOpacity>
@@ -256,173 +355,179 @@ export default function SetupAutopayScreen() {
                             </View>
                         )}
 
+                        {(identifier.length > 4) && currentServiceData && !currentServiceData.hasPlans && (
+                            <View style={styles.stepSection}>
+                                <Text style={styles.stepTitle}>Step 3: Enter Amount</Text>
+                                <View style={styles.customAmountCard}>
+                                    <Text style={styles.inputLabel}>Bill Amount Limit / Value</Text>
+                                    <View style={styles.inputRow}>
+                                        <Text style={styles.rupeeSymbol}>₹</Text>
+                                        <TextInput
+                                            style={styles.textInput}
+                                            placeholder="Enter Amount"
+                                            keyboardType="number-pad"
+                                            value={customAmount}
+                                            onChangeText={setCustomAmount}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+                        )}
+
                         {/* Step 4: Set Frequency */}
                         {(selectedPlan || customAmount) && (
                             <View style={styles.stepSection}>
                                 <Text style={styles.stepTitle}>Step 4: Set Frequency</Text>
 
                                 <View style={styles.frequencyCard}>
-                                    <Text style={styles.frequencyLabel}>Repeat Every:</Text>
+                                    <Text style={styles.inputLabel}>Repeat Every:</Text>
 
-                                    <TouchableOpacity
-                                        style={styles.frequencyOption}
-                                        onPress={() => setFrequency("every28days")}
-                                    >
-                                        <View style={styles.radio}>
-                                            {frequency === "every28days" && (
-                                                <View style={styles.radioInner} />
-                                            )}
-                                        </View>
-                                        <Text style={styles.frequencyText}>Every 28 Days</Text>
-                                    </TouchableOpacity>
+                                    <View style={styles.freqContainerRow}>
+                                        <TouchableOpacity
+                                            style={styles.frequencyOption}
+                                            onPress={() => setFrequency("every28days")}
+                                        >
+                                            <View style={[styles.radio, frequency === "every28days" && styles.radioActive]}>
+                                                {frequency === "every28days" && <View style={styles.radioInner} />}
+                                            </View>
+                                            <Text style={styles.frequencyText}>28 Days</Text>
+                                        </TouchableOpacity>
 
-                                    <TouchableOpacity
-                                        style={styles.frequencyOption}
-                                        onPress={() => setFrequency("monthly")}
-                                    >
-                                        <View style={styles.radio}>
-                                            {frequency === "monthly" && (
-                                                <View style={styles.radioInner} />
-                                            )}
-                                        </View>
-                                        <Text style={styles.frequencyText}>Monthly</Text>
-                                    </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.frequencyOption}
+                                            onPress={() => setFrequency("monthly")}
+                                        >
+                                            <View style={[styles.radio, frequency === "monthly" && styles.radioActive]}>
+                                                {frequency === "monthly" && <View style={styles.radioInner} />}
+                                            </View>
+                                            <Text style={styles.frequencyText}>Monthly</Text>
+                                        </TouchableOpacity>
 
-                                    <TouchableOpacity
-                                        style={styles.frequencyOption}
-                                        onPress={() => setFrequency("custom")}
-                                    >
-                                        <View style={styles.radio}>
-                                            {frequency === "custom" && (
-                                                <View style={styles.radioInner} />
-                                            )}
-                                        </View>
-                                        <Text style={styles.frequencyText}>Custom Date</Text>
-                                    </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.frequencyOption}
+                                            onPress={() => setFrequency("custom")}
+                                        >
+                                            <View style={[styles.radio, frequency === "custom" && styles.radioActive]}>
+                                                {frequency === "custom" && <View style={styles.radioInner} />}
+                                            </View>
+                                            <Text style={styles.frequencyText}>Custom</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
                             </View>
                         )}
 
                         {/* Step 5: Payment Method */}
-                        {frequency && (
+                        {frequency && (selectedPlan || customAmount) && (
                             <View style={styles.stepSection}>
                                 <Text style={styles.stepTitle}>Step 5: Payment Method</Text>
 
-                                <TouchableOpacity
-                                    style={[
-                                        styles.paymentCard,
-                                        paymentMethod === "wallet" && styles.paymentCardSelected,
-                                    ]}
-                                    onPress={() => setPaymentMethod("wallet")}
-                                >
-                                    <View style={styles.paymentLeft}>
-                                        <View style={styles.paymentIcon}>
-                                            <Ionicons name="wallet" size={24} color="#4CAF50" />
-                                        </View>
-                                        <View>
-                                            <Text style={styles.paymentName}>Wallet Balance</Text>
-                                            <Text style={styles.paymentDetail}>₹1,260 available</Text>
-                                        </View>
-                                    </View>
-                                    {paymentMethod === "wallet" && (
-                                        <Ionicons
-                                            name="checkmark-circle"
-                                            size={24}
-                                            color="#1E88E5"
-                                        />
-                                    )}
-                                </TouchableOpacity>
+                                <View style={styles.paymentModesGrid}>
+                                    {['Wallet', 'Debit Card', 'Credit Card', 'Net Banking'].map((mode) => (
+                                        <TouchableOpacity
+                                            key={mode}
+                                            style={[
+                                                styles.paymentModeCard,
+                                                paymentMethod === mode && styles.selectedPaymentModeCard
+                                            ]}
+                                            onPress={() => {
+                                                setPaymentMethod(mode);
+                                                setIsConfirmedDecl(false);
+                                            }}
+                                        >
+                                            <Ionicons
+                                                name={mode === 'Wallet' ? 'wallet' : mode === 'Net Banking' ? 'globe-outline' : 'card'}
+                                                size={20}
+                                                color={paymentMethod === mode ? '#0F172A' : '#64748B'}
+                                            />
+                                            <Text style={[styles.paymentModeText, paymentMethod === mode && styles.selectedPaymentModeText]}>{mode}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
 
-                                <TouchableOpacity
-                                    style={[
-                                        styles.paymentCard,
-                                        paymentMethod === "card" && styles.paymentCardSelected,
-                                    ]}
-                                    onPress={() => setPaymentMethod("card")}
-                                >
-                                    <View style={styles.paymentLeft}>
-                                        <View style={styles.paymentIcon}>
-                                            <Ionicons name="card" size={24} color="#2196F3" />
+                                {/* Card Input Form */}
+                                {paymentMethod.includes('Card') && (
+                                    <View style={styles.cardForm}>
+                                        <View style={styles.cardFieldGroup}>
+                                            <Text style={styles.cardFieldLabel}>Name on Card</Text>
+                                            <View style={styles.cardInput}>
+                                                <Ionicons name="person-outline" size={16} color="#94A3B8" />
+                                                <TextInput 
+                                                    style={styles.cardInputText} 
+                                                    placeholder="Card Holder Name" 
+                                                    placeholderTextColor="#94A3B8" 
+                                                    value={cardHolder} 
+                                                    onChangeText={setCardHolder} 
+                                                    autoCapitalize="characters" 
+                                                />
+                                            </View>
                                         </View>
-                                        <View>
-                                            <Text style={styles.paymentName}>Debit Card</Text>
-                                            <Text style={styles.paymentDetail}>XXXX 4589</Text>
+                                        
+                                        <View style={styles.cardFieldGroup}>
+                                            <Text style={styles.cardFieldLabel}>Card Number</Text>
+                                            <View style={styles.cardInput}>
+                                                <Ionicons name="card-outline" size={16} color="#94A3B8" />
+                                                <TextInput 
+                                                    style={styles.cardInputText} 
+                                                    placeholder="0000 0000 0000 0000" 
+                                                    placeholderTextColor="#94A3B8" 
+                                                    keyboardType="numeric" 
+                                                    value={cardNumber} 
+                                                    onChangeText={handleCardNumberChange} 
+                                                    maxLength={19} 
+                                                />
+                                            </View>
                                         </View>
-                                    </View>
-                                    {paymentMethod === "card" && (
-                                        <Ionicons
-                                            name="checkmark-circle"
-                                            size={24}
-                                            color="#1E88E5"
-                                        />
-                                    )}
-                                </TouchableOpacity>
 
-                                <TouchableOpacity style={styles.addPaymentLink}>
-                                    <Ionicons
-                                        name="add-circle-outline"
-                                        size={18}
-                                        color="#1E88E5"
-                                    />
-                                    <Text style={styles.addPaymentText}>
-                                        Add New Payment Method
-                                    </Text>
-                                </TouchableOpacity>
+                                        <View style={styles.rowInputs}>
+                                            <View style={[styles.cardFieldGroup, { flex: 1 }]}>
+                                                <Text style={styles.cardFieldLabel}>Expiry</Text>
+                                                <View style={styles.cardInput}>
+                                                    <TextInput 
+                                                        style={styles.cardInputText} 
+                                                        placeholder="MM/YY" 
+                                                        placeholderTextColor="#94A3B8" 
+                                                        keyboardType="numeric" 
+                                                        value={expiryDate} 
+                                                        onChangeText={handleExpiryChange} 
+                                                        maxLength={5} 
+                                                    />
+                                                </View>
+                                            </View>
+                                            <View style={[styles.cardFieldGroup, { flex: 1 }]}>
+                                                <Text style={styles.cardFieldLabel}>CVV</Text>
+                                                <View style={styles.cardInput}>
+                                                    <TextInput 
+                                                        style={styles.cardInputText} 
+                                                        placeholder="123" 
+                                                        placeholderTextColor="#94A3B8" 
+                                                        keyboardType="numeric" 
+                                                        secureTextEntry 
+                                                        value={cvv} 
+                                                        onChangeText={setCvv} 
+                                                        maxLength={3} 
+                                                    />
+                                                </View>
+                                            </View>
+                                        </View>
+
+                                        <TouchableOpacity 
+                                            style={styles.declarationRow} 
+                                            onPress={() => setIsConfirmedDecl(!isConfirmedDecl)}
+                                        >
+                                            <Ionicons 
+                                                name={isConfirmedDecl ? 'checkbox' : 'square-outline'} 
+                                                size={22} 
+                                                color={isConfirmedDecl ? '#0F172A' : '#64748B'} 
+                                            />
+                                            <Text style={styles.declarationText}>I confirm the above details to authorize future automated payments.</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
                             </View>
                         )}
-
-                        {/* Step 6: Summary */}
-                        {paymentMethod && (
-                            <View style={styles.stepSection}>
-                                <Text style={styles.stepTitle}>Step 6: Autopay Summary</Text>
-
-                                <View style={styles.summaryCard}>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Service:</Text>
-                                        <Text style={styles.summaryValue}>Mobile Recharge</Text>
-                                    </View>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Number:</Text>
-                                        <Text style={styles.summaryValue}>{mobileNumber}</Text>
-                                    </View>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Amount:</Text>
-                                        <Text style={styles.summaryValue}>
-                                            ₹
-                                            {selectedPlan
-                                                ? plans.find((p) => p.id === selectedPlan)?.amount
-                                                : customAmount}
-                                        </Text>
-                                    </View>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Frequency:</Text>
-                                        <Text style={styles.summaryValue}>Every 28 Days</Text>
-                                    </View>
-                                    <View style={styles.summaryRow}>
-                                        <Text style={styles.summaryLabel}>Start Date:</Text>
-                                        <Text style={styles.summaryValue}>15 March 2026</Text>
-                                    </View>
-                                </View>
-
-                                {/* Info Badges */}
-                                <View style={styles.infoBadges}>
-                                    <View style={styles.infoBadge}>
-                                        <Ionicons name="pause-circle" size={16} color="#4CAF50" />
-                                        <Text style={styles.infoBadgeText}>Pause anytime</Text>
-                                    </View>
-                                    <View style={styles.infoBadge}>
-                                        <Ionicons name="gift" size={16} color="#FF9800" />
-                                        <Text style={styles.infoBadgeText}>Cashback eligible</Text>
-                                    </View>
-                                </View>
-
-                                <View style={styles.cashbackInfo}>
-                                    <Text style={styles.cashbackText}>
-                                        🎁 Get ₹20 cashback on 3 successful autopay cycles
-                                    </Text>
-                                </View>
-                            </View>
-                        )}
+                        
+                        <View style={{height: 40}} />
                     </View>
                 </ScrollView>
 
@@ -430,17 +535,19 @@ export default function SetupAutopayScreen() {
                 {paymentMethod && (
                     <View style={styles.bottomCTA}>
                         <TouchableOpacity
-                            style={styles.enableButton}
+                            style={[styles.enableButton, !isReadyToEnable() && styles.enableButtonDisabled]}
                             onPress={handleEnableAutopay}
+                            disabled={!isReadyToEnable()}
+                            activeOpacity={0.8}
                         >
                             <LinearGradient
-                                colors={["#66BB6A", "#2E7D32"]}
+                                colors={isReadyToEnable() ? ["#0F172A", "#1E293B"] : ["#E2E8F0", "#CBD5E1"]}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                                 style={styles.enableGradient}
                             >
-                                <Ionicons name="shield-checkmark" size={20} color="#FFFFFF" />
-                                <Text style={styles.enableButtonText}>Enable Autopay</Text>
+                                <Ionicons name="shield-checkmark" size={20} color={isReadyToEnable() ? "#FFFFFF" : "#64748B"} />
+                                <Text style={[styles.enableButtonText, !isReadyToEnable() && styles.enableButtonTextDisabled]}>Enable Autopay</Text>
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>
@@ -456,7 +563,7 @@ export default function SetupAutopayScreen() {
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalContent}>
                             <View style={styles.modalIconCircle}>
-                                <Ionicons name="shield-checkmark" size={40} color="#2E7D32" />
+                                <Ionicons name="shield-checkmark" size={40} color="#0F172A" />
                             </View>
 
                             <Text style={styles.modalTitle}>Confirm Autopay Setup?</Text>
@@ -464,8 +571,8 @@ export default function SetupAutopayScreen() {
                                 You authorize automatic payments of ₹
                                 {selectedPlan
                                     ? plans.find((p) => p.id === selectedPlan)?.amount
-                                    : customAmount}{" "}
-                                every 28 days.
+                                    : customAmount || 0}{" "}
+                                according to your selected schedule.
                             </Text>
 
                             <View style={styles.modalButtons}>
@@ -496,21 +603,21 @@ export default function SetupAutopayScreen() {
                     <View style={styles.modalOverlay}>
                         <View style={styles.successContent}>
                             <View style={styles.successIconCircle}>
-                                <Ionicons name="checkmark-circle" size={80} color="#2E7D32" />
+                                <Ionicons name="checkmark-circle" size={80} color="#059669" />
                             </View>
 
                             <Text style={styles.successTitle}>
                                 Autopay Enabled Successfully!
                             </Text>
                             <Text style={styles.successMessage}>
-                                You will be charged automatically on 15 March 2026
+                                Your future payments will be processed securely and automatically.
                             </Text>
 
                             <TouchableOpacity
                                 style={styles.viewAutopayButton}
                                 onPress={handleViewAutopay}
                             >
-                                <Text style={styles.viewAutopayButtonText}>View Autopay</Text>
+                                <Text style={styles.viewAutopayButtonText}>View Mandates</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -523,7 +630,7 @@ export default function SetupAutopayScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F7FA",
+        backgroundColor: "#F8FAFC",
     },
     safeArea: {
         flex: 1,
@@ -536,8 +643,6 @@ const styles = StyleSheet.create({
         paddingTop: 50,
         paddingBottom: 20,
         backgroundColor: "#FFFFFF",
-        borderBottomWidth: 1,
-        borderBottomColor: "#F0F0F0",
     },
     backButton: {
         padding: 5,
@@ -549,11 +654,11 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: "bold",
-        color: "#1A1A1A",
+        color: "#0F172A",
     },
     headerSubtext: {
         fontSize: 12,
-        color: "#999",
+        color: "#64748B",
         marginTop: 2,
     },
     placeholder: {
@@ -564,126 +669,128 @@ const styles = StyleSheet.create({
         padding: 20,
     },
 
-    // Step Section
+    // Steps
     stepSection: {
-        marginBottom: 24,
+        marginBottom: 32,
     },
-
     stepTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#1A1A1A",
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#0F172A",
         marginBottom: 16,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
     },
 
-    // Services Grid
+    // Step 1: Icons Grid
     servicesGrid: {
         flexDirection: "row",
         flexWrap: "wrap",
-        gap: 12,
+        justifyContent: "flex-start",
+        gap: 10,
     },
-
-    serviceCard: {
-        width: "48%",
-        backgroundColor: "#FFFFFF",
-        padding: 16,
-        borderRadius: 16,
+    serviceItem: {
+        width: "22.5%",
         alignItems: "center",
-        borderWidth: 2,
-        borderColor: "transparent",
-        position: "relative",
+        marginBottom: 20,
     },
-
-    serviceCardSelected: {
-        borderColor: "#1E88E5",
-        backgroundColor: "#E3F2FD",
-    },
-
-    checkmark: {
-        position: "absolute",
-        top: 8,
-        right: 8,
-    },
-
-    serviceIconCircle: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        justifyContent: "center",
-        alignItems: "center",
+    serviceIconWrapper: {
+        width: 55,
+        height: 55,
+        borderRadius: 32.5,
+        backgroundColor: '#F1F8FE',
+        justifyContent: 'center',
+        alignItems: 'center',
         marginBottom: 8,
-        backgroundColor: "#F1F8FE",
+        shadowColor: '#2196F3',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 3,
         borderWidth: 1,
-        borderColor: "#BBDEFB",
+        borderColor: '#BBDEFB',
     },
-
+    serviceIconWrapperSelected: {
+        borderColor: "#0D47A1",
+        backgroundColor: "#E3F2FD",
+        borderWidth: 2,
+    },
     serviceName: {
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: "600",
         color: "#1A1A1A",
         textAlign: "center",
-        lineHeight: 16,
+        lineHeight: 13,
+    },
+    serviceNameSelected: {
+        color: "#0F172A",
+        fontWeight: "800",
     },
 
-    // Input Card
+    // Input Cards (Step 2/3)
     inputCard: {
         backgroundColor: "#FFFFFF",
         padding: 16,
         borderRadius: 16,
         marginBottom: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.02,
+        shadowRadius: 4,
+        elevation: 1,
     },
-
     inputLabel: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: "600",
-        color: "#666",
+        color: "#64748B",
         marginBottom: 8,
+        textTransform: "uppercase",
     },
-
     inputRow: {
         flexDirection: "row",
         alignItems: "center",
         gap: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "#F1F5F9",
+        paddingBottom: 8,
     },
-
     textInput: {
         flex: 1,
         fontSize: 16,
-        color: "#1A1A1A",
-        paddingVertical: 8,
+        color: "#0F172A",
     },
-
     rupeeSymbol: {
         fontSize: 18,
         fontWeight: "600",
-        color: "#666",
+        color: "#64748B",
     },
-
     detailsRow: {
         flexDirection: "row",
         gap: 12,
     },
-
     detailCard: {
         flex: 1,
         backgroundColor: "#FFFFFF",
         padding: 12,
         borderRadius: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.02,
+        shadowRadius: 4,
+        elevation: 1,
     },
-
     detailLabel: {
-        fontSize: 12,
-        color: "#999",
+        fontSize: 11,
+        color: "#94A3B8",
         marginBottom: 4,
     },
-
     detailValue: {
         fontSize: 14,
         fontWeight: "600",
-        color: "#1A1A1A",
+        color: "#0F172A",
     },
 
-    // Plan Cards
+    // Step 3: Plan Cards
     planCard: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -692,53 +799,49 @@ const styles = StyleSheet.create({
         padding: 16,
         borderRadius: 16,
         marginBottom: 12,
-        borderWidth: 2,
-        borderColor: "transparent",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
     },
-
     planCardSelected: {
-        borderColor: "#1E88E5",
-        backgroundColor: "#E3F2FD",
+        borderColor: "#0F172A",
+        backgroundColor: "#F8FAFC",
+        borderWidth: 2,
     },
-
     planLeft: {
         flex: 1,
     },
-
     planAmount: {
         fontSize: 20,
-        fontWeight: "bold",
-        color: "#1A1A1A",
+        fontWeight: "700",
+        color: "#0F172A",
         marginBottom: 4,
     },
-
     planDetails: {
-        fontSize: 14,
-        color: "#666",
+        fontSize: 13,
+        color: "#64748B",
     },
-
     orDivider: {
         flexDirection: "row",
         alignItems: "center",
-        marginVertical: 16,
+        marginVertical: 12,
     },
-
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: "#E0E0E0",
+        backgroundColor: "#E2E8F0",
     },
-
     orText: {
-        fontSize: 13,
-        color: "#999",
+        fontSize: 12,
+        color: "#94A3B8",
         marginHorizontal: 12,
+        fontWeight: "600",
     },
-
     customAmountCard: {
         backgroundColor: "#FFFFFF",
         padding: 16,
         borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
     },
 
     // Frequency
@@ -746,161 +849,124 @@ const styles = StyleSheet.create({
         backgroundColor: "#FFFFFF",
         padding: 16,
         borderRadius: 16,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
     },
-
-    frequencyLabel: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1A1A1A",
-        marginBottom: 12,
+    freqContainerRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginTop: 8,
     },
-
     frequencyOption: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
-        paddingVertical: 12,
+        gap: 8,
     },
-
     radio: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        borderWidth: 2,
-        borderColor: "#1E88E5",
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        borderWidth: 1.5,
+        borderColor: "#94A3B8",
         justifyContent: "center",
         alignItems: "center",
     },
-
+    radioActive: {
+        borderColor: "#0F172A",
+    },
     radioInner: {
         width: 10,
         height: 10,
         borderRadius: 5,
-        backgroundColor: "#1E88E5",
+        backgroundColor: "#0F172A",
     },
-
     frequencyText: {
-        fontSize: 15,
-        color: "#1A1A1A",
-    },
-
-    // Payment Cards
-    paymentCard: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        backgroundColor: "#FFFFFF",
-        padding: 16,
-        borderRadius: 16,
-        marginBottom: 12,
-        borderWidth: 2,
-        borderColor: "transparent",
-    },
-
-    paymentCardSelected: {
-        borderColor: "#1E88E5",
-        backgroundColor: "#E3F2FD",
-    },
-
-    paymentLeft: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 12,
-    },
-
-    paymentIcon: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: "#F5F7FA",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-
-    paymentName: {
-        fontSize: 15,
-        fontWeight: "600",
-        color: "#1A1A1A",
-        marginBottom: 4,
-    },
-
-    paymentDetail: {
         fontSize: 13,
-        color: "#666",
+        color: "#0F172A",
+        fontWeight: "500",
     },
 
-    addPaymentLink: {
+    // Payment Grid
+    paymentModesGrid: {
         flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
-        paddingVertical: 8,
-    },
-
-    addPaymentText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1E88E5",
-    },
-
-    // Summary
-    summaryCard: {
-        backgroundColor: "#F5F7FA",
-        padding: 16,
-        borderRadius: 16,
+        flexWrap: "wrap",
+        gap: 12,
         marginBottom: 16,
     },
-
-    summaryRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginBottom: 12,
-    },
-
-    summaryLabel: {
-        fontSize: 14,
-        color: "#666",
-    },
-
-    summaryValue: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#1A1A1A",
-    },
-
-    infoBadges: {
-        flexDirection: "row",
-        gap: 10,
-        marginBottom: 12,
-    },
-
-    infoBadge: {
+    paymentModeCard: {
+        width: "48%",
         flexDirection: "row",
         alignItems: "center",
-        gap: 6,
-        backgroundColor: "#E8F5E9",
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        padding: 14,
         borderRadius: 12,
-    },
-
-    infoBadgeText: {
-        fontSize: 12,
-        fontWeight: "600",
-        color: "#2E7D32",
-    },
-
-    cashbackInfo: {
-        backgroundColor: "#FFF3E0",
-        padding: 12,
-        borderRadius: 12,
+        backgroundColor: "#FFFFFF",
         borderWidth: 1,
-        borderColor: "#FFE0B2",
+        borderColor: "#E2E8F0",
+        gap: 8,
+    },
+    selectedPaymentModeCard: {
+        borderColor: "#0F172A",
+        backgroundColor: "#F1F5F9",
+    },
+    paymentModeText: {
+        fontSize: 13,
+        color: "#64748B",
+        fontWeight: "500",
+    },
+    selectedPaymentModeText: {
+        color: "#0F172A",
+        fontWeight: "700",
     },
 
-    cashbackText: {
-        fontSize: 13,
-        color: "#E65100",
-        textAlign: "center",
+    // Card Input Form
+    cardForm: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+    },
+    cardFieldGroup: {
+        marginBottom: 16,
+    },
+    cardFieldLabel: {
+        fontSize: 11,
+        fontWeight: "600",
+        color: "#64748B",
+        marginBottom: 6,
+        textTransform: "uppercase",
+    },
+    cardInput: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F8FAFC",
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        height: 48,
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+        gap: 10,
+    },
+    cardInputText: {
+        flex: 1,
+        fontSize: 15,
+        color: "#0F172A",
+    },
+    rowInputs: {
+        flexDirection: "row",
+        gap: 12,
+    },
+    declarationRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 10,
+        marginTop: 8,
+    },
+    declarationText: {
+        flex: 1,
+        fontSize: 12,
+        color: "#64748B",
+        lineHeight: 18,
     },
 
     // Bottom CTA
@@ -908,151 +974,151 @@ const styles = StyleSheet.create({
         padding: 20,
         backgroundColor: "#FFFFFF",
         borderTopWidth: 1,
-        borderTopColor: "#F0F0F0",
+        borderTopColor: "#E2E8F0",
     },
-
     enableButton: {
-        borderRadius: 25,
+        borderRadius: 12,
         overflow: "hidden",
-        shadowColor: "#2E7D32",
+        shadowColor: "#0F172A",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-        elevation: 5,
+        shadowOpacity: 0.1,
+        shadowRadius: 10,
+        elevation: 4,
     },
-
+    enableButtonDisabled: {
+        shadowOpacity: 0,
+        elevation: 0,
+    },
     enableGradient: {
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "center",
-        gap: 10,
-        paddingVertical: 16,
+        paddingVertical: 18,
+        gap: 8,
     },
-
     enableButtonText: {
         fontSize: 16,
-        fontWeight: "bold",
+        fontWeight: "700",
         color: "#FFFFFF",
+    },
+    enableButtonTextDisabled: {
+        color: "#64748B",
     },
 
     // Modals
     modalOverlay: {
         flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        backgroundColor: "rgba(15, 23, 42, 0.6)",
         justifyContent: "center",
         alignItems: "center",
         padding: 20,
     },
-
     modalContent: {
         backgroundColor: "#FFFFFF",
-        borderRadius: 20,
+        borderRadius: 24,
         padding: 24,
         width: "100%",
-        maxWidth: 400,
         alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        elevation: 10,
     },
-
     modalIconCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
-        backgroundColor: "#E8F5E9",
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: "#F1F5F9",
         justifyContent: "center",
         alignItems: "center",
         marginBottom: 16,
     },
-
     modalTitle: {
         fontSize: 20,
-        fontWeight: "bold",
-        color: "#1A1A1A",
+        fontWeight: "800",
+        color: "#0F172A",
         marginBottom: 8,
         textAlign: "center",
     },
-
     modalMessage: {
         fontSize: 14,
-        color: "#666",
+        color: "#64748B",
         textAlign: "center",
-        lineHeight: 20,
+        lineHeight: 22,
         marginBottom: 24,
     },
-
     modalButtons: {
         flexDirection: "row",
         gap: 12,
         width: "100%",
     },
-
     cancelButton: {
         flex: 1,
         paddingVertical: 14,
         borderRadius: 12,
-        backgroundColor: "#F5F5F5",
+        backgroundColor: "#F1F5F9",
         alignItems: "center",
     },
-
     cancelButtonText: {
         fontSize: 15,
         fontWeight: "600",
-        color: "#666",
+        color: "#475569",
     },
-
     confirmButton: {
         flex: 1,
         paddingVertical: 14,
         borderRadius: 12,
-        backgroundColor: "#2E7D32",
+        backgroundColor: "#0F172A",
         alignItems: "center",
     },
-
     confirmButtonText: {
         fontSize: 15,
-        fontWeight: "600",
+        fontWeight: "700",
         color: "#FFFFFF",
     },
 
     // Success Modal
     successContent: {
         backgroundColor: "#FFFFFF",
-        borderRadius: 20,
-        padding: 32,
+        borderRadius: 24,
+        padding: 30,
         width: "100%",
-        maxWidth: 400,
         alignItems: "center",
     },
-
     successIconCircle: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: "#ECFDF5",
+        justifyContent: "center",
+        alignItems: "center",
         marginBottom: 20,
     },
-
     successTitle: {
         fontSize: 22,
-        fontWeight: "bold",
-        color: "#1A1A1A",
-        marginBottom: 8,
+        fontWeight: "800",
+        color: "#0F172A",
+        marginBottom: 12,
         textAlign: "center",
     },
-
     successMessage: {
-        fontSize: 14,
-        color: "#666",
+        fontSize: 15,
+        color: "#64748B",
         textAlign: "center",
-        lineHeight: 20,
-        marginBottom: 24,
+        lineHeight: 22,
+        marginBottom: 32,
     },
-
     viewAutopayButton: {
-        backgroundColor: "#2E7D32",
-        paddingVertical: 14,
-        paddingHorizontal: 40,
-        borderRadius: 25,
+        width: "100%",
+        backgroundColor: "#0F172A",
+        paddingVertical: 16,
+        borderRadius: 14,
+        alignItems: "center",
     },
-
     viewAutopayButtonText: {
-        fontSize: 16,
-        fontWeight: "bold",
         color: "#FFFFFF",
+        fontSize: 16,
+        fontWeight: "700",
     },
 });
