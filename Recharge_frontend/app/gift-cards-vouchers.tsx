@@ -89,7 +89,7 @@ export default function GiftCardsVouchersScreen() {
                                     {voucher.library === "Ionicons" ? (
                                         <Ionicons name={voucher.icon as any} size={28} color={voucher.color} />
                                     ) : (
-                                        <MaterialCommunityIcons name={voucher.icon as any} size={voucher.name === "Zomato" ? 34 : 28} color={voucher.color} />
+                                        <MaterialCommunityIcons name={voucher.icon as any} size={voucher.name === "Zomato" ? 48 : voucher.name === "Netflix" ? 38 : 28} color={voucher.color} />
                                     )}
                                 </View>
                                 <Text style={styles.voucherName}>{voucher.name}</Text>

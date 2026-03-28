@@ -16,6 +16,8 @@ import {
   View,
 } from "react-native";
 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const { width } = Dimensions.get("window");
 
 // Define types for expenses and earnings
@@ -156,7 +158,7 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
 
   // Get data for selected month or use default
   const monthData = userData?.[selectedMonth] || DEFAULT_DATA;
-  
+
   // Calculate total spent based on current expenses
   const totalSpent = monthData.totalSpent || 0;
   const incomeVal = parseFloat(monthlyIncome) || 0;
@@ -167,11 +169,31 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
   const prevMonthIdx = selectedMonthIdx === 0 ? 11 : selectedMonthIdx - 1;
   const prevMonth = MONTHS[prevMonthIdx].substring(0, 3);
 
-  const handleSetSalary = () => {
+  const handleSetSalary = async () => {
     if (parseFloat(monthlyIncome) > 0) {
-      setIsSalarySet(true);
+      try {
+        await AsyncStorage.setItem("@monthly_salary", monthlyIncome);
+        setIsSalarySet(true);
+      } catch (e) {
+        console.error("Error saving salary:", e);
+      }
     }
   };
+
+  useEffect(() => {
+    const loadSalary = async () => {
+      try {
+        const savedSalary = await AsyncStorage.getItem("@monthly_salary");
+        if (savedSalary) {
+          setMonthlyIncome(savedSalary);
+          setIsSalarySet(true);
+        }
+      } catch (e) {
+        console.error("Error loading salary:", e);
+      }
+    };
+    loadSalary();
+  }, []);
 
 
   useEffect(() => {
@@ -333,8 +355,8 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
 
                 <View style={styles.expensesGrid}>
                   {monthData.expenses.map((expense) => (
-                    <View 
-                      key={expense.id} 
+                    <View
+                      key={expense.id}
                       style={[
                         styles.expenseCard,
                         { backgroundColor: expense.backgroundColor }
@@ -635,7 +657,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 60, // Increased padding
+    paddingTop: 45,
     paddingBottom: 15,
     zIndex: 1,
   },

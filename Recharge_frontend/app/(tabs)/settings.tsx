@@ -93,8 +93,8 @@ export default function SettingsScreen() {
     // Handle About
     const handleAbout = () => {
         Alert.alert(
-            "About ONLRecharge",
-            "Version 1.0.0\n\n© 2026 ONLRecharge\nAll rights reserved.\n\nMade with ❤️ in India",
+            "About PayIndia",
+            "Version 1.0.0\n\n© 2026 PayIndia\nAll rights reserved.\n\nMade with ❤️ in India",
             [{ text: "OK" }],
         );
     };
@@ -233,7 +233,7 @@ export default function SettingsScreen() {
                             <Ionicons name="chevron-forward" size={20} color="#999" />
                         </TouchableOpacity>
 
-                        {/* About ONLRecharge */}
+                        {/* About PayIndia */}
                         <TouchableOpacity style={styles.settingCard} onPress={handleAbout}>
                             <View style={styles.settingLeft}>
                                 <View
@@ -246,7 +246,7 @@ export default function SettingsScreen() {
                                     />
                                 </View>
                                 <View style={styles.settingInfo}>
-                                    <Text style={styles.settingTitle}>About ONLRecharge</Text>
+                                    <Text style={styles.settingTitle}>About PayIndia</Text>
                                     <Text style={styles.settingSubtext}>Version 1.0.0</Text>
                                 </View>
                             </View>
@@ -283,7 +283,7 @@ export default function SettingsScreen() {
 
                     {/* App Info */}
                     <View style={styles.appInfo}>
-                        <Text style={styles.appInfoText}>ONLRecharge</Text>
+                        <Text style={styles.appInfoText}>PayIndia</Text>
                         <Text style={styles.appInfoVersion}>Version 1.0.0</Text>
                         <Text style={styles.appInfoCopyright}>
                             © 2026 All Rights Reserved

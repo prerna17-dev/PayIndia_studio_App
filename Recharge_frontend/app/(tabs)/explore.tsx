@@ -4,6 +4,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   BackHandler,
   Dimensions,
   Image,
@@ -146,6 +147,12 @@ export default function HomeScreen({
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [reminders, setReminders] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState({
+    spent: 0,
+    cashback: 0,
+    paidBills: 0,
+    savingsPercentage: 0,
+  });
 
   const fetchProfile = async () => {
     try {
@@ -183,10 +190,74 @@ export default function HomeScreen({
     }
   };
 
+  const fetchAnalyticsData = async () => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const savedSalary = await AsyncStorage.getItem("@monthly_salary");
+      const salary = parseFloat(savedSalary || "0");
+
+      const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const transactions = await response.json();
+
+      if (response.ok && Array.isArray(transactions)) {
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        // Filter transactions for current month
+        const currentMonthTransactions = transactions.filter((t: any) => {
+          const tDate = new Date(t.created_at);
+          return tDate >= firstDayOfMonth;
+        });
+
+        let totalSpent = 0;
+        let totalCashback = 0;
+        let paidBillsCount = 0;
+
+        currentMonthTransactions.forEach((t: any) => {
+          const type = (t.transaction_type || "").toUpperCase().replace('_', ' ');
+          const description = (t.description || "").toLowerCase();
+
+          const isDebit = type === "WALLET DEBIT" || type === "WALLET_DEBIT" || type === "RECHARGE" || type === "BILL" || type === "BILL PAYMENT";
+
+          // Only count as Cashback if it's explicitly a reward, not a standard top-up
+          const isCashbackType = type === "CASHBACK" || type === "REWARD";
+          const isCashbackDescription = description.includes("cashback") || description.includes("reward") || description.includes("refer");
+          const isWalletCredit = type === "WALLET CREDIT" || type === "WALLET_CREDIT";
+
+          if (isDebit) {
+            totalSpent += parseFloat(t.amount);
+            if (type.includes("BILL") || type.includes("RECHARGE")) {
+              paidBillsCount++;
+            }
+          }
+
+          // Exclude manual top-ups from cashback totals
+          if (isCashbackType || (isWalletCredit && isCashbackDescription)) {
+            totalCashback += parseFloat(t.amount);
+          }
+        });
+
+        const savings = salary > 0 ? Math.max(0, ((salary - totalSpent) / salary) * 100) : 0;
+
+        setAnalytics({
+          spent: totalSpent,
+          cashback: totalCashback,
+          paidBills: paidBillsCount,
+          savingsPercentage: Math.round(savings),
+        });
+      }
+    } catch (e) {
+      console.error("Error fetching analytics:", e);
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       fetchProfile();
       fetchReminders();
+      fetchAnalyticsData();
     }, [])
   );
 
@@ -229,6 +300,7 @@ export default function HomeScreen({
     { label: "Flight Booking", route: "/flight-booking", icon: "airplane", color: "#1976D2", bg: "#E3F2FD", category: "Travel" },
     { label: "Train Booking", route: "/train-booking", icon: "train", color: "#C62828", bg: "#FCE4EC", category: "Travel" },
     { label: "Bus Booking", route: "/bus-booking", icon: "bus", color: "#2E7D32", bg: "#E8F5E9", category: "Travel" },
+    { label: "Hotel Booking", route: "/hotel-booking", icon: "business", color: "#C62828", bg: "#FCE4EC", category: "Travel" },
     { label: "Refer & Earn", route: "/refer-earn", icon: "gift", color: "#E65100", bg: "#FFF3E0", category: "Offers" },
     { label: "My Money", route: "/mymoney", icon: "wallet", color: "#4F46E5", bg: "#EDE9FE", category: "Finance" },
   ];
@@ -619,7 +691,12 @@ export default function HomeScreen({
             <View style={styles.section}>
               <View style={styles.cardContainer}>
                 <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>Maha E Seva Services</Text>
+                  <View style={styles.titleWithBadge}>
+                    <Text style={styles.cardTitle}>Maha E Seva Services</Text>
+                    <View style={styles.headerNewBadge}>
+                      <Text style={styles.headerNewBadgeText}>NEW</Text>
+                    </View>
+                  </View>
                   <TouchableOpacity
                     style={styles.viewMoreButton}
                     onPress={() => router.push("/more-seva")}
@@ -747,6 +824,20 @@ export default function HomeScreen({
                     </View>
                     <Text style={styles.serviceText}>Bus</Text>
                   </TouchableOpacity>
+
+                  {/* Hotel */}
+                  <TouchableOpacity
+                    style={styles.serviceCardHorizontal}
+                    onPress={() => Alert.alert("Redirecting", "Redirecting to our app...")}>
+                    <View style={styles.iconCircle}>
+                      <MaterialCommunityIcons
+                        name="office-building"
+                        size={24}
+                        color="#0D47A1"
+                      />
+                    </View>
+                    <Text style={styles.serviceText}>Hotel</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
@@ -866,7 +957,7 @@ export default function HomeScreen({
                       </View>
                       <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.05)", justifyContent: "center", alignItems: "center", borderWidth: 4, borderColor: "rgba(255,255,255,0.15)", borderTopColor: "#34D399", borderRightColor: "#34D399", borderBottomColor: "#34D399", transform: [{ rotate: "45deg" }], shadowColor: "#34D399", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 8 }}>
                         <View style={{ transform: [{ rotate: "-45deg" }] }}>
-                          <Text style={{ fontSize: 11, fontWeight: "900", color: "#ffffffff" }}>75%</Text>
+                          <Text style={{ fontSize: 11, fontWeight: "900", color: "#ffffffff" }}>{analytics.savingsPercentage}%</Text>
                         </View>
                       </View>
                     </View>
@@ -877,21 +968,21 @@ export default function HomeScreen({
                 <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 16, padding: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 }}>
                   <View style={{ flex: 1, alignItems: "center" }}>
                     <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: "600", marginBottom: 6, letterSpacing: 0.5 }}>SPENT</Text>
-                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5 }}>₹4,250</Text>
+                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5 }}>₹{analytics.spent.toLocaleString()}</Text>
                   </View>
 
                   <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.15)", marginVertical: 4 }} />
 
                   <View style={{ flex: 1, alignItems: "center" }}>
                     <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: "600", marginBottom: 6, letterSpacing: 0.5 }}>CASHBACK</Text>
-                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#4ffcbcff", letterSpacing: 0.5 }}>+₹320</Text>
+                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#4ffcbcff", letterSpacing: 0.5 }}>+₹{analytics.cashback.toLocaleString()}</Text>
                   </View>
 
                   <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.15)", marginVertical: 4 }} />
 
                   <View style={{ flex: 1, alignItems: "center" }}>
                     <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: "600", marginBottom: 6, letterSpacing: 0.5 }}>PAID BILLS</Text>
-                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5 }}>04</Text>
+                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5 }}>{analytics.paidBills.toString().padStart(2, '0')}</Text>
                   </View>
                 </View>
               </LinearGradient>
@@ -1034,7 +1125,7 @@ export default function HomeScreen({
                         {v.lib === "Ionicons" ? (
                           <Ionicons name={v.icon as any} size={28} color={v.color} />
                         ) : (
-                          <MaterialCommunityIcons name={v.icon as any} size={v.name === "Zomato" ? 34 : 28} color={v.color} />
+                          <MaterialCommunityIcons name={v.icon as any} size={v.name === "Zomato" ? 48 : v.name === "Netflix" ? 38 : 28} color={v.color} />
                         )}
                       </View>
                       <Text style={styles.voucherName} numberOfLines={1}>{v.name}</Text>
@@ -1708,4 +1799,21 @@ const styles = StyleSheet.create({
   referCode: { fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: "500" },
   referCodeBox: { backgroundColor: "rgba(255,255,255,0.25)", paddingVertical: 4, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.4)" },
   referCodeText: { fontSize: 13, fontWeight: "900", color: "#FFFFFF", letterSpacing: 1.5 },
+  titleWithBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  headerNewBadge: {
+    backgroundColor: "#178302ff",
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 12,
+    marginLeft: 4,
+  },
+  headerNewBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 9,
+    fontWeight: "bold",
+  },
 });
