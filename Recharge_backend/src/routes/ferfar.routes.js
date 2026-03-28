@@ -1,5 +1,5 @@
-const express = require("express");
-const router = express.Router();
+const expressway = require("express");
+const router = expressway.Router();
 const multer = require("multer");
 const path = require("path");
 const ferfarController = require("../controllers/ferfar.controller");
@@ -23,15 +23,28 @@ const upload = multer({
 
 const ferfarUpload = upload.fields([
     { name: "aadhaar_card", maxCount: 1 },
-    { name: "index_2", maxCount: 1 },
-    { name: "death_cert", maxCount: 1 },
-    { name: "ferfar_cert", maxCount: 1 },
+    { name: "aadhaarCard", maxCount: 1 },
+    { name: "id_proof", maxCount: 1 },
+    { name: "legalDoc", maxCount: 1 },
+    { name: "mutation_doc", maxCount: 1 },
+    { name: "prev712", maxCount: 1 },
+    { name: "ownership_doc", maxCount: 1 },
+    { name: "saleDeed", maxCount: 1 },
+    { name: "application_form", maxCount: 1 },
+    { name: "prev8A", maxCount: 1 },
+    { name: "supporting_doc", maxCount: 1 },
+    { name: "idProof", maxCount: 1 },
+    { name: "photo", maxCount: 1 },
+    { name: "otherDoc", maxCount: 1 },
 ]);
 
 // All routes require authentication
 router.use(authMiddleware);
 
+router.post("/send-otp", ferfarController.sendOTP);
+router.post("/verify-otp", ferfarController.verifyOTP);
 router.post("/apply", ferfarUpload, ferfarController.createApplication);
+router.post("/correction/submit", ferfarUpload, ferfarController.submitCorrection);
 router.get("/list", ferfarController.getApplications);
 router.get("/:referenceId", ferfarController.getApplicationByRef);
 router.put("/update-status/:id", ferfarController.updateStatus);

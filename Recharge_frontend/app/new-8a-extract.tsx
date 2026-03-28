@@ -14,9 +14,13 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator
+    ActivityIndicator,
+    Keyboard,
+    Clipboard,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -54,7 +58,7 @@ interface DocumentsState {
     aadhaarCard: DocumentType | null;
     ownershipProof: DocumentType | null;
     propertyDetailsDoc: DocumentType | null;
-    previous8A: DocumentType | null;
+    previous_8a: DocumentType | null;
     mutationRecord: DocumentType | null;
     [key: string]: DocumentType | null;
 }
@@ -70,12 +74,25 @@ export default function New8AExtractScreen() {
     const [isEditingMode, setIsEditingMode] = useState(false);
     const [isOtpSent, setIsOtpSent] = useState(false);
     const [otp, setOtp] = useState("");
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+    const [showToast, setShowToast] = useState(false);
+
+    useEffect(() => {
+        const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+        const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+        return () => {
+            keyboardDidShowListener.remove();
+            keyboardDidHideListener.remove();
+        };
+    }, []);
 
     const [documents, setDocuments] = useState<DocumentsState>({
         aadhaarCard: null,
         ownershipProof: null,
         propertyDetailsDoc: null,
-        previous8A: null,
+        previous_8a: null,
         mutationRecord: null,
     });
 
@@ -162,13 +179,61 @@ export default function New8AExtractScreen() {
         setDocuments(prev => ({ ...prev, [docType]: null }));
     };
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async () => {
+        if (formData.aadhaarNumber.length !== 12) {
+            Alert.alert("Invalid Aadhaar", "Please enter a valid 12-digit Aadhaar number");
+            return;
+        }
         if (formData.mobileNumber.length !== 10) {
             Alert.alert("Invalid Mobile", "Please enter a valid 10-digit mobile number");
             return;
         }
-        setIsOtpSent(true);
-        Alert.alert("OTP Sent", "A verification code has been sent to your mobile number");
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.LAND_8A_OTP_SEND,
+                { mobile_number: formData.mobileNumber, aadhaar_number: formData.aadhaarNumber },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to your mobile number");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (otp.length !== 6) {
+            Alert.alert("Error", "Please enter valid 6-digit OTP");
+            return;
+        }
+
+        setIsVerifying(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.LAND_8A_OTP_VERIFY,
+                { mobile_number: formData.mobileNumber, otp_code: otp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsVerifying(false);
+                setIsOtpSent(false);
+                setIsOtpVerified(true);
+                Alert.alert("Success", "OTP verified successfully");
+            } else {
+                setIsVerifying(false);
+                Alert.alert("Error", response.data.message || "Invalid OTP");
+            }
+        } catch (error: any) {
+            setIsVerifying(false);
+            Alert.alert("Error", error.response?.data?.message || "OTP verification failed");
+        }
     };
 
     const handleContinue = () => {
@@ -186,7 +251,7 @@ export default function New8AExtractScreen() {
                 Alert.alert("Required", "Please select Purpose and Delivery Type");
                 return;
             }
-            if (!isOtpSent) {
+            if (!isOtpVerified) {
                 Alert.alert("Verification Required", "Please verify your mobile via OTP");
                 return;
             }
@@ -228,13 +293,48 @@ export default function New8AExtractScreen() {
                     return;
                 }
 
-                // Simulate API call
-                setTimeout(() => {
-                    const refId = "EXT" + Math.random().toString(36).substr(2, 9).toUpperCase();
-                    setApplicationId(refId);
+                try {
+                    const data = new FormData();
+                    Object.keys(formData).forEach(key => {
+                        const backendKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
+                        data.append(backendKey, (formData as any)[key]);
+                    });
+
+                    Object.keys(documents).forEach(key => {
+                        const doc = documents[key];
+                        if (doc) {
+                            const backendKey = key.replace(/([A-Z])/g, "_$1").toLowerCase();
+                            data.append(backendKey, {
+                                uri: doc.uri,
+                                name: doc.name,
+                                type: doc.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+                            } as any);
+                        }
+                    });
+
+                    const response = await axios.post(
+                        API_ENDPOINTS.LAND_8A_APPLY,
+                        data,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                "Content-Type": "multipart/form-data",
+                            },
+                        }
+                    );
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id || response.data.data.applicationId);
+                        setIsSubmitting(false);
+                        setIsSubmitted(true);
+                    } else {
+                        setIsSubmitting(false);
+                        Alert.alert("Error", response.data.message || "Submission failed");
+                    }
+                } catch (error: any) {
                     setIsSubmitting(false);
-                    setIsSubmitted(true);
-                }, 2000);
+                    Alert.alert("Error", error.response?.data?.message || "Failed to submit application");
+                }
             };
 
             submitApplication();
@@ -273,18 +373,23 @@ export default function New8AExtractScreen() {
                     <Text style={styles.successSubtitle}>Your 8A Extract application has been received successfully.</Text>
                     <View style={styles.idCard}>
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <TouchableOpacity onPress={() => {
+                                Clipboard.setString(applicationId);
+                                setShowToast(true);
+                                setTimeout(() => setShowToast(false), 2000);
+                            }} style={{ padding: 4 }}>
+                                <Ionicons name="copy-outline" size={24} color="#0D47A1" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}><Ionicons name="download-outline" size={24} color="#0D47A1" /></View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}><Ionicons name="time-outline" size={24} color="#2E7D32" /></View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {showToast && (
+                        <View style={{ position: 'absolute', bottom: 120, backgroundColor: '#333', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, zIndex: 100 }}>
+                            <Text style={{ color: '#FFF', fontSize: 14 }}>Reference ID Copied!</Text>
+                        </View>
+                    )}
+                    <View style={{ height: 40 }} />
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
@@ -328,26 +433,33 @@ export default function New8AExtractScreen() {
                         <View style={styles.stepWrapper}>
                             <SectionTitle title="Applicant Details" icon="person" />
                             <View style={styles.formCard}>
-                                <Label text="Full Name (as per Aadhaar) *" />
-                                <Input value={formData.fullName} onChangeText={(v: string) => setFormData({ ...formData, fullName: v })} placeholder="Enter full name" icon="person-outline" />
-
-                                <Label text="Aadhaar Number *" />
-                                <Input value={formData.aadhaarNumber} onChangeText={(v: string) => setFormData({ ...formData, aadhaarNumber: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} />
+                                <Label text="Full Name *" />
+                                <Input value={formData.fullName} onChangeText={(v: string) => setFormData({ ...formData, fullName: v })} placeholder="As per Aadhaar" icon="person-outline" />
 
                                 <Label text="Mobile Number *" />
+                                <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="call-outline" keyboardType="number-pad" maxLength={10} />
+
+                                <Label text="Aadhaar Number *" />
                                 <View style={styles.otpInputContainer}>
                                     <View style={{ flex: 1 }}>
-                                        <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} />
+                                        <Input value={formData.aadhaarNumber} onChangeText={(v: string) => setFormData({ ...formData, aadhaarNumber: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="finger-print-outline" keyboardType="number-pad" maxLength={12} />
                                     </View>
-                                    <TouchableOpacity style={[styles.otpBtn, isOtpSent && styles.otpBtnDisabled]} onPress={handleSendOtp}>
-                                        <Text style={styles.otpBtnText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                    <TouchableOpacity style={[styles.otpBtn, isOtpVerified && styles.otpBtnDisabled]} onPress={handleSendOtp} disabled={isOtpVerified}>
+                                        <Text style={styles.otpBtnText}>{isOtpVerified ? "Verified" : isOtpSent ? "Resend" : "Send OTP"}</Text>
                                     </TouchableOpacity>
                                 </View>
 
-                                {isOtpSent && (
+                                {isOtpSent && !isOtpVerified && (
                                     <View style={{ marginTop: 10 }}>
                                         <Label text="Enter OTP *" />
-                                        <Input value={otp} onChangeText={setOtp} placeholder="6-digit OTP" keyboardType="number-pad" maxLength={6} icon="shield-checkmark-outline" />
+                                        <View style={styles.otpInputContainer}>
+                                            <View style={{ flex: 1 }}>
+                                                <Input value={otp} onChangeText={setOtp} placeholder="Enter 6-digit OTP" keyboardType="number-pad" maxLength={6} icon="key-outline" />
+                                            </View>
+                                            <TouchableOpacity style={styles.verifyBtn} onPress={handleVerifyOtp} disabled={isVerifying}>
+                                                {isVerifying ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.verifyBtnText}>Verify</Text>}
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                 )}
 
@@ -415,7 +527,7 @@ export default function New8AExtractScreen() {
 
                                 <DocUploadItem title="3. Property Details Document *" hint="Mandatory if survey details unclear" isUploaded={!!documents.propertyDetailsDoc} filename={documents.propertyDetailsDoc?.name} onUpload={() => pickDocument('propertyDetailsDoc')} onRemove={() => removeDocument('propertyDetailsDoc')} icon="file-document" color="#1565C0" />
 
-                                <DocUploadItem title="4. Previous 8A Extract" hint="Optional" isUploaded={!!documents.previous8A} filename={documents.previous8A?.name} onUpload={() => pickDocument('previous8A')} onRemove={() => removeDocument('previous8A')} icon="folder-open" color="#455A64" />
+                                <DocUploadItem title="4. Previous 8A Extract" hint="Optional" isUploaded={!!documents.previous_8a} filename={documents.previous_8a?.name} onUpload={() => pickDocument('previous_8a')} onRemove={() => removeDocument('previous_8a')} icon="folder-open" color="#455A64" />
 
                                 <DocUploadItem title="5. Mutation (Ferfar) Record" hint="Required if recent changes" isUploaded={!!documents.mutationRecord} filename={documents.mutationRecord?.name} onUpload={() => pickDocument('mutationRecord')} onRemove={() => removeDocument('mutationRecord')} icon="file-edit" color="#E65100" />
                             </View>
@@ -455,6 +567,8 @@ export default function New8AExtractScreen() {
                                 { label: "Aadhaar", value: documents.aadhaarCard ? "Uploaded ✅" : "Missing ❌" },
                                 { label: "Ownership Proof", value: documents.ownershipProof ? "Uploaded ✅" : "Missing ❌" },
                                 { label: "Property Doc", value: documents.propertyDetailsDoc ? "Uploaded ✅" : "Missing ❌" },
+                                { label: "Prev 8A Extract", value: documents.previous_8a ? "Uploaded ✅" : "Optional ℹ️" },
+                                { label: "Mutation Record", value: documents.mutationRecord ? "Uploaded ✅" : "Optional ℹ️" },
                             ]} onEdit={() => { setCurrentStep(2); setIsEditingMode(true); }} />
 
                             <TouchableOpacity style={[styles.declarationRow, { marginTop: 20 }]} onPress={() => setFormData({ ...formData, finalConfirmation: !formData.finalConfirmation })}>
@@ -467,18 +581,20 @@ export default function New8AExtractScreen() {
                     <View style={{ height: 100 }} />
                 </ScrollView>
 
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
-                            {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
-                                <>
-                                    <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
-                                    <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
-                                </>
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
+                {!isKeyboardVisible && (
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
+                            <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
+                                {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
+                                    <>
+                                        <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
+                                        <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </SafeAreaView>
         </View>
     );
@@ -558,9 +674,11 @@ const styles = StyleSheet.create({
     inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, height: 50 },
     input: { flex: 1, fontSize: 14, color: '#1E293B', fontWeight: '500' },
     otpInputContainer: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-    otpBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 15, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#BBDEFB' },
+    otpBtn: { backgroundColor: '#0D47A1', paddingHorizontal: 15, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     otpBtnDisabled: { opacity: 0.6 },
-    otpBtnText: { color: '#0D47A1', fontWeight: '700', fontSize: 12 },
+    otpBtnText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
+    verifyBtn: { backgroundColor: '#2E7D32', paddingHorizontal: 20, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    verifyBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
     genderRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
     chip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', marginRight: 8, marginBottom: 8 },
     chipActive: { borderColor: '#0D47A1', backgroundColor: '#E3F2FD' },

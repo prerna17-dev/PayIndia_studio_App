@@ -9,27 +9,59 @@ exports.create = async (data) => {
         full_name,
         aadhaar_number,
         mobile_number,
+        email,
         district,
         taluka,
         village,
         survey_number,
+        sub_division_number,
+        application_type,
+        application_mode,
         reference_id,
         aadhaar_card_url,
+        id_proof_url,
         land_document_url,
+        ownership_doc_url,
+        supporting_doc_url,
         photo_url
     } = data;
 
     const [result] = await pool.query(
         `INSERT INTO service_712_extract 
-        (user_id, full_name, aadhaar_number, mobile_number, district, taluka, village, survey_number, 
-        reference_id, aadhaar_card_url, land_document_url, photo_url) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (user_id, full_name, aadhaar_number, mobile_number, email, district, taluka, village, survey_number, 
+        sub_division_number, application_type, application_mode, reference_id, 
+        aadhaar_card_url, id_proof_url, land_document_url, ownership_doc_url, supporting_doc_url, photo_url) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-            user_id, full_name, aadhaar_number, mobile_number, district, taluka, village, survey_number,
-            reference_id, aadhaar_card_url, land_document_url, photo_url
+            user_id, full_name, aadhaar_number, mobile_number, email, district, taluka, village, survey_number,
+            sub_division_number, application_type, application_mode, reference_id,
+            aadhaar_card_url, id_proof_url, land_document_url, ownership_doc_url, supporting_doc_url, photo_url
         ]
     );
     return result.insertId;
+};
+
+/**
+ * Store OTP for 7/12 service
+ */
+exports.storeOTP = async (mobileNumber, otp) => {
+    const purpose = "LAND_712_VERIFICATION";
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    await pool.query(
+        "INSERT INTO verification_otps (mobile_number, otp_code, purpose, expires_at) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE otp_code = ?, expires_at = ?",
+        [mobileNumber, otp, purpose, expiry, otp, expiry]
+    );
+};
+
+/**
+ * Verify OTP for 7/12 service
+ */
+exports.verifyOTP = async (mobileNumber, otp) => {
+    const [rows] = await pool.query(
+        "SELECT * FROM verification_otps WHERE mobile_number = ? AND otp_code = ? AND purpose = 'LAND_712_VERIFICATION' AND expires_at > NOW()",
+        [mobileNumber, otp]
+    );
+    return rows.length > 0;
 };
 
 /**
@@ -78,4 +110,39 @@ exports.updateStatus = async (id, status) => {
         `UPDATE service_712_extract SET status = ? WHERE id = ?`,
         [status, id]
     );
+};
+
+/**
+ * Create a 7/12 correction application
+ */
+exports.createCorrection = async (data) => {
+    const {
+        user_id,
+        satbara_id,
+        aadhaar_number,
+        mobile_number,
+        correction_type,
+        corrected_name,
+        corrected_area,
+        corrected_occupant,
+        corrected_land_use,
+        other_details,
+        id_proof_url,
+        supporting_doc_url,
+        reference_id
+    } = data;
+
+    const [result] = await pool.query(
+        `INSERT INTO service_712_correction 
+        (user_id, satbara_id, aadhaar_number, mobile_number, correction_type, 
+        corrected_name, corrected_area, corrected_occupant, corrected_land_use, 
+        other_details, id_proof_url, supporting_doc_url, reference_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            user_id, satbara_id, aadhaar_number, mobile_number, correction_type,
+            corrected_name, corrected_area, corrected_occupant, corrected_land_use,
+            other_details, id_proof_url, supporting_doc_url, reference_id
+        ]
+    );
+    return result.insertId;
 };

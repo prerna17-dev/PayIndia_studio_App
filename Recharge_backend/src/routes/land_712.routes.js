@@ -1,5 +1,5 @@
-const express = require("express");
-const router = express.Router();
+const expressway = require("express");
+const router = expressway.Router();
 const multer = require("multer");
 const path = require("path");
 const land712Controller = require("../controllers/land_712.controller");
@@ -23,14 +23,20 @@ const upload = multer({
 
 const land712Upload = upload.fields([
     { name: "aadhaar_card", maxCount: 1 },
+    { name: "id_proof", maxCount: 1 },
     { name: "land_document", maxCount: 1 },
+    { name: "ownership_doc", maxCount: 1 },
+    { name: "supporting_doc", maxCount: 1 },
     { name: "photo", maxCount: 1 },
 ]);
 
 // All routes require authentication
 router.use(authMiddleware);
 
+router.post("/send-otp", land712Controller.sendOTP);
+router.post("/verify-otp", land712Controller.verifyOTP);
 router.post("/apply", land712Upload, land712Controller.createApplication);
+router.post("/correction/submit", land712Upload, land712Controller.submitCorrection);
 router.get("/list", land712Controller.getApplications);
 router.get("/:referenceId", land712Controller.getApplicationByRef);
 router.put("/update-status/:id", land712Controller.updateStatus);

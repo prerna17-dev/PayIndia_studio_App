@@ -14,8 +14,13 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator
+    ActivityIndicator,
+    Keyboard,
+    Clipboard,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -52,10 +57,12 @@ interface FormDataType {
 
 interface DocumentsState {
     aadhaarCard: DocumentType | null;
+    idProof: DocumentType | null;
     saleDeed: DocumentType | null;
     prev712: DocumentType | null;
     prev8A: DocumentType | null;
     legalDoc: DocumentType | null;
+    photo: DocumentType | null;
     [key: string]: DocumentType | null;
 }
 
@@ -68,13 +75,30 @@ export default function NewFerfarApplicationScreen() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
     const [isEditingMode, setIsEditingMode] = useState(false);
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+    const [showToast, setShowToast] = useState(false);
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [otp, setOtp] = useState("");
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+
+    useEffect(() => {
+        const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+        const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+        return () => {
+            keyboardDidShowListener.remove();
+            keyboardDidHideListener.remove();
+        };
+    }, []);
 
     const [documents, setDocuments] = useState<DocumentsState>({
         aadhaarCard: null,
+        idProof: null,
         saleDeed: null,
         prev712: null,
         prev8A: null,
         legalDoc: null,
+        photo: null,
     });
 
     const [formData, setFormData] = useState<FormDataType>({
@@ -147,6 +171,64 @@ export default function NewFerfarApplicationScreen() {
         setDocuments(prev => ({ ...prev, [docType]: null }));
     };
 
+    const handleSendOtp = async () => {
+        if (formData.aadhaarNumber.length !== 12) {
+            Alert.alert("Invalid Aadhaar", "Please enter a valid 12-digit Aadhaar number");
+            return;
+        }
+        if (formData.mobileNumber.length !== 10) {
+            Alert.alert("Invalid Mobile", "Please enter a valid 10-digit mobile number");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.FERFAR_OTP_SEND,
+                { mobile_number: formData.mobileNumber, aadhaar_number: formData.aadhaarNumber },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to your mobile number");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (otp.length !== 6) {
+            Alert.alert("Error", "Please enter valid 6-digit OTP");
+            return;
+        }
+
+        setIsVerifying(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.FERFAR_OTP_VERIFY,
+                { mobile_number: formData.mobileNumber, otp_code: otp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsVerifying(false);
+                setIsOtpSent(false); // Reset to hide OTP input if desired, or keep to show verified status
+                setIsOtpVerified(true);
+                Alert.alert("Success", "OTP verified successfully");
+                // Auto-proceed to next step if appropriate, or let user click continue
+            } else {
+                setIsVerifying(false);
+                Alert.alert("Error", response.data.message || "Invalid OTP");
+            }
+        } catch (error: any) {
+            setIsVerifying(false);
+            Alert.alert("Error", error.response?.data?.message || "OTP verification failed");
+        }
+    };
+
     const handleContinue = () => {
         if (currentStep === 1) {
             if (!formData.fullName || formData.aadhaarNumber.length !== 12 || formData.mobileNumber.length !== 10 || !formData.declaration) {
@@ -161,6 +243,10 @@ export default function NewFerfarApplicationScreen() {
                 Alert.alert("Required", "Please select Mutation Type and Purpose");
                 return;
             }
+            if (!isOtpVerified) {
+                Alert.alert("Verification Required", "Please verify your mobile via OTP");
+                return;
+            }
 
             if (isEditingMode) {
                 setCurrentStep(3);
@@ -169,8 +255,8 @@ export default function NewFerfarApplicationScreen() {
                 setCurrentStep(2);
             }
         } else if (currentStep === 2) {
-            if (!documents.aadhaarCard || !documents.prev712 || !documents.prev8A) {
-                Alert.alert("Missing Documents", "Please upload Aadhaar Card, Previous 7/12 Extract, and Previous 8A Extract");
+            if (!documents.aadhaarCard || !documents.idProof || !documents.prev712 || !documents.prev8A || !documents.photo) {
+                Alert.alert("Missing Documents", "Please upload Aadhaar Card, ID Proof, Previous 7/12 & 8A Extracts, and Photo");
                 return;
             }
             if (formData.mutationType === "Sale Deed" && !documents.saleDeed) {
@@ -193,14 +279,53 @@ export default function NewFerfarApplicationScreen() {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const id = "FRF" + Math.floor(Math.random() * 90000000 + 10000000);
-            setApplicationId(id);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const data = new FormData();
+
+            // Append form fields
+            Object.keys(formData).forEach(key => {
+                data.append(key, (formData as any)[key]);
+            });
+
+            // Append documents
+            Object.keys(documents).forEach(key => {
+                const doc = documents[key];
+                if (doc) {
+                    data.append(key, {
+                        uri: doc.uri,
+                        name: doc.name,
+                        type: doc.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+                    } as any);
+                }
+            });
+
+            const response = await axios.post(
+                API_ENDPOINTS.FERFAR_APPLY,
+                data,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
+
+            if (response.data.success) {
+                const refId = response.data.data.reference_id || response.data.data.applicationId || response.data.applicationId || response.data.referenceId || "FER-PENDING";
+                setApplicationId(refId);
+                setIsSubmitting(false);
+                setIsSubmitted(true);
+            } else {
+                setIsSubmitting(false);
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+            Alert.alert("Error", error.response?.data?.message || "Failed to submit application");
+        }
     };
 
     const handleBack = () => {
@@ -245,19 +370,24 @@ export default function NewFerfarApplicationScreen() {
                     <Text style={styles.successTitle}>Application Submitted!</Text>
                     <Text style={styles.successSubtitle}>Your Ferfar Utara application has been received successfully.</Text>
                     <View style={styles.idCard}>
-                        <Text style={styles.idLabel}>Application Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
+                        <Text style={styles.idLabel}>Reference ID</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <TouchableOpacity onPress={() => {
+                                Clipboard.setString(applicationId);
+                                setShowToast(true);
+                                setTimeout(() => setShowToast(false), 2000);
+                            }} style={{ padding: 4 }}>
+                                <Ionicons name="copy-outline" size={24} color="#0D47A1" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}><Ionicons name="download-outline" size={24} color="#0D47A1" /></View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}><Ionicons name="time-outline" size={24} color="#2E7D32" /></View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {showToast && (
+                        <View style={{ position: 'absolute', bottom: 120, backgroundColor: '#333', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, zIndex: 100 }}>
+                            <Text style={{ color: '#FFF', fontSize: 14 }}>Reference ID Copied!</Text>
+                        </View>
+                    )}
+                    <View style={{ height: 40 }} />
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
@@ -293,14 +423,35 @@ export default function NewFerfarApplicationScreen() {
                         <View style={styles.stepWrapper}>
                             <SectionTitle title="Applicant Details" icon="person" />
                             <View style={styles.formCard}>
-                                <Label text="Full Name (as per Aadhaar) *" />
-                                <Input value={formData.fullName} onChangeText={(v: string) => setFormData({ ...formData, fullName: v })} placeholder="Enter full name" icon="person-outline" />
-
-                                <Label text="Aadhaar Number *" />
-                                <Input value={formData.aadhaarNumber} onChangeText={(v: string) => setFormData({ ...formData, aadhaarNumber: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} />
+                                <Label text="Full Name *" />
+                                <Input value={formData.fullName} onChangeText={(v: string) => setFormData({ ...formData, fullName: v })} placeholder="As per Aadhaar" icon="person-outline" />
 
                                 <Label text="Mobile Number *" />
-                                <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} />
+                                <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="call-outline" keyboardType="number-pad" maxLength={10} />
+
+                                <Label text="Aadhaar Number *" />
+                                <View style={styles.otpInputContainer}>
+                                    <View style={{ flex: 1 }}>
+                                        <Input value={formData.aadhaarNumber} onChangeText={(v: string) => setFormData({ ...formData, aadhaarNumber: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="finger-print-outline" keyboardType="number-pad" maxLength={12} />
+                                    </View>
+                                    <TouchableOpacity style={[styles.otpBtn, isOtpVerified && styles.otpBtnDisabled]} onPress={handleSendOtp} disabled={isOtpVerified}>
+                                        <Text style={styles.otpBtnText}>{isOtpVerified ? "Verified" : isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {isOtpSent && !isOtpVerified && (
+                                    <View style={{ marginTop: 10 }}>
+                                        <Label text="Enter OTP *" />
+                                        <View style={styles.otpInputContainer}>
+                                            <View style={{ flex: 1 }}>
+                                                <Input value={otp} onChangeText={setOtp} placeholder="Enter 6-digit OTP" keyboardType="number-pad" maxLength={6} icon="key-outline" />
+                                            </View>
+                                            <TouchableOpacity style={styles.verifyBtn} onPress={handleVerifyOtp} disabled={isVerifying}>
+                                                {isVerifying ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.verifyBtnText}>Verify</Text>}
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                )}
 
                                 <Label text="Email (Optional)" />
                                 <Input value={formData.email} onChangeText={(v: string) => setFormData({ ...formData, email: v })} placeholder="Email address" icon="mail-outline" />
@@ -374,13 +525,17 @@ export default function NewFerfarApplicationScreen() {
                             <View style={styles.docList}>
                                 <DocUploadItem title="Aadhaar Card *" hint="(आधार कार्ड) Mandatory" isUploaded={!!documents.aadhaarCard} filename={documents.aadhaarCard?.name} onUpload={() => pickDocument('aadhaarCard')} onRemove={() => removeDocument('aadhaarCard')} icon="card-account-details" color="#0D47A1" />
 
-                                <DocUploadItem title="Sale Deed / Transfer Doc" hint="Mandatory for sale mutation" isUploaded={!!documents.saleDeed} filename={documents.saleDeed?.name} onUpload={() => pickDocument('saleDeed')} onRemove={() => removeDocument('saleDeed')} icon="file-sign" color="#1565C0" />
+                                <DocUploadItem title="Identity Proof *" hint="PAN / Voter ID / Passport" isUploaded={!!documents.idProof} filename={documents.idProof?.name} onUpload={() => pickDocument('idProof')} onRemove={() => removeDocument('idProof')} icon="badge-account-horizontal" color="#1565C0" />
+
+                                <DocUploadItem title="Sale Deed / Transfer Doc" hint="Mandatory for sale mutation" isUploaded={!!documents.saleDeed} filename={documents.saleDeed?.name} onUpload={() => pickDocument('saleDeed')} onRemove={() => removeDocument('saleDeed')} icon="file-sign" color="#1976D2" />
 
                                 <DocUploadItem title="Previous 7/12 Extract *" hint="(सातबारा उतारा) Mandatory" isUploaded={!!documents.prev712} filename={documents.prev712?.name} onUpload={() => pickDocument('prev712')} onRemove={() => removeDocument('prev712')} icon="file-document" color="#2E7D32" />
 
                                 <DocUploadItem title="Previous 8A Extract *" hint="(८अ उतारा) Mandatory" isUploaded={!!documents.prev8A} filename={documents.prev8A?.name} onUpload={() => pickDocument('prev8A')} onRemove={() => removeDocument('prev8A')} icon="file-table" color="#388E3C" />
 
-                                <DocUploadItem title="Supporting Legal Document" hint="Court Order / Inheritance (if applicable)" isUploaded={!!documents.legalDoc} filename={documents.legalDoc?.name} onUpload={() => pickDocument('legalDoc')} onRemove={() => removeDocument('legalDoc')} icon="balance-scale" color="#455A64" />
+                                <DocUploadItem title="Supporting Legal Document" hint="Court Order / Inheritance (if applicable)" isUploaded={!!documents.legalDoc} filename={documents.legalDoc?.name} onUpload={() => pickDocument('legalDoc')} onRemove={() => removeDocument('legalDoc')} icon="file-table" color="#455A64" />
+
+                                <DocUploadItem title="Passport Photo *" hint="Recent color photo" isUploaded={!!documents.photo} filename={documents.photo?.name} onUpload={() => pickDocument('photo')} onRemove={() => removeDocument('photo')} icon="account-box" color="#7B1FA2" />
                             </View>
 
                             <View style={styles.uploadRulesBox}>
@@ -434,18 +589,20 @@ export default function NewFerfarApplicationScreen() {
                     <View style={{ height: 100 }} />
                 </ScrollView>
 
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
-                            {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
-                                <>
-                                    <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
-                                    <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
-                                </>
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
+                {!isKeyboardVisible && (
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
+                            <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
+                                {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
+                                    <>
+                                        <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
+                                        <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </SafeAreaView>
         </View>
     );
@@ -523,6 +680,12 @@ const styles = StyleSheet.create({
     inputLabel: { fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 8, marginTop: 12 },
     inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, height: 50 },
     input: { flex: 1, fontSize: 14, color: '#1E293B', fontWeight: '500' },
+    otpInputContainer: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+    otpBtn: { backgroundColor: '#0D47A1', paddingHorizontal: 15, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    otpBtnDisabled: { opacity: 0.6 },
+    otpBtnText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
+    verifyBtn: { backgroundColor: '#2E7D32', paddingHorizontal: 20, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    verifyBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
     genderRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
     chip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', marginRight: 8, marginBottom: 8 },
     chipActive: { borderColor: '#0D47A1', backgroundColor: '#E3F2FD' },

@@ -43,7 +43,7 @@ export default function PropertyTaxServicesScreen() {
                     </TouchableOpacity>
                     <View style={styles.headerCenter}>
                         <Text style={styles.headerTitle}>Property Tax</Text>
-                        <Text style={styles.headerSubtitle}>Online Payment Service</Text>
+                        <Text style={styles.headerSubtitle}>Property Registration & Correction</Text>
                     </View>
                     <View style={styles.placeholder} />
                 </View>
@@ -59,7 +59,7 @@ export default function PropertyTaxServicesScreen() {
                             <View style={styles.cardHeader}>
                                 <View style={styles.iconCircle}>
                                     <MaterialCommunityIcons
-                                        name="town-hall"
+                                        name="office-building"
                                         size={28}
                                         color="#0A4DA3"
                                     />
@@ -67,15 +67,15 @@ export default function PropertyTaxServicesScreen() {
                                 <View style={styles.titleSection}>
                                     <Text style={styles.cardTitle}>Municipal Corporation / Nagar Parishad</Text>
                                     <Text style={styles.cardSubtitle}>
-                                        Official Collection Service
+                                        Official Revenue & Assessment Service
                                     </Text>
                                 </View>
                             </View>
 
                             <View style={styles.badgesRow}>
-                                <Badge text="Instant Tax Calculation" />
-                                <Badge text="Secure Online Payment" />
-                                <Badge text="Digital Receipt" />
+                                <Badge text="New Property Registration" />
+                                <Badge text="Assessment Correction" />
+                                <Badge text="Name Transfer (Mutation)" />
                                 <Badge text="Government Authorized" />
                             </View>
                         </View>
@@ -83,29 +83,60 @@ export default function PropertyTaxServicesScreen() {
 
                     {/* Service Options */}
                     <View style={styles.serviceRow}>
-                        {/* Pay Property Tax */}
+                        {/* New Property Tax Application */}
                         <View style={styles.serviceCard}>
                             <View style={styles.blueGradient}>
                                 <View style={styles.serviceHeaderRow}>
                                     <View style={styles.serviceIcon}>
                                         <MaterialCommunityIcons
-                                            name="home-search-outline"
+                                            name="home-plus-outline"
                                             size={28}
                                             color="#0D47A1"
                                         />
                                     </View>
                                     <View style={styles.serviceContent}>
-                                        <Text style={styles.serviceTitle}>Pay Property Tax</Text>
+                                        <Text style={styles.serviceTitle}>New Property Tax Application</Text>
+                                        <Text style={styles.serviceHindi}>नवीन मालमत्ता कर अर्ज</Text>
                                     </View>
                                 </View>
 
                                 <View style={styles.serviceBottomRow}>
-                                    <Text style={styles.serviceDesc}>Pay your property tax and download official receipt</Text>
+                                    <Text style={styles.serviceDesc}>Register new property for tax assessment</Text>
                                     <TouchableOpacity
                                         style={styles.blueButton}
-                                        onPress={() => router.push("/pay-property-tax")}
+                                        onPress={() => router.push("/new-property-tax")}
                                     >
-                                        <Text style={styles.buttonTextBlue}>Proceed to Payment</Text>
+                                        <Text style={styles.buttonTextBlue}>Start Application</Text>
+                                        <Ionicons name="arrow-forward" size={16} color="#0D47A1" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+
+                        {/* Update Property Tax Details */}
+                        <View style={styles.serviceCard}>
+                            <View style={styles.blueGradient}>
+                                <View style={styles.serviceHeaderRow}>
+                                    <View style={styles.serviceIcon}>
+                                        <MaterialCommunityIcons
+                                            name="home-edit-outline"
+                                            size={28}
+                                            color="#0D47A1"
+                                        />
+                                    </View>
+                                    <View style={styles.serviceContent}>
+                                        <Text style={styles.serviceTitle}>Update Property Tax Details</Text>
+                                        <Text style={styles.serviceHindi}>मालमत्ता कर तपशील अपडेट करा</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.serviceBottomRow}>
+                                    <Text style={styles.serviceDesc}>Correction in owner name, area or property type</Text>
+                                    <TouchableOpacity
+                                        style={styles.blueButton}
+                                        onPress={() => router.push("/update-property-tax")}
+                                    >
+                                        <Text style={styles.buttonTextBlue}>Start Application</Text>
                                         <Ionicons name="arrow-forward" size={16} color="#0D47A1" />
                                     </TouchableOpacity>
                                 </View>

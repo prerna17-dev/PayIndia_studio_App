@@ -57,14 +57,14 @@ export default function EightAExtractServicesScreen() {
                 >
                     {/* Authority Information Card */}
                     <View style={styles.infoCard}>
-                        <View style={styles.orangeLeftBorder} />
+                        <View style={styles.blueLeftBorder} />
                         <View style={styles.cardContent}>
                             <View style={styles.cardHeader}>
                                 <View style={styles.iconCircle}>
                                     <MaterialCommunityIcons
                                         name="office-building"
                                         size={28}
-                                        color="#F57C00"
+                                        color="#0A4DA3"
                                     />
                                 </View>
                                 <View style={styles.titleSection}>
@@ -88,13 +88,13 @@ export default function EightAExtractServicesScreen() {
                     <View style={styles.serviceRow}>
                         {/* New 8A Extract */}
                         <View style={styles.serviceCard}>
-                            <View style={styles.orangeGradient}>
+                            <View style={styles.blueGradient}>
                                 <View style={styles.serviceHeaderRow}>
                                     <View style={styles.serviceIcon}>
                                         <MaterialCommunityIcons
                                             name="card-text-outline"
                                             size={28}
-                                            color="#E65100"
+                                            color="#0D47A1"
                                         />
                                     </View>
                                     <View style={styles.serviceContent}>
@@ -106,11 +106,43 @@ export default function EightAExtractServicesScreen() {
                                 <View style={styles.serviceBottomRow}>
                                     <Text style={styles.serviceDesc}>Apply for certified land holding details (Khata)</Text>
                                     <TouchableOpacity
-                                        style={styles.orangeButton}
+                                        style={styles.blueButton}
                                         onPress={handleApplyNow}
                                     >
-                                        <Text style={styles.buttonTextOrange}>Apply Now</Text>
-                                        <Ionicons name="arrow-forward" size={16} color="#E65100" />
+                                        <Text style={styles.buttonTextBlue}>Apply Now</Text>
+                                        <Ionicons name="arrow-forward" size={16} color="#0D47A1" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    </View>
+ 
+                    {/* Mutation / Update 8A */}
+                    <View style={styles.serviceRow}>
+                        <View style={styles.serviceCard}>
+                            <View style={styles.blueGradient}>
+                                <View style={styles.serviceHeaderRow}>
+                                    <View style={styles.serviceIcon}>
+                                        <MaterialCommunityIcons
+                                            name="file-edit-outline"
+                                            size={28}
+                                            color="#0D47A1"
+                                        />
+                                    </View>
+                                    <View style={styles.serviceContent}>
+                                        <Text style={styles.serviceTitle}>Mutation / Update 8A</Text>
+                                        <Text style={styles.serviceHindi}>८-अ उतारा फेरफार / सुधारणा</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.serviceBottomRow}>
+                                    <Text style={styles.serviceDesc}>Correction in Name, Area or Occupant details</Text>
+                                    <TouchableOpacity
+                                        style={styles.blueButton}
+                                        onPress={() => router.push("/update-8a-extract")}
+                                    >
+                                        <Text style={styles.buttonTextBlue}>Apply Now</Text>
+                                        <Ionicons name="arrow-forward" size={16} color="#0D47A1" />
                                     </TouchableOpacity>
                                 </View>
                             </View>
@@ -120,7 +152,7 @@ export default function EightAExtractServicesScreen() {
                     {/* Application Process Information Section */}
                     <View style={styles.processCard}>
                         <View style={styles.processHeader}>
-                            <MaterialCommunityIcons name="information-variant" size={24} color="#E65100" />
+                            <MaterialCommunityIcons name="information-variant" size={24} color="#0A4DA3" />
                             <Text style={styles.processTitle}>Application Process</Text>
                         </View>
 
@@ -170,7 +202,7 @@ export default function EightAExtractServicesScreen() {
 
 const Badge = ({ text }: { text: string }) => (
     <View style={styles.badge}>
-        <Ionicons name="checkmark-circle" size={16} color="#E65100" />
+        <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
         <Text style={styles.badgeText}>{text}</Text>
     </View>
 );
@@ -231,9 +263,9 @@ const styles = StyleSheet.create({
         elevation: 3,
         overflow: 'hidden',
     },
-    orangeLeftBorder: {
+    blueLeftBorder: {
         width: 4,
-        backgroundColor: '#F57C00',
+        backgroundColor: '#0A4DA3',
     },
     cardContent: {
         flex: 1,
@@ -248,7 +280,7 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        backgroundColor: '#FFF3E0',
+        backgroundColor: '#E3F2FD',
         alignItems: 'center',
         justifyContent: 'center',
         marginRight: 10,
@@ -293,8 +325,8 @@ const styles = StyleSheet.create({
         elevation: 2,
         overflow: 'hidden',
     },
-    orangeGradient: {
-        backgroundColor: '#FFF9F2',
+    blueGradient: {
+        backgroundColor: '#F1F8FE',
         padding: 16,
     },
     serviceHeaderRow: {
@@ -340,21 +372,21 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#777',
     },
-    orangeButton: {
+    blueButton: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 6,
-        backgroundColor: '#FFF3E0',
+        backgroundColor: '#E3F2FD',
         paddingVertical: 8,
         paddingHorizontal: 16,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: '#FFE0B2',
+        borderColor: '#BBDEFB',
     },
-    buttonTextOrange: {
+    buttonTextBlue: {
         fontSize: 14,
         fontWeight: 'bold',
-        color: '#E65100',
+        color: '#0D47A1',
     },
     processCard: {
         backgroundColor: '#FFFFFF',
@@ -380,7 +412,7 @@ const styles = StyleSheet.create({
     processTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#E65100',
+        color: '#0A4DA3',
     },
     processType: {
         marginBottom: 10,
@@ -399,7 +431,7 @@ const styles = StyleSheet.create({
     },
     bullet: {
         fontSize: 13,
-        color: '#E65100',
+        color: '#0A4DA3',
     },
     bulletText: {
         fontSize: 13,

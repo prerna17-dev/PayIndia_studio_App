@@ -16,7 +16,11 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Clipboard,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -58,6 +62,7 @@ export default function NewPMKisanRegistrationScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [showToast, setShowToast] = useState(false);
     const [declarationChecked, setDeclarationChecked] = useState(false);
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
     const categories = ["General", "OBC", "SC", "ST", "VJNT"];
@@ -85,6 +90,12 @@ export default function NewPMKisanRegistrationScreen() {
         bankPassbook: null,
     });
 
+    // OTP State
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [otp, setOtp] = useState("");
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+
     // Handle Hardware Back Button
     useEffect(() => {
         const backAction = () => {
@@ -104,6 +115,64 @@ export default function NewPMKisanRegistrationScreen() {
         const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
         return () => backHandler.remove();
     }, [currentStep, isSubmitted]);
+
+    const handleSendOtp = async () => {
+        if (formData.aadhaarNumber.length !== 12) {
+            Alert.alert("Invalid Aadhaar", "Please enter a valid 12-digit Aadhaar number");
+            return;
+        }
+        if (formData.mobileNumber.length !== 10) {
+            Alert.alert("Invalid Mobile", "Please enter a valid 10-digit mobile number");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.PM_KISAN_OTP_SEND,
+                { mobileNumber: formData.mobileNumber, aadhaarNumber: formData.aadhaarNumber, type: 'apply' },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to your mobile number");
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to send OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (otp.length !== 6) {
+            Alert.alert("Invalid OTP", "Please enter the 6-digit verification code");
+            return;
+        }
+
+        setIsVerifying(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.PM_KISAN_OTP_VERIFY,
+                { mobileNumber: formData.mobileNumber, otp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsVerifying(false);
+                setIsOtpVerified(true);
+                Alert.alert("Success", "Aadhaar verified successfully");
+            } else {
+                setIsVerifying(false);
+                Alert.alert("Error", response.data.message || "Invalid OTP");
+            }
+        } catch (error: any) {
+            setIsVerifying(false);
+            Alert.alert("Error", error.response?.data?.message || "OTP verification failed");
+        }
+    };
 
     const pickDocument = async (docType: keyof DocumentsState) => {
         try {
@@ -138,6 +207,10 @@ export default function NewPMKisanRegistrationScreen() {
                 Alert.alert("Required", "Please fill all required farmer details accurately");
                 return;
             }
+            if (!isOtpVerified) {
+                Alert.alert("Verification Required", "Please verify your Aadhaar number via OTP before proceeding");
+                return;
+            }
             setCurrentStep(2);
         } else if (currentStep === 2) {
             if (!formData.surveyNumber || !formData.landArea || !formData.bankName || !formData.accountNumber || !formData.ifscCode) {
@@ -158,14 +231,76 @@ export default function NewPMKisanRegistrationScreen() {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const refId = "PMK-" + Math.random().toString(36).substr(2, 6).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const data = new FormData();
+
+            // Map frontend fields to backend fields
+            const submissionData = {
+                farmer_name: formData.farmerName,
+                aadhaar_number: formData.aadhaarNumber,
+                mobile_number: formData.mobileNumber,
+                gender: formData.gender,
+                category: formData.category,
+                state: formData.state,
+                district: formData.district,
+                taluka: formData.taluka,
+                village: formData.village,
+                survey_number: formData.surveyNumber,
+                land_area: formData.landArea,
+                ownership_type: formData.ownershipType,
+                bank_name: formData.bankName,
+                account_number: formData.accountNumber,
+                ifsc_code: formData.ifscCode,
+            };
+
+            // Append form fields
+            Object.keys(submissionData).forEach(key => {
+                data.append(key, (submissionData as any)[key]);
+            });
+
+            // Append documents
+            if (documents.land712) {
+                data.append("land_712", {
+                    uri: documents.land712.uri,
+                    name: documents.land712.name,
+                    type: documents.land712.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+                } as any);
+            }
+            if (documents.bankPassbook) {
+                data.append("bank_passbook", {
+                    uri: documents.bankPassbook.uri,
+                    name: documents.bankPassbook.name,
+                    type: documents.bankPassbook.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+                } as any);
+            }
+
+            const response = await axios.post(
+                API_ENDPOINTS.PM_KISAN_APPLY,
+                data,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
+
+            if (response.data.success) {
+                const refId = response.data.data.reference_id || "PMK-PENDING";
+                setApplicationId(refId);
+                setIsSubmitting(false);
+                setIsSubmitted(true);
+            } else {
+                setIsSubmitting(false);
+                Alert.alert("Error", response.data.message || "Submission failed");
+            }
+        } catch (error: any) {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+            Alert.alert("Error", error.response?.data?.message || "Failed to submit application");
+        }
     };
 
     const renderStepIndicator = () => (
@@ -201,24 +336,31 @@ export default function NewPMKisanRegistrationScreen() {
 
                     <View style={styles.idCard}>
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <TouchableOpacity
+                                onPress={() => {
+                                    Clipboard.setString(applicationId);
+                                    setShowToast(true);
+                                    setTimeout(() => setShowToast(false), 2000);
+                                }}
+                                style={{ padding: 4 }}
+                            >
+                                <Ionicons name="copy-outline" size={24} color="#1565C0" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
 
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}><Ionicons name="download-outline" size={24} color="#1565C0" /></View>
-                            <Text style={styles.actionText}>Application{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}><Ionicons name="notifications-outline" size={24} color="#2E7D32" /></View>
-                            <Text style={styles.actionText}>SMS{"\n"}Confirmation</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {showToast && (
+                        <View style={styles.toast}>
+                            <Text style={styles.toastText}>Reference ID Copied!</Text>
+                        </View>
+                    )}
 
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#1565C0', '#0D47A1']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
-                            <Ionicons name="home-outline" size={18} color="#FFF" />
+                            <Ionicons name="arrow-forward" size={18} color="#FFF" />
                         </LinearGradient>
                     </TouchableOpacity>
                 </SafeAreaView>
@@ -251,26 +393,50 @@ export default function NewPMKisanRegistrationScreen() {
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                     {currentStep === 1 && (
                         <View style={styles.stepWrapper}>
-                            <View style={styles.docsRequiredCard}>
-                                <Text style={styles.docsRequiredTitle}>📄 Documents Required:</Text>
-                                <View style={styles.docsList}>
-                                    <Text style={styles.docItem}>• Aadhaar Card</Text>
-                                    <Text style={styles.docItem}>• Land Ownership (7/12 Extract)</Text>
-                                    <Text style={styles.docItem}>• Bank Passbook Copy</Text>
-                                    <Text style={styles.docItem}>• Mobile linked with Aadhaar</Text>
-                                </View>
-                            </View>
-
                             <SectionTitle title="Farmer Information" icon="person" />
                             <View style={styles.formCard}>
                                 <Label text="Farmer Full Name (as per Aadhaar) *" />
                                 <Input value={formData.farmerName} onChangeText={(t: string) => setFormData({ ...formData, farmerName: t })} placeholder="Enter full name" />
 
-                                <Label text="Aadhaar Number *" />
-                                <Input value={formData.aadhaarNumber} onChangeText={(t: string) => setFormData({ ...formData, aadhaarNumber: t.replace(/\D/g, '').substring(0, 12) })} placeholder="12 digit Aadhaar number" keyboardType="number-pad" maxLength={12} />
-
                                 <Label text="Mobile Number *" />
                                 <Input value={formData.mobileNumber} onChangeText={(t: string) => setFormData({ ...formData, mobileNumber: t.replace(/\D/g, '').substring(0, 10) })} placeholder="10 digit mobile number" keyboardType="number-pad" maxLength={10} />
+
+                                <Label text="Aadhaar Number *" />
+                                <View style={styles.otpInputRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Input
+                                            value={formData.aadhaarNumber}
+                                            onChangeText={(t: string) => setFormData({ ...formData, aadhaarNumber: t.replace(/\D/g, '').substring(0, 12) })}
+                                            placeholder="12 digit Aadhaar number"
+                                            keyboardType="number-pad"
+                                            maxLength={12}
+                                            editable={!isOtpVerified}
+                                        />
+                                    </View>
+                                    <TouchableOpacity style={[styles.inlineOtpBtn, (isOtpSent || isOtpVerified) && styles.inlineOtpBtnDisabled]} onPress={handleSendOtp} disabled={isOtpVerified}>
+                                        <Text style={styles.inlineOtpBtnText}>{isOtpVerified ? "Verified" : isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                {isOtpSent && !isOtpVerified && (
+                                    <View style={{ marginTop: 10 }}>
+                                        <Label text="Enter 6-digit OTP *" />
+                                        <View style={styles.otpInputRow}>
+                                            <View style={{ flex: 1 }}>
+                                                <Input
+                                                    value={otp}
+                                                    onChangeText={setOtp}
+                                                    placeholder="X X X X X X"
+                                                    keyboardType="number-pad"
+                                                    maxLength={6}
+                                                />
+                                            </View>
+                                            <TouchableOpacity style={styles.verifyBtnInline} onPress={handleVerifyOtp} disabled={isVerifying}>
+                                                {isVerifying ? <ActivityIndicator size="small" color="#FFF" /> : <Text style={styles.verifyBtnTextInline}>Verify</Text>}
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                )}
 
                                 <View style={styles.row}>
                                     <View style={{ flex: 1 }}>
@@ -482,16 +648,12 @@ const styles = StyleSheet.create({
 
     scrollContent: { padding: 20 },
     stepWrapper: { gap: 15 },
-    docsRequiredCard: { backgroundColor: "#E0F2F1", padding: 16, borderRadius: 16, borderLeftWidth: 4, borderLeftColor: "#2E7D32" },
-    docsRequiredTitle: { fontSize: 14, fontWeight: "800", color: "#1B5E20", marginBottom: 8 },
-    docsList: { gap: 4 },
-    docItem: { fontSize: 12, color: "#2E7D32", fontWeight: "600" },
 
     secHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 },
     secIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: "#E3F2FD", alignItems: "center", justifyContent: "center" },
     secTitle: { fontSize: 15, fontWeight: "800", color: "#1E293B" },
 
-    formCard: { backgroundColor: "#FFF", borderRadius: 20, padding: 20, elevation: 2, shadowColor: "#64748B", shadowOpacity: 0.05, shadowRadius: 10 },
+    formCard: { backgroundColor: "#FFF", borderRadius: 20, padding: 20, marginBottom: 20, borderWidth: 1, borderColor: "#F1F5F9" },
     label: { fontSize: 12, fontWeight: "700", color: "#475569", marginBottom: 8, marginTop: 12 },
     input: { backgroundColor: "#F8FAFC", borderRadius: 12, padding: 14, fontSize: 14, color: "#1E293B", borderWidth: 1, borderColor: "#E2E8F0" },
     inputDisabled: { backgroundColor: "#F1F5F9", color: "#94A3B8" },
@@ -525,6 +687,13 @@ const styles = StyleSheet.create({
     btnContent: { flexDirection: "row", alignItems: "center", justifyContent: "center", paddingVertical: 16, gap: 8 },
     btnLabel: { fontSize: 16, fontWeight: "800", color: "#FFF" },
 
+    otpInputRow: { flexDirection: "row", gap: 10, alignItems: "center" },
+    inlineOtpBtn: { backgroundColor: "#1565C0", paddingHorizontal: 15, height: 48, borderRadius: 12, justifyContent: "center", borderWidth: 1, borderColor: "#0D47A1" },
+    inlineOtpBtnDisabled: { opacity: 0.6, borderColor: "#E2E8F0" },
+    inlineOtpBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
+    verifyBtnInline: { backgroundColor: "#2E7D32", paddingHorizontal: 20, height: 48, borderRadius: 12, justifyContent: "center" },
+    verifyBtnTextInline: { color: "#FFF", fontWeight: "700", fontSize: 14 },
+
     successContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, backgroundColor: '#FFF' },
     successIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F8E9', alignItems: 'center', justifyContent: 'center', marginBottom: 25 },
     successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 10 },
@@ -537,7 +706,9 @@ const styles = StyleSheet.create({
     actionIcon: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', marginBottom: 10 },
     actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
     mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
-    mainBtnText: { fontSize: 16, fontWeight: '800', color: '#FFF' },
+    mainBtnText: { fontSize: 16, fontWeight: "800", color: "#FFF" },
+    toast: { position: 'absolute', bottom: 120, backgroundColor: '#333', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, zIndex: 100 },
+    toastText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 12 },
 
     modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center", padding: 20 },

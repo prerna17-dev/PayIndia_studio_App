@@ -92,6 +92,19 @@ export default function NewNonCreamyLayerScreen() {
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
+    useEffect(() => {
+        checkAuth();
+    }, []);
+
+    const checkAuth = async () => {
+        const token = await AsyncStorage.getItem("userToken");
+        if (!token) {
+            Alert.alert("Session Expired", "Please login again to continue.", [
+                { text: "OK", onPress: () => router.replace("/auth/login") }
+            ]);
+        }
+    };
+
     const [documents, setDocuments] = useState<DocumentsState>({
         idProof: null,
         addressProof: null,

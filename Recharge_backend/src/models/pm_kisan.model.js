@@ -88,3 +88,86 @@ exports.updateStatus = async (id, status) => {
         [status, id]
     );
 };
+
+/**
+ * Store OTP for PM Kisan service
+ */
+exports.storeOTP = async (mobileNumber, otp) => {
+    const purpose = "PM_KISAN_VERIFICATION";
+    const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    await pool.query(
+        "INSERT INTO verification_otps (mobile_number, otp_code, purpose, expires_at) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE otp_code = ?, expires_at = ?",
+        [mobileNumber, otp, purpose, expiry, otp, expiry]
+    );
+};
+
+/**
+ * Verify OTP for PM Kisan service
+ */
+exports.verifyOTP = async (mobileNumber, otp) => {
+    const [rows] = await pool.query(
+        "SELECT * FROM verification_otps WHERE mobile_number = ? AND otp_code = ? AND purpose = 'PM_KISAN_VERIFICATION' AND expires_at > NOW()",
+        [mobileNumber, otp]
+    );
+    return rows.length > 0;
+};
+
+/**
+ * Create a PM Kisan correction application
+ */
+exports.createCorrection = async (data) => {
+    const {
+        user_id,
+        mobile_number,
+        aadhaar_number,
+        correction_type,
+        corrected_name,
+        corrected_bank,
+        corrected_land,
+        other_details,
+        id_proof_url,
+        supporting_doc_url,
+        reference_id
+    } = data;
+
+    const [result] = await pool.query(
+        `INSERT INTO service_pm_kisan_correction 
+        (user_id, mobile_number, aadhaar_number, correction_type, corrected_name, 
+        corrected_bank, corrected_land, other_details, id_proof_url, 
+        supporting_doc_url, reference_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            user_id, mobile_number, aadhaar_number, correction_type, corrected_name,
+            corrected_bank, corrected_land, other_details, id_proof_url,
+            supporting_doc_url, reference_id
+        ]
+    );
+    return result.insertId;
+};
+
+/**
+ * Get application by Aadhaar (check for existing registration)
+ */
+exports.getByAadhaar = async (aadhaarNumber) => {
+    const [rows] = await pool.query(
+        `SELECT farmer_name, reference_id, mobile_number, status 
+         FROM service_pm_kisan 
+         WHERE aadhaar_number = ?`,
+        [aadhaarNumber]
+    );
+    return rows[0];
+};
+
+/**
+ * Get application by Aadhaar or Reference ID (for status check)
+ */
+exports.getByAadhaarOrRef = async (idValue, type) => {
+    const column = type === "Aadhaar" ? "aadhaar_number" : "reference_id";
+    const [rows] = await pool.query(
+        `SELECT farmer_name, reference_id, district, status, created_at 
+         FROM service_pm_kisan 
+         WHERE ${column} = ?`,
+        [idValue]
+    );
+    return rows[0];
+};

@@ -112,6 +112,36 @@ export default function FerfarServicesScreen() {
                                 </View>
                             </View>
                         </View>
+
+                        {/* Update Ferfar Details */}
+                        <View style={styles.serviceCard}>
+                            <View style={styles.blueGradient}>
+                                <View style={styles.serviceHeaderRow}>
+                                    <View style={styles.serviceIcon}>
+                                        <MaterialCommunityIcons
+                                            name="file-cog-outline"
+                                            size={28}
+                                            color="#0D47A1"
+                                        />
+                                    </View>
+                                    <View style={styles.serviceContent}>
+                                        <Text style={styles.serviceTitle}>Update Ferfar Details</Text>
+                                        <Text style={styles.serviceHindi}>फेरफार तपशील अपडेट करा</Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.serviceBottomRow}>
+                                    <Text style={styles.serviceDesc}>Correction in applicant name, year or reason</Text>
+                                    <TouchableOpacity
+                                        style={styles.blueButton}
+                                        onPress={() => router.push("/update-ferfar")}
+                                    >
+                                        <Text style={styles.buttonTextBlue}>Start Application</Text>
+                                        <Ionicons name="arrow-forward" size={16} color="#0D47A1" />
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
                     </View>
 
                     {/* Important Note */}

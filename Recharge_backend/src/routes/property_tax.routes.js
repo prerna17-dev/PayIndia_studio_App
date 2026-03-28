@@ -24,12 +24,25 @@ const upload = multer({
 const propertyTaxUpload = upload.fields([
     { name: "aadhaar_card", maxCount: 1 },
     { name: "tax_bill", maxCount: 1 },
+    { name: "index_ii", maxCount: 1 },
+    { name: "posession_letter", maxCount: 1 },
+    { name: "other_doc", maxCount: 1 },
+    { name: "id_proof", maxCount: 1 },
+    { name: "supporting_doc", maxCount: 1 },
+    { name: "photo", maxCount: 1 },
 ]);
 
 // All routes require authentication
 router.use(authMiddleware);
 
-router.post("/apply", propertyTaxUpload, propertyTaxController.createApplication);
+// OTP routes
+router.post("/otp/send", propertyTaxController.sendOTP);
+router.post("/otp/verify", propertyTaxController.verifyOTP);
+
+// Application routes
+router.post("/apply-new", propertyTaxUpload, propertyTaxController.createApplication);
+router.post("/submit-correction", propertyTaxUpload, propertyTaxController.submitCorrection);
+
 router.get("/list", propertyTaxController.getApplications);
 router.get("/:referenceId", propertyTaxController.getApplicationByRef);
 router.put("/update-status/:id", propertyTaxController.updateStatus);

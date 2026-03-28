@@ -112,31 +112,31 @@ export default function SatbaraServicesScreen() {
                             </View>
                         </View>
 
-                        {/* Mutation / Update (Ferfar) */}
+                        {/* Mutation / Update (7/12 Correction) */}
                         <View style={styles.serviceCard}>
-                            <View style={styles.greenGradient}>
+                            <View style={styles.blueGradient}>
                                 <View style={styles.serviceHeaderRow}>
                                     <View style={styles.serviceIcon}>
                                         <MaterialCommunityIcons
-                                            name="file-edit-outline"
+                                            name="file-cog-outline"
                                             size={28}
-                                            color="#2E7D32"
+                                            color="#0D47A1"
                                         />
                                     </View>
                                     <View style={styles.serviceContent}>
                                         <Text style={styles.serviceTitle}>Mutation / Update</Text>
-                                        <Text style={styles.serviceHindi}>फेरफार नोंदणी</Text>
+                                        <Text style={styles.serviceHindi}>७/१२ फेरफार दुरुस्ती</Text>
                                     </View>
                                 </View>
 
                                 <View style={styles.serviceBottomRow}>
-                                    <Text style={styles.serviceDesc}>Apply for ownership update (Ferfar)</Text>
+                                    <Text style={styles.serviceDesc}>Official correction in name, area or land use</Text>
                                     <TouchableOpacity
-                                        style={styles.greenButton}
+                                        style={styles.blueButton}
                                         onPress={() => router.push("/mutation-712-update")}
                                     >
-                                        <Text style={styles.buttonTextGreen}>Apply Now</Text>
-                                        <Ionicons name="arrow-forward" size={16} color="#2E7D32" />
+                                        <Text style={styles.buttonTextBlue}>Apply Now</Text>
+                                        <Ionicons name="arrow-forward" size={16} color="#0D47A1" />
                                     </TouchableOpacity>
                                 </View>
                             </View>

@@ -15,6 +15,7 @@ import {
     TouchableOpacity,
     View,
     ActivityIndicator,
+    Keyboard,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import axios from "axios";
@@ -61,6 +62,16 @@ export default function NewAadhaarScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+    useEffect(() => {
+        const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+        const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+        return () => {
+            keyboardDidShowListener.remove();
+            keyboardDidHideListener.remove();
+        };
+    }, []);
 
     const [documents, setDocuments] = useState<DocumentsState>({
         birthCertificate: null,
@@ -797,29 +808,31 @@ export default function NewAadhaarScreen() {
                 </ScrollView>
 
                 {/* Bottom Bar */}
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity
-                        style={styles.continueButton}
-                        onPress={handleContinue}
-                        activeOpacity={0.8}
-                    >
-                        <LinearGradient
-                            colors={['#0D47A1', '#1565C0']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.buttonGradient}
+                {!isKeyboardVisible && (
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity
+                            style={styles.continueButton}
+                            onPress={handleContinue}
+                            activeOpacity={0.8}
                         >
-                            <Text style={styles.buttonText}>
-                                {currentStep === 3 ? "Submit Application" : "Continue"}
-                            </Text>
-                            <Ionicons
-                                name={currentStep === 3 ? "checkmark-done" : "arrow-forward"}
-                                size={20}
-                                color="#FFF"
-                            />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
+                            <LinearGradient
+                                colors={['#0D47A1', '#1565C0']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 0 }}
+                                style={styles.buttonGradient}
+                            >
+                                <Text style={styles.buttonText}>
+                                    {currentStep === 3 ? "Submit Application" : "Continue"}
+                                </Text>
+                                <Ionicons
+                                    name={currentStep === 3 ? "checkmark-done" : "arrow-forward"}
+                                    size={20}
+                                    color="#FFF"
+                                />
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </SafeAreaView>
         </View>
     );

@@ -5,7 +5,7 @@
 
 // Replace this IP address with your computer's current IP address (IPv4)
 // Run 'ipconfig' in terminal to find your IPv4 address
-export const API_BASE_URL = "http://192.168.1.7:5000";
+export const API_BASE_URL = "http://192.168.1.15:5000";
 
 
 export const API_ENDPOINTS = {
@@ -105,4 +105,32 @@ export const API_ENDPOINTS = {
     RATION_CARD_CORRECTION: `${API_BASE_URL}/api/social/ration-card/correction`,
     RATION_CARD_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/social/ration-card/correction/send-otp`,
     RATION_CARD_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/social/ration-card/correction/verify-otp`,
+
+    // Land Records
+    LAND_712_APPLY: `${API_BASE_URL}/api/land/712/apply`,
+    LAND_712_OTP_SEND: `${API_BASE_URL}/api/land/712/send-otp`,
+    LAND_712_OTP_VERIFY: `${API_BASE_URL}/api/land/712/verify-otp`,
+    LAND_712_CORRECTION_SUBMIT: `${API_BASE_URL}/api/land/712/correction/submit`,
+    FERFAR_APPLY: `${API_BASE_URL}/api/land/ferfar/apply`,
+    FERFAR_OTP_SEND: `${API_BASE_URL}/api/land/ferfar/send-otp`,
+    FERFAR_OTP_VERIFY: `${API_BASE_URL}/api/land/ferfar/verify-otp`,
+    FERFAR_CORRECTION_SUBMIT: `${API_BASE_URL}/api/land/ferfar/correction/submit`,
+    LAND_8A_APPLY: `${API_BASE_URL}/api/land/8a/apply`,
+    LAND_8A_LIST: `${API_BASE_URL}/api/land/8a/list`,
+    LAND_8A_OTP_SEND: `${API_BASE_URL}/api/land/8a/send-otp`,
+    LAND_8A_OTP_VERIFY: `${API_BASE_URL}/api/land/8a/verify-otp`,
+    LAND_8A_CORRECTION_SUBMIT: `${API_BASE_URL}/api/land/8a/correction/submit`,
+
+    // Property Tax Services
+    PROPERTY_TAX_OTP_SEND: `${API_BASE_URL}/api/land/property-tax/otp/send`,
+    PROPERTY_TAX_OTP_VERIFY: `${API_BASE_URL}/api/land/property-tax/otp/verify`,
+    PROPERTY_TAX_APPLY_NEW: `${API_BASE_URL}/api/land/property-tax/apply-new`,
+    PROPERTY_TAX_CORRECTION_SUBMIT: `${API_BASE_URL}/api/land/property-tax/submit-correction`,
+
+    // PM Kisan Services
+    PM_KISAN_APPLY: `${API_BASE_URL}/api/social/pm-kisan/apply`,
+    PM_KISAN_OTP_SEND: `${API_BASE_URL}/api/social/pm-kisan/otp/send`,
+    PM_KISAN_OTP_VERIFY: `${API_BASE_URL}/api/social/pm-kisan/otp/verify`,
+    PM_KISAN_CORRECTION_SUBMIT: `${API_BASE_URL}/api/social/pm-kisan/correction`,
+    PM_KISAN_STATUS: `${API_BASE_URL}/api/social/pm-kisan/status`,
 };

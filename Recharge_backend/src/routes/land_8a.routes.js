@@ -23,14 +23,22 @@ const upload = multer({
 
 const land8aUpload = upload.fields([
     { name: "aadhaar_card", maxCount: 1 },
-    { name: "holding_document", maxCount: 1 },
-    { name: "photo", maxCount: 1 },
+    { name: "ownership_proof", maxCount: 1 },
+    { name: "property_details_doc", maxCount: 1 },
+    { name: "previous_8a", maxCount: 1 },
+    { name: "previous8_a", maxCount: 1 },
+    { name: "mutation_record", maxCount: 1 },
+    { name: "id_proof", maxCount: 1 },
+    { name: "supporting_doc", maxCount: 1 },
 ]);
 
 // All routes require authentication
 router.use(authMiddleware);
 
+router.post("/send-otp", land8aController.sendOTP);
+router.post("/verify-otp", land8aController.verifyOTP);
 router.post("/apply", land8aUpload, land8aController.createApplication);
+router.post("/correction/submit", land8aUpload, land8aController.submitCorrection);
 router.get("/list", land8aController.getApplications);
 router.get("/:referenceId", land8aController.getApplicationByRef);
 router.put("/update-status/:id", land8aController.updateStatus);

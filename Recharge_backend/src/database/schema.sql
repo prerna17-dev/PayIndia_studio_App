@@ -240,7 +240,8 @@ CREATE TABLE verification_otps (
   purpose VARCHAR(50) NOT NULL,
   is_verified BOOLEAN DEFAULT FALSE,
   expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `unq_mobile_purpose` (`mobile_number`, `purpose`)
 );
 
 CREATE TABLE pan_corrections (

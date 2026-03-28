@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
+    Alert,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -13,6 +14,8 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 export default function PMKisanStatusScreen() {
     const router = useRouter();
@@ -22,20 +25,39 @@ export default function PMKisanStatusScreen() {
     const [mobileNumber, setMobileNumber] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [showStatus, setShowStatus] = useState(false);
+    const [benData, setBenData] = useState<any>(null);
 
-    const handleCheckStatus = () => {
-        if (!idNumber || mobileNumber.length !== 10) return;
+    const handleCheckStatus = async () => {
+        if (!idNumber) {
+            Alert.alert("Error", `Please enter ${idType} Number`);
+            return;
+        }
+        if (mobileNumber.length !== 10) {
+            Alert.alert("Error", "Please enter valid 10-digit Mobile Number");
+            return;
+        }
+
         setIsLoading(true);
-        setTimeout(() => {
-            setIsLoading(false);
-            setShowStatus(true);
-        }, 1500);
+        try {
+            const response = await axios.post(API_ENDPOINTS.PM_KISAN_STATUS, { idType, idNumber });
+            if (response.data.success) {
+                setBenData(response.data.data);
+                setShowStatus(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to fetch status");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Application not found or data error");
+        } finally {
+            setIsLoading(true);
+            // Simulate minor delay for UX
+            setTimeout(() => setIsLoading(false), 800);
+        }
     };
 
     const installments = [
         { num: 15, date: "15 Nov 2025", status: "Success", amount: "₹2,000", bank: "State Bank of India" },
         { num: 14, date: "28 Jul 2025", status: "Success", amount: "₹2,000", bank: "State Bank of India" },
-        { num: 13, date: "27 Feb 2025", status: "Success", amount: "₹2,000", bank: "State Bank of India" },
     ];
 
     return (
@@ -103,19 +125,25 @@ export default function PMKisanStatusScreen() {
                                 <View style={styles.benHeader}>
                                     <View style={styles.benIcon}><Ionicons name="person" size={24} color="#1565C0" /></View>
                                     <View>
-                                        <Text style={styles.benName}>Suresh Pandurang Patil</Text>
-                                        <Text style={styles.benId}>Reg No: PMK-MH-941205</Text>
+                                        <Text style={styles.benName}>{benData?.farmer_name || "N/A"}</Text>
+                                        <Text style={styles.benId}>Reg No: {benData?.reference_id || "N/A"}</Text>
                                     </View>
                                 </View>
                                 <View style={styles.benDivider} />
                                 <View style={styles.benInfoRow}>
                                     <View style={styles.benInfoItem}>
                                         <Text style={styles.benInfoLabel}>District</Text>
-                                        <Text style={styles.benInfoValue}>Pune</Text>
+                                        <Text style={styles.benInfoValue}>{benData?.district || "N/A"}</Text>
+                                    </View>
+                                    <View style={styles.benInfoItem}>
+                                        <Text style={styles.benInfoLabel}>Reg. Date</Text>
+                                        <Text style={styles.benInfoValue}>{benData?.created_at ? new Date(benData.created_at).toLocaleDateString() : "N/A"}</Text>
                                     </View>
                                     <View style={styles.benInfoItem}>
                                         <Text style={styles.benInfoLabel}>Status</Text>
-                                        <Text style={[styles.benInfoValue, { color: '#2E7D32' }]}>Active</Text>
+                                        <Text style={[styles.benInfoValue, { color: benData?.status === 'APPROVED' ? '#2E7D32' : benData?.status === 'REJECTED' ? '#D32F2F' : '#F57C00' }]}>
+                                            {benData?.status || "PENDING"}
+                                        </Text>
                                     </View>
                                 </View>
                             </View>

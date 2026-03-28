@@ -14,8 +14,13 @@ import {
     TextInput,
     TouchableOpacity,
     View,
-    ActivityIndicator
+    ActivityIndicator,
+    Clipboard,
+    Keyboard
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -49,10 +54,12 @@ interface FormDataType {
 }
 
 interface DocumentsState {
-    applicationForm: DocumentType | null;
+    aadhaarCard: DocumentType | null;
     idProof: DocumentType | null;
+    landDocument: DocumentType | null;
     ownershipDoc: DocumentType | null;
-    propertySupportingDoc: DocumentType | null;
+    supportingDoc: DocumentType | null;
+    photo: DocumentType | null;
     [key: string]: DocumentType | null;
 }
 
@@ -66,13 +73,27 @@ export default function NewSatbaraExtractScreen() {
     const [applicationId, setApplicationId] = useState("");
     const [isEditingMode, setIsEditingMode] = useState(false);
     const [isOtpSent, setIsOtpSent] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
     const [otp, setOtp] = useState("");
+    const [showToast, setShowToast] = useState(false);
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+    useEffect(() => {
+        const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => setKeyboardVisible(true));
+        const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+        return () => {
+            keyboardDidShowListener.remove();
+            keyboardDidHideListener.remove();
+        };
+    }, []);
 
     const [documents, setDocuments] = useState<DocumentsState>({
-        applicationForm: null,
+        aadhaarCard: null,
         idProof: null,
+        landDocument: null,
         ownershipDoc: null,
-        propertySupportingDoc: null,
+        supportingDoc: null,
+        photo: null,
     });
 
     const [formData, setFormData] = useState<FormDataType>({
@@ -90,6 +111,18 @@ export default function NewSatbaraExtractScreen() {
         declaration: false,
         finalConfirmation: false,
     });
+
+    // Session Validation
+    useEffect(() => {
+        const checkAuth = async () => {
+            const token = await AsyncStorage.getItem("userToken");
+            if (!token) {
+                Alert.alert("Session Expired", "Please log in to continue");
+                router.replace("/auth/login");
+            }
+        };
+        checkAuth();
+    }, []);
 
     // Handle back navigation
     useEffect(() => {
@@ -143,13 +176,144 @@ export default function NewSatbaraExtractScreen() {
         setDocuments(prev => ({ ...prev, [docType]: null }));
     };
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async () => {
+        if (formData.aadhaarNumber.length !== 12) {
+            Alert.alert("Invalid Aadhaar", "Please enter a valid 12-digit Aadhaar number");
+            return;
+        }
         if (formData.mobileNumber.length !== 10) {
             Alert.alert("Invalid Mobile", "Please enter a valid 10-digit mobile number");
             return;
         }
-        setIsOtpSent(true);
-        Alert.alert("OTP Sent", "A verification code has been sent to your mobile number");
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.LAND_712_OTP_SEND,
+                { mobile_number: formData.mobileNumber, aadhaar_number: formData.aadhaarNumber },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to your mobile number");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+        }
+    };
+
+    const handleVerifyOtp = async () => {
+        if (otp.length !== 6) {
+            Alert.alert("Error", "Please enter valid 6-digit OTP");
+            return;
+        }
+
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(
+                API_ENDPOINTS.LAND_712_OTP_VERIFY,
+                { mobile_number: formData.mobileNumber, otp_code: otp },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (response.data.success) {
+                setIsOtpVerified(true);
+                Alert.alert("Verified", "Mobile verified successfully");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Invalid or expired OTP");
+        }
+    };
+
+    const submitApplication = async () => {
+        setIsSubmitting(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            if (!token) {
+                Alert.alert("Error", "Session expired. Please log in again.");
+                setIsSubmitting(false);
+                return;
+            }
+
+            const data = new FormData();
+            data.append("full_name", formData.fullName);
+            data.append("aadhaar_number", formData.aadhaarNumber);
+            data.append("mobile_number", formData.mobileNumber);
+            data.append("email", formData.email);
+            data.append("district", formData.district);
+            data.append("taluka", formData.taluka);
+            data.append("village", formData.village);
+            data.append("survey_number", formData.surveyNumber);
+            data.append("sub_division_number", formData.subDivisionNumber);
+            data.append("application_type", formData.applicationType);
+            data.append("application_mode", formData.applicationMode);
+
+            if (documents.aadhaarCard) {
+                data.append("aadhaar_card", {
+                    uri: documents.aadhaarCard.uri,
+                    name: documents.aadhaarCard.name,
+                    type: documents.aadhaarCard.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg"
+                } as any);
+            }
+            if (documents.idProof) {
+                data.append("id_proof", {
+                    uri: documents.idProof.uri,
+                    name: documents.idProof.name,
+                    type: documents.idProof.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg"
+                } as any);
+            }
+            if (documents.landDocument) {
+                data.append("land_document", {
+                    uri: documents.landDocument.uri,
+                    name: documents.landDocument.name,
+                    type: documents.landDocument.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg"
+                } as any);
+            }
+            if (documents.ownershipDoc) {
+                data.append("ownership_doc", {
+                    uri: documents.ownershipDoc.uri,
+                    name: documents.ownershipDoc.name,
+                    type: documents.ownershipDoc.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg"
+                } as any);
+            }
+            if (documents.supportingDoc) {
+                data.append("supporting_doc", {
+                    uri: documents.supportingDoc.uri,
+                    name: documents.supportingDoc.name,
+                    type: documents.supportingDoc.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg"
+                } as any);
+            }
+            if (documents.photo) {
+                data.append("photo", {
+                    uri: documents.photo.uri,
+                    name: documents.photo.name,
+                    type: documents.photo.uri.endsWith(".pdf") ? "application/pdf" : "image/jpeg"
+                } as any);
+            }
+
+            const response = await axios.post(
+                API_ENDPOINTS.LAND_712_APPLY,
+                data,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.reference_id);
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to submit application");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Something went wrong. Please try again.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleContinue = () => {
@@ -167,7 +331,7 @@ export default function NewSatbaraExtractScreen() {
                 Alert.alert("Required", "Please select Application Type and Mode");
                 return;
             }
-            if (formData.applicationMode === "Online" && !isOtpSent) {
+            if (formData.applicationMode === "Online" && !isOtpVerified) {
                 Alert.alert("Verification Required", "Please verify your mobile via OTP for Online application");
                 return;
             }
@@ -180,8 +344,8 @@ export default function NewSatbaraExtractScreen() {
             }
         } else if (currentStep === 2) {
             // Mandatory Documents check
-            if (!documents.applicationForm || !documents.idProof || !documents.ownershipDoc) {
-                Alert.alert("Missing Documents", "Please upload Application Form, ID Proof, and Ownership Documents");
+            if (!documents.aadhaarCard || !documents.idProof || !documents.landDocument || !documents.ownershipDoc || !documents.supportingDoc || !documents.photo) {
+                Alert.alert("Missing Documents", "Please upload all 6 required documents: Aadhaar, ID Proof, Land Document, Ownership Proof, Supporting Doc, and Passport Photo.");
                 return;
             }
 
@@ -191,6 +355,12 @@ export default function NewSatbaraExtractScreen() {
             } else {
                 setCurrentStep(3);
             }
+        } else if (currentStep === 3) {
+            if (!formData.finalConfirmation) {
+                Alert.alert("Confirmation Required", "Please accept the final confirmation");
+                return;
+            }
+            submitApplication();
         }
     };
 
@@ -237,18 +407,23 @@ export default function NewSatbaraExtractScreen() {
                     <Text style={styles.successSubtitle}>Your 7/12 Extract application has been received successfully.</Text>
                     <View style={styles.idCard}>
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
+                        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <TouchableOpacity onPress={() => {
+                                Clipboard.setString(applicationId);
+                                setShowToast(true);
+                                setTimeout(() => setShowToast(false), 2000);
+                            }} style={{ padding: 4 }}>
+                                <Ionicons name="copy-outline" size={24} color="#0D47A1" />
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}><Ionicons name="download-outline" size={24} color="#0D47A1" /></View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}><Ionicons name="time-outline" size={24} color="#2E7D32" /></View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {showToast && (
+                        <View style={{ position: 'absolute', bottom: 120, backgroundColor: '#333', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, zIndex: 100 }}>
+                            <Text style={{ color: '#FFF', fontSize: 14 }}>Reference ID Copied!</Text>
+                        </View>
+                    )}
+                    <View style={{ height: 40 }} />
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
@@ -284,25 +459,38 @@ export default function NewSatbaraExtractScreen() {
                             <SectionTitle title="Applicant Details" icon="person" />
                             <View style={styles.formCard}>
                                 <Label text="Full Name *" />
-                                <Input value={formData.fullName} onChangeText={(v: string) => setFormData({ ...formData, fullName: v })} placeholder="Enter full name" icon="person-outline" />
-
-                                <Label text="Aadhaar Number *" />
-                                <Input value={formData.aadhaarNumber} onChangeText={(v: string) => setFormData({ ...formData, aadhaarNumber: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="card-outline" keyboardType="number-pad" maxLength={12} />
+                                <Input value={formData.fullName} onChangeText={(v: string) => setFormData({ ...formData, fullName: v })} placeholder="As per Aadhaar" icon="person-outline" />
 
                                 <Label text="Mobile Number *" />
+                                <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="call-outline" keyboardType="number-pad" maxLength={10} />
+
+                                <Label text="Aadhaar Number *" />
                                 <View style={styles.otpInputContainer}>
                                     <View style={{ flex: 1 }}>
-                                        <Input value={formData.mobileNumber} onChangeText={(v: string) => setFormData({ ...formData, mobileNumber: v.replace(/\D/g, '').substring(0, 10) })} placeholder="10-digit mobile" icon="phone-portrait-outline" keyboardType="number-pad" maxLength={10} />
+                                        <Input value={formData.aadhaarNumber} onChangeText={(v: string) => setFormData({ ...formData, aadhaarNumber: v.replace(/\D/g, '').substring(0, 12) })} placeholder="12-digit Aadhaar" icon="finger-print-outline" keyboardType="number-pad" maxLength={12} />
                                     </View>
-                                    <TouchableOpacity style={[styles.otpBtn, isOtpSent && styles.otpBtnDisabled]} onPress={handleSendOtp}>
-                                        <Text style={styles.otpBtnText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                    <TouchableOpacity style={[styles.otpBtn, isOtpVerified && styles.otpBtnDisabled]} onPress={handleSendOtp} disabled={isOtpVerified}>
+                                        <Text style={styles.otpBtnText}>{isOtpVerified ? "Verified" : isOtpSent ? "Resend" : "Send OTP"}</Text>
                                     </TouchableOpacity>
                                 </View>
 
-                                {isOtpSent && (
+                                {isOtpSent && !isOtpVerified && (
                                     <View style={{ marginTop: 10 }}>
                                         <Label text="Enter OTP *" />
-                                        <Input value={otp} onChangeText={setOtp} placeholder="6-digit OTP" keyboardType="number-pad" maxLength={6} icon="shield-checkmark-outline" />
+                                        <View style={styles.otpInputContainer}>
+                                            <View style={{ flex: 1 }}>
+                                                <Input value={otp} onChangeText={setOtp} placeholder="Enter 6-digit OTP" keyboardType="number-pad" maxLength={6} icon="key-outline" />
+                                            </View>
+                                            <TouchableOpacity style={styles.verifyBtn} onPress={handleVerifyOtp}>
+                                                <Text style={styles.verifyBtnText}>Verify</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                )}
+                                {isOtpVerified && (
+                                    <View style={styles.verifiedBadge}>
+                                        <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+                                        <Text style={styles.verifiedText}>Aadhaar Verified</Text>
                                     </View>
                                 )}
 
@@ -367,13 +555,17 @@ export default function NewSatbaraExtractScreen() {
                         <View style={styles.stepWrapper}>
                             <SectionTitle title="Required Documents" icon="document-text" />
                             <View style={styles.docList}>
-                                <DocUploadItem title="Application Form *" hint="Duly filled and signed" isUploaded={!!documents.applicationForm} filename={documents.applicationForm?.name} onUpload={() => pickDocument('applicationForm')} onRemove={() => removeDocument('applicationForm')} icon="file-document" color="#0D47A1" />
+                                <DocUploadItem title="Aadhaar Card *" hint="Front and Back copy" isUploaded={!!documents.aadhaarCard} filename={documents.aadhaarCard?.name} onUpload={() => pickDocument('aadhaarCard')} onRemove={() => removeDocument('aadhaarCard')} icon="card-account-details" color="#0D47A1" />
 
-                                <DocUploadItem title="Identity Proof *" hint="Aadhaar / Voter ID / DL" isUploaded={!!documents.idProof} filename={documents.idProof?.name} onUpload={() => pickDocument('idProof')} onRemove={() => removeDocument('idProof')} icon="card-account-details" color="#1565C0" />
+                                <DocUploadItem title="Identity Proof *" hint="PAN / Voter ID / Passport" isUploaded={!!documents.idProof} filename={documents.idProof?.name} onUpload={() => pickDocument('idProof')} onRemove={() => removeDocument('idProof')} icon="badge-account-horizontal" color="#1565C0" />
 
-                                <DocUploadItem title="Land Ownership Docs *" hint="Sale Deed / Index II" isUploaded={!!documents.ownershipDoc} filename={documents.ownershipDoc?.name} onUpload={() => pickDocument('ownershipDoc')} onRemove={() => removeDocument('ownershipDoc')} icon="certificate" color="#2E7D32" />
+                                <DocUploadItem title="Land Document *" hint="Satbara / 7-12 Copy" isUploaded={!!documents.landDocument} filename={documents.landDocument?.name} onUpload={() => pickDocument('landDocument')} onRemove={() => removeDocument('landDocument')} icon="file-document" color="#1976D2" />
 
-                                <DocUploadItem title="Supporting property document" hint="Optional" isUploaded={!!documents.propertySupportingDoc} filename={documents.propertySupportingDoc?.name} onUpload={() => pickDocument('propertySupportingDoc')} onRemove={() => removeDocument('propertySupportingDoc')} icon="folder-open" color="#455A64" />
+                                <DocUploadItem title="Ownership Document *" hint="Sale Deed / Index II" isUploaded={!!documents.ownershipDoc} filename={documents.ownershipDoc?.name} onUpload={() => pickDocument('ownershipDoc')} onRemove={() => removeDocument('ownershipDoc')} icon="certificate" color="#2E7D32" />
+
+                                <DocUploadItem title="Supporting Document" hint="Optional proof" isUploaded={!!documents.supportingDoc} filename={documents.supportingDoc?.name} onUpload={() => pickDocument('supportingDoc')} onRemove={() => removeDocument('supportingDoc')} icon="folder-open" color="#455A64" />
+
+                                <DocUploadItem title="Passport Photo *" hint="Recent color photo" isUploaded={!!documents.photo} filename={documents.photo?.name} onUpload={() => pickDocument('photo')} onRemove={() => removeDocument('photo')} icon="account-box" color="#7B1FA2" />
                             </View>
 
                             <View style={[styles.infoBox, { marginTop: 20 }]}>
@@ -404,9 +596,12 @@ export default function NewSatbaraExtractScreen() {
                             ]} onEdit={() => { setCurrentStep(1); setIsEditingMode(true); }} />
 
                             <ReviewItem title="Uploaded Documents" data={[
-                                { label: "Form", value: documents.applicationForm ? "Uploaded" : "Missing" },
+                                { label: "Aadhaar Card", value: documents.aadhaarCard ? "Uploaded" : "Missing" },
                                 { label: "ID Proof", value: documents.idProof ? "Uploaded" : "Missing" },
+                                { label: "Land Doc", value: documents.landDocument ? "Uploaded" : "Missing" },
                                 { label: "Ownership", value: documents.ownershipDoc ? "Uploaded" : "Missing" },
+                                { label: "Supporting", value: documents.supportingDoc ? "Uploaded" : "N/A" },
+                                { label: "Photo", value: documents.photo ? "Uploaded" : "Missing" },
                             ]} onEdit={() => { setCurrentStep(2); setIsEditingMode(true); }} />
 
                             <TouchableOpacity style={[styles.declarationRow, { marginTop: 20 }]} onPress={() => setFormData({ ...formData, finalConfirmation: !formData.finalConfirmation })}>
@@ -419,18 +614,20 @@ export default function NewSatbaraExtractScreen() {
                     <View style={{ height: 100 }} />
                 </ScrollView>
 
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
-                            {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
-                                <>
-                                    <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
-                                    <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
-                                </>
-                            )}
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
+                {!isKeyboardVisible && (
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
+                            <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
+                                {isSubmitting ? <ActivityIndicator color="#FFF" size="small" /> : (
+                                    <>
+                                        <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
+                                        <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                )}
             </SafeAreaView>
         </View>
     );
@@ -509,9 +706,11 @@ const styles = StyleSheet.create({
     inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', paddingHorizontal: 12, height: 50 },
     input: { flex: 1, fontSize: 14, color: '#1E293B', fontWeight: '500' },
     otpInputContainer: { flexDirection: 'row', gap: 10, alignItems: 'center' },
-    otpBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 15, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#BBDEFB' },
+    otpBtn: { backgroundColor: '#0D47A1', paddingHorizontal: 15, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
     otpBtnDisabled: { opacity: 0.6 },
-    otpBtnText: { color: '#0D47A1', fontWeight: '700', fontSize: 12 },
+    otpBtnText: { color: '#FFF', fontWeight: '700', fontSize: 13 },
+    verifyBtn: { backgroundColor: '#2E7D32', paddingHorizontal: 20, height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+    verifyBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
     genderRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
     chip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: '#E2E8F0', backgroundColor: '#F8FAFC', marginRight: 8, marginBottom: 8 },
     chipActive: { borderColor: '#0D47A1', backgroundColor: '#E3F2FD' },
@@ -556,4 +755,6 @@ const styles = StyleSheet.create({
     mainBtn: { width: '100%', borderRadius: 16, overflow: 'hidden' },
     mainBtnText: { fontSize: 16, fontWeight: '800', color: '#FFF' },
     btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 12 },
+    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, backgroundColor: '#F1F8E9', padding: 8, borderRadius: 8, alignSelf: 'flex-start' },
+    verifiedText: { fontSize: 13, fontWeight: '700', color: '#2E7D32' },
 });
