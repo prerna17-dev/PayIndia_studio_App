@@ -151,7 +151,8 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
   const currentMonthIdx = new Date().getMonth();
   const [selectedMonth, setSelectedMonth] = useState(MONTHS[currentMonthIdx]);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
-  const [monthlyIncome, setMonthlyIncome] = useState("0");
+  const [monthlyIncome, setMonthlyIncome] = useState("");
+  const [isSalarySet, setIsSalarySet] = useState(false);
 
   // Get data for selected month or use default
   const monthData = userData?.[selectedMonth] || DEFAULT_DATA;
@@ -165,6 +166,12 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
   const selectedMonthIdx = MONTHS.indexOf(selectedMonth);
   const prevMonthIdx = selectedMonthIdx === 0 ? 11 : selectedMonthIdx - 1;
   const prevMonth = MONTHS[prevMonthIdx].substring(0, 3);
+
+  const handleSetSalary = () => {
+    if (parseFloat(monthlyIncome) > 0) {
+      setIsSalarySet(true);
+    }
+  };
 
 
   useEffect(() => {
@@ -262,9 +269,13 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
                       value={monthlyIncome}
                       onChangeText={setMonthlyIncome}
                       keyboardType="numeric"
-                      placeholder="0"
+                      placeholder="Enter salary"
+                      placeholderTextColor="#999"
                     />
                   </View>
+                  <TouchableOpacity style={styles.setSalaryButton} onPress={handleSetSalary}>
+                    <Text style={styles.setSalaryButtonText}>Set Salary</Text>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.statDivider} />
@@ -311,48 +322,46 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Where your money went</Text>
 
-            {totalSpent > 0 ? (
+            {totalSpent > 0 || isSalarySet ? (
               <>
                 <View style={styles.highlightBox}>
                   <Ionicons name="bulb" size={20} color="#2196F3" />
                   <Text style={styles.highlightText}>
-                    {monthData.highestExpense || "Expenses are tracked by category"}
+                    {monthData.highestExpense !== "No expenses" ? monthData.highestExpense : "Expenses are tracked by category"}
                   </Text>
                 </View>
 
                 <View style={styles.expensesGrid}>
                   {monthData.expenses.map((expense) => (
-                    <View key={expense.id} style={styles.expenseCard}>
-                      <View
-                        style={[
-                          styles.expenseIconCircle,
-                          { backgroundColor: expense.backgroundColor },
-                        ]}
-                      >
+                    <View 
+                      key={expense.id} 
+                      style={[
+                        styles.expenseCard,
+                        { backgroundColor: expense.backgroundColor }
+                      ]}
+                    >
+                      <View style={[styles.expenseIconCircle, { backgroundColor: '#FFFFFF' }]}>
                         {expense.iconType === "ionicons" ? (
                           <Ionicons
                             name={expense.icon as any}
-                            size={28}
+                            size={20}
                             color={expense.iconColor}
                           />
                         ) : (
                           <MaterialCommunityIcons
                             name={expense.icon as any}
-                            size={28}
+                            size={20}
                             color={expense.iconColor}
                           />
                         )}
                       </View>
-                      <Text style={styles.expenseTitle}>{expense.title}</Text>
-                      <Text style={styles.expenseAmount}>
+                      <Text style={[styles.expenseTitle, { color: expense.progressColor }]} numberOfLines={1}>
+                        {expense.title}
+                      </Text>
+                      <Text style={[styles.expenseAmount, { color: expense.progressColor }]}>
                         ₹{expense.amount.toLocaleString()}
                       </Text>
-                      <View
-                        style={[
-                          styles.progressBar,
-                          { backgroundColor: expense.backgroundColor },
-                        ]}
-                      >
+                      <View style={[styles.progressBar, { backgroundColor: 'rgba(255, 255, 255, 0.6)' }]}>
                         <View
                           style={[
                             styles.progressFill,
@@ -374,7 +383,7 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
                   No expense tracked yet
                 </Text>
                 <Text style={styles.noExpensesSubtext}>
-                  Your spending will appear here once you make transactions
+                  Set your monthly salary to start tracking expenses
                 </Text>
               </View>
             )}
@@ -626,7 +635,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 45, // Reduced padding
+    paddingTop: 60, // Increased padding
     paddingBottom: 15,
     zIndex: 1,
   },
@@ -736,9 +745,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
     borderRadius: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 4,
     paddingVertical: 4,
-    minWidth: 80,
+    width: '100%',
   },
 
   currencySymbol: {
@@ -749,11 +758,26 @@ const styles = StyleSheet.create({
   },
 
   incomeInput: {
-    fontSize: 16,
+    fontSize: 11,
     fontWeight: 'bold',
     color: '#1A1A1A',
     padding: 0,
     flex: 1,
+  },
+
+  setSalaryButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+  },
+
+  setSalaryButtonText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
 
   positiveBalance: {
@@ -801,19 +825,19 @@ const styles = StyleSheet.create({
   highlightBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F1F8FE",
+    backgroundColor: "#FFF9E6",
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 10,
     marginBottom: 15,
     gap: 10,
     borderWidth: 1,
-    borderColor: "#E3F2FD",
+    borderColor: "#BBDEFB",
   },
 
   highlightText: {
     fontSize: 13,
-    color: "#0D47A1",
+    color: "#5D4E37",
     fontWeight: "500",
     flex: 1,
   },
@@ -826,40 +850,42 @@ const styles = StyleSheet.create({
 
   expenseCard: {
     width: "48%",
-    backgroundColor: "#FFFFFF",
     borderRadius: 12,
-    padding: 15,
-    marginBottom: 15,
+    padding: 10,
+    marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
     borderWidth: 1,
-    borderColor: "#F0F0F0",
+    borderColor: "rgba(255,255,255,0.3)",
   },
 
   expenseIconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
 
   expenseTitle: {
-    fontSize: 13,
-    color: "#1A1A1A",
-    fontWeight: "600",
-    marginBottom: 5,
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 4,
   },
 
   expenseAmount: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
-    color: "#1A1A1A",
-    marginBottom: 10,
+    marginBottom: 8,
   },
 
   progressBar: {

@@ -20,8 +20,8 @@ export default function MoreServicesScreen() {
       <StatusBar style="dark" />
 
       <SafeAreaView style={styles.safeArea}>
-        <ScrollView showsVerticalScrollIndicator={false}>
-
+        {/* Fixed Header Content */}
+        <View style={styles.fixedHeader}>
           {/* ✅ NEW: Add Bills Section */}
           <View style={styles.addBillsCard}>
             <View style={styles.addBillsContent}>
@@ -29,7 +29,7 @@ export default function MoreServicesScreen() {
                 Add all bills in <Text style={styles.addBillsHighlight}>one click</Text>
               </Text>
               <Text style={styles.addBillsSubtitle}>
-                Get reminders for all upcoming bills and never miss a due
+                Get reminders for upcoming bills
               </Text>
               <TouchableOpacity
                 style={styles.addNowButton}
@@ -40,7 +40,7 @@ export default function MoreServicesScreen() {
             </View>
             <View style={styles.addBillsIcon}>
               <View style={styles.billIconCircle}>
-                <Ionicons name="document-text-outline" size={40} color="#2196F3" />
+                <Ionicons name="document-text-outline" size={24} color="#2196F3" />
               </View>
             </View>
           </View>
@@ -51,9 +51,11 @@ export default function MoreServicesScreen() {
             onPress={() => router.push('/my-bills')}
           >
             <Text style={styles.myBillsText}>My bills</Text>
-            <Ionicons name="chevron-forward" size={24} color="#1A1A1A" />
+            <Ionicons name="chevron-forward" size={20} color="#1A1A1A" />
           </TouchableOpacity>
+        </View>
 
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           {/* Suggested Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -409,15 +411,21 @@ const styles = StyleSheet.create({
     elevation: 3,
     zIndex: 999,
   },
+  fixedHeader: {
+    paddingTop: 100, // Space for back button
+    backgroundColor: '#F5F5F5',
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
 
   // ✅ NEW: Add Bills Card Styles
   addBillsCard: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
-    marginTop: 100, // Space for back button
-    marginBottom: 15,
-    borderRadius: 16,
-    padding: 20,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     shadowColor: '#000',
@@ -440,20 +448,20 @@ const styles = StyleSheet.create({
     color: '#4CAF50', // Green color for "one click"
   },
   addBillsSubtitle: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
-    lineHeight: 18,
-    marginBottom: 15,
+    lineHeight: 16,
+    marginBottom: 10,
   },
   addNowButton: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     borderColor: '#1A1A1A',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 15,
+    borderRadius: 6,
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   addNowButtonText: {
     fontSize: 14,
@@ -469,9 +477,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   billIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#F1F8FE',
     justifyContent: 'center',
     alignItems: 'center',
@@ -481,9 +489,9 @@ const styles = StyleSheet.create({
   myBillsCard: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
-    marginBottom: 20,
-    borderRadius: 12,
-    padding: 18,
+    marginBottom: 10,
+    borderRadius: 10,
+    padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -494,7 +502,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   myBillsText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1A1A1A',
   },

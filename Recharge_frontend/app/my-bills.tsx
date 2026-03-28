@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
     SafeAreaView,
     ScrollView,
@@ -12,7 +12,12 @@ import {
     View,
     TextInput,
     Image,
+    Alert,
+    Modal,
+    ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Bill {
     id: string;
@@ -28,63 +33,47 @@ interface Bill {
     status: 'pending' | 'paid' | 'overdue';
 }
 
-const MOCK_BILLS: Bill[] = [
-    {
-        id: '1',
-        category: 'Electricity',
-        icon: 'flash',
-        iconBg: '#FFF3E0',
-        iconColor: '#FF9800',
-        provider: 'TNEB Limited',
-        consumerNumber: '04234567890',
-        amount: '₹1,450',
-        dueDate: '25 Feb 2026',
-        status: 'pending',
-    },
-    {
-        id: '2',
-        category: 'Postpaid',
-        icon: 'phone-portrait',
-        iconBg: '#E3F2FD',
-        iconColor: '#2196F3',
-        provider: 'Airtel Mobile',
-        consumerNumber: '9876543210',
-        amount: '₹799',
-        dueDate: '20 Feb 2026',
-        status: 'overdue',
-    },
-    {
-        id: '3',
-        category: 'Broadband',
-        icon: 'wifi',
-        iconBg: '#E8F5E9',
-        iconColor: '#4CAF50',
-        provider: 'ACT Fibernet',
-        consumerNumber: 'ACT12345678',
-        amount: '₹899',
-        paidDate: '10 Feb 2026',
-        status: 'paid',
-    },
-    {
-        id: '4',
-        category: 'DTH',
-        icon: 'tv',
-        iconBg: '#F3E5F5',
-        iconColor: '#9C27B0',
-        provider: 'Tata Play',
-        consumerNumber: '1092837465',
-        amount: '₹350',
-        paidDate: '05 Feb 2026',
-        status: 'paid',
-    },
-];
+const MOCK_BILLS: Bill[] = [];
 
 export default function MyBillsScreen() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<'upcoming' | 'paid'>('upcoming');
     const [searchQuery, setSearchQuery] = useState('');
+    const [userBills, setUserBills] = useState<Bill[]>(MOCK_BILLS);
 
-    const filteredBills = MOCK_BILLS.filter(bill => {
+    // Payment Modal State
+    const [payingBill, setPayingBill] = useState<Bill | null>(null);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [selectedPaymentMode, setSelectedPaymentMode] = useState('');
+    const [isConfirmed, setIsConfirmed] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+    // Card Details
+    const [cardNumber, setCardNumber] = useState('');
+    const [expiryDate, setExpiryDate] = useState('');
+    const [cvv, setCvv] = useState('');
+    const [cardHolder, setCardHolder] = useState('');
+
+    useFocusEffect(
+        useCallback(() => {
+            const fetchManualBills = async () => {
+                try {
+                    const saved = await AsyncStorage.getItem('@my_manual_bills');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        setUserBills([...MOCK_BILLS, ...parsed]);
+                    } else {
+                        setUserBills(MOCK_BILLS);
+                    }
+                } catch (error) {
+                    console.error('Error fetching manual bills:', error);
+                }
+            };
+            fetchManualBills();
+        }, [])
+    );
+
+    const filteredBills = userBills.filter(bill => {
         const matchesTab = activeTab === 'upcoming'
             ? (bill.status === 'pending' || bill.status === 'overdue')
             : bill.status === 'paid';
@@ -92,6 +81,117 @@ export default function MyBillsScreen() {
             bill.category.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesTab && matchesSearch;
     });
+
+    const handleDeleteBill = (id: string, provider: string) => {
+        Alert.alert(
+            "Delete Bill",
+            `Are you sure you want to remove ${provider}?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Delete", 
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const saved = await AsyncStorage.getItem('@my_manual_bills');
+                            if (saved) {
+                                const parsed = JSON.parse(saved);
+                                const updated = parsed.filter((b: Bill) => b.id !== id);
+                                await AsyncStorage.setItem('@my_manual_bills', JSON.stringify(updated));
+                                setUserBills([...MOCK_BILLS, ...updated]);
+                            }
+                        } catch (error) {
+                            console.error('Error deleting bill:', error);
+                            Alert.alert('Error', 'Failed to delete bill');
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const handleCardNumberChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = '';
+        for (let i = 0; i < cleaned.length && i < 16; i++) {
+            if (i > 0 && i % 4 === 0) formatted += ' ';
+            formatted += cleaned[i];
+        }
+        setCardNumber(formatted);
+    };
+
+    const handleExpiryChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        let formatted = cleaned;
+        if (cleaned.length > 2) formatted = `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}`;
+        setExpiryDate(formatted);
+    };
+
+    const isReadyToPay = () => {
+        if (!isConfirmed || !selectedPaymentMode) return false;
+        if (selectedPaymentMode.includes('Card')) {
+            if (cardNumber.replace(/\s/g, '').length !== 16) return false;
+            if (expiryDate.length !== 5) return false;
+            if (cvv.length !== 3) return false;
+            if (cardHolder.trim().length < 3) return false;
+        }
+        return true;
+    };
+
+    const openPayment = (bill: Bill) => {
+        setPayingBill(bill);
+        setSelectedPaymentMode('');
+        setIsConfirmed(false);
+        setCardNumber(''); setExpiryDate(''); setCvv(''); setCardHolder('');
+        setShowPaymentModal(true);
+    };
+
+    const handleProceedToPay = () => {
+        if (!isReadyToPay() || !payingBill) return;
+        if (selectedPaymentMode === 'Wallet') {
+            setShowPaymentModal(false);
+            router.push({
+                pathname: '/wallet' as any,
+                params: {
+                    amount: payingBill.amount.replace('₹', ''),
+                    billType: `${payingBill.category} Bill`,
+                    borrowerName: payingBill.provider,
+                    loanAccountNumber: payingBill.consumerNumber,
+                    lenderName: payingBill.provider,
+                },
+            });
+            return;
+        }
+        setIsProcessing(true);
+        setTimeout(async () => {
+            setIsProcessing(false);
+            setShowPaymentModal(false);
+
+            // Mark the bill as paid
+            const today = new Date().toLocaleDateString();
+            setUserBills(prev => prev.map(b =>
+                b.id === payingBill.id
+                    ? { ...b, status: 'paid' as const, paidDate: today }
+                    : b
+            ));
+
+            // Persist update in AsyncStorage for manual bills
+            try {
+                const saved = await AsyncStorage.getItem('@my_manual_bills');
+                if (saved) {
+                    const parsed: Bill[] = JSON.parse(saved);
+                    const updated = parsed.map(b =>
+                        b.id === payingBill.id
+                            ? { ...b, status: 'paid', paidDate: today }
+                            : b
+                    );
+                    await AsyncStorage.setItem('@my_manual_bills', JSON.stringify(updated));
+                }
+            } catch (e) { /* silent */ }
+
+            setShowSuccessModal(true);
+        }, 2500);
+    };
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -157,19 +257,26 @@ export default function MyBillsScreen() {
                             {filteredBills.map((bill) => (
                                 <View key={bill.id} style={styles.billCard}>
                                     <View style={styles.billTop}>
-                                        <View style={[styles.iconCircle, { backgroundColor: bill.iconBg }]}>
-                                            <Ionicons name={bill.icon as any} size={24} color={bill.iconColor} />
-                                        </View>
-                                        <View style={styles.billMainInfo}>
-                                            <View style={styles.providerRow}>
-                                                <Text style={styles.providerName}>{bill.provider}</Text>
-                                                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(bill.status) + '15' }]}>
-                                                    <Text style={[styles.statusText, { color: getStatusColor(bill.status) }]}>
-                                                        {bill.status.charAt(0).toUpperCase() + bill.status.slice(1)}
-                                                    </Text>
-                                                </View>
+                                        <View style={styles.billHeaderLeft}>
+                                            <View style={[styles.iconCircle, { backgroundColor: bill.iconBg }]}>
+                                                <Ionicons name={bill.icon as any} size={18} color={bill.iconColor} />
                                             </View>
-                                            <Text style={styles.categoryText}>{bill.category} • {bill.consumerNumber}</Text>
+                                            <View style={styles.billMainInfo}>
+                                                <View style={styles.providerRow}>
+                                                    <Text style={styles.providerName}>{bill.provider}</Text>
+                                                </View>
+                                                <Text style={styles.categoryText}>{bill.category} • {bill.consumerNumber}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={styles.billActionsRow}>
+                                            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(bill.status) + '15' }]}>
+                                                <Text style={[styles.statusText, { color: getStatusColor(bill.status) }]}>
+                                                    {bill.status.charAt(0).toUpperCase() + bill.status.slice(1)}
+                                                </Text>
+                                            </View>
+                                            <TouchableOpacity onPress={() => handleDeleteBill(bill.id, bill.provider)} style={{ marginLeft: 8 }}>
+                                                <Ionicons name="trash-outline" size={20} color="#F44336" />
+                                            </TouchableOpacity>
                                         </View>
                                     </View>
 
@@ -177,7 +284,7 @@ export default function MyBillsScreen() {
 
                                     <View style={styles.billBottom}>
                                         <View>
-                                            <Text style={styles.amountLabel}>Amount Due</Text>
+                                            <Text style={styles.amountLabel}>Total Due</Text>
                                             <Text style={styles.amountValue}>{bill.amount}</Text>
                                         </View>
                                         <View style={styles.actionContainer}>
@@ -187,13 +294,7 @@ export default function MyBillsScreen() {
                                             {bill.status !== 'paid' && (
                                                 <TouchableOpacity
                                                     style={styles.payButton}
-                                                    onPress={() => {
-                                                        // Navigate to respective payment screen
-                                                        const route = bill.category.toLowerCase().includes('electricity') ? '/electricity-bill' :
-                                                            bill.category.toLowerCase().includes('postpaid') ? '/mobile-postpaid' :
-                                                                bill.category.toLowerCase().includes('broadband') ? '/broadband-bill' : '/more-services';
-                                                        router.push(route as any);
-                                                    }}
+                                                    onPress={() => openPayment(bill)}
                                                 >
                                                     <LinearGradient
                                                         colors={['#2196F3', '#1976D2']}
@@ -237,6 +338,139 @@ export default function MyBillsScreen() {
                     </View>
                 </ScrollView>
             </SafeAreaView>
+
+            {/* Payment Modal */}
+            <Modal visible={showPaymentModal} transparent animationType="slide" onRequestClose={() => setShowPaymentModal(false)}>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalSheet}>
+                        <View style={styles.modalHandle} />
+                        <View style={styles.modalTitleRow}>
+                            <Text style={styles.modalTitle}>Pay Bill</Text>
+                            <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+                                <Ionicons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {payingBill && (
+                            <View style={styles.payBillSummary}>
+                                <View style={[styles.payBillIcon, { backgroundColor: payingBill.iconBg }]}>
+                                    <Ionicons name={payingBill.icon as any} size={22} color={payingBill.iconColor} />
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={styles.payBillProvider}>{payingBill.provider}</Text>
+                                    <Text style={styles.payBillCategory}>{payingBill.category}</Text>
+                                </View>
+                                <Text style={styles.payBillAmount}>{payingBill.amount}</Text>
+                            </View>
+                        )}
+
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <Text style={styles.payModeLabel}>Select Payment Mode</Text>
+                            <View style={styles.paymentModes}>
+                                {['Wallet', 'Debit Card', 'Credit Card', 'Net Banking'].map((mode) => (
+                                    <TouchableOpacity
+                                        key={mode}
+                                        style={[styles.paymentModeCard, selectedPaymentMode === mode && styles.selectedPaymentModeCard]}
+                                        onPress={() => setSelectedPaymentMode(mode)}
+                                    >
+                                        <Ionicons
+                                            name={mode === 'Wallet' ? 'wallet' : mode === 'Net Banking' ? 'globe-outline' : 'card'}
+                                            size={20}
+                                            color={selectedPaymentMode === mode ? '#0D47A1' : '#64748B'}
+                                        />
+                                        <Text style={[styles.paymentModeText, selectedPaymentMode === mode && styles.selectedPaymentModeText]}>{mode}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            {selectedPaymentMode.includes('Card') && (
+                                <View style={styles.cardForm}>
+                                    <View style={styles.cardFieldGroup}>
+                                        <Text style={styles.cardFieldLabel}>Name on Card</Text>
+                                        <View style={styles.cardInput}>
+                                            <Ionicons name="person-outline" size={16} color="#94A3B8" />
+                                            <TextInput style={styles.cardInputText} placeholder="Card Holder Name" placeholderTextColor="#94A3B8" value={cardHolder} onChangeText={setCardHolder} autoCapitalize="characters" />
+                                        </View>
+                                    </View>
+                                    <View style={styles.cardFieldGroup}>
+                                        <Text style={styles.cardFieldLabel}>Card Number</Text>
+                                        <View style={styles.cardInput}>
+                                            <Ionicons name="card-outline" size={16} color="#94A3B8" />
+                                            <TextInput style={styles.cardInputText} placeholder="0000 0000 0000 0000" placeholderTextColor="#94A3B8" keyboardType="numeric" value={cardNumber} onChangeText={handleCardNumberChange} maxLength={19} />
+                                        </View>
+                                    </View>
+                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                        <View style={[styles.cardFieldGroup, { flex: 1 }]}>
+                                            <Text style={styles.cardFieldLabel}>Expiry</Text>
+                                            <View style={styles.cardInput}>
+                                                <TextInput style={styles.cardInputText} placeholder="MM/YY" placeholderTextColor="#94A3B8" keyboardType="numeric" value={expiryDate} onChangeText={handleExpiryChange} maxLength={5} />
+                                            </View>
+                                        </View>
+                                        <View style={[styles.cardFieldGroup, { flex: 1 }]}>
+                                            <Text style={styles.cardFieldLabel}>CVV</Text>
+                                            <View style={styles.cardInput}>
+                                                <TextInput style={styles.cardInputText} placeholder="123" placeholderTextColor="#94A3B8" keyboardType="numeric" secureTextEntry value={cvv} onChangeText={setCvv} maxLength={3} />
+                                            </View>
+                                        </View>
+                                    </View>
+                                </View>
+                            )}
+
+                            <TouchableOpacity style={styles.declarationRow} onPress={() => setIsConfirmed(!isConfirmed)}>
+                                <Ionicons name={isConfirmed ? 'checkbox' : 'square-outline'} size={22} color={isConfirmed ? '#0D47A1' : '#64748B'} />
+                                <Text style={styles.declarationText}>I confirm the above details and authorize this payment.</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                disabled={!isReadyToPay() || isProcessing}
+                                onPress={handleProceedToPay}
+                            >
+                                <LinearGradient
+                                    colors={!isReadyToPay() || isProcessing ? ['#E0E0E0', '#E0E0E0'] : ['#0D47A1', '#1565C0']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                    style={styles.proceedButton}
+                                >
+                                    {isProcessing ? <ActivityIndicator color="#FFF" /> : <Text style={styles.proceedButtonText}>Proceed to Pay</Text>}
+                                </LinearGradient>
+                            </TouchableOpacity>
+                            <View style={{ height: 40 }} />
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Success Modal */}
+            <Modal visible={showSuccessModal} transparent animationType="fade">
+                <View style={styles.successOverlay}>
+                    <View style={styles.successCard}>
+                        <View style={styles.successIcon}>
+                            <Ionicons name="checkmark" size={50} color="#FFF" />
+                        </View>
+                        <Text style={styles.successTitle}>Payment Successful!</Text>
+                        <View style={styles.receipt}>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>Transaction ID</Text>
+                                <Text style={styles.receiptValue}>TX-BILL-{Math.floor(Math.random() * 900000) + 100000}</Text>
+                            </View>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>Provider</Text>
+                                <Text style={styles.receiptValue}>{payingBill?.provider}</Text>
+                            </View>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>Amount Paid</Text>
+                                <Text style={styles.receiptValue}>{payingBill?.amount}</Text>
+                            </View>
+                            <View style={styles.receiptRow}>
+                                <Text style={styles.receiptLabel}>Date</Text>
+                                <Text style={styles.receiptValue}>{new Date().toLocaleDateString()}</Text>
+                            </View>
+                        </View>
+                        <TouchableOpacity style={styles.backHomeButton} onPress={() => { setShowSuccessModal(false); }}>
+                            <Text style={styles.backHomeText}>Done</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -329,59 +563,66 @@ const styles = StyleSheet.create({
     },
     billCard: {
         backgroundColor: '#FFFFFF',
-        borderRadius: 20,
-        padding: 16,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 10,
-        elevation: 3,
+        borderRadius: 16,
+        padding: 12,
+        marginBottom: 12,
         borderWidth: 1,
-        borderColor: '#F1F5F9',
+        borderColor: '#E2E8F0',
     },
     billTop: {
         flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    billHeaderLeft: {
+        flexDirection: 'row',
         alignItems: 'center',
-        gap: 12,
+        flex: 1,
+    },
+    billActionsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     iconCircle: {
-        width: 52,
-        height: 52,
-        borderRadius: 26,
+        width: 34,
+        height: 34,
+        borderRadius: 17,
         justifyContent: 'center',
         alignItems: 'center',
+        marginRight: 12,
     },
     billMainInfo: {
         flex: 1,
     },
     providerRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: 4,
     },
     providerName: {
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
         color: '#1E293B',
     },
     statusBadge: {
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 8,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 10,
     },
     statusText: {
-        fontSize: 10,
-        fontWeight: '700',
+        fontSize: 9,
+        fontWeight: 'bold',
     },
     categoryText: {
-        fontSize: 12,
+        fontSize: 11,
         color: '#64748B',
     },
     billDivider: {
         height: 1,
         backgroundColor: '#F1F5F9',
-        marginVertical: 16,
+        marginBottom: 8,
     },
     billBottom: {
         flexDirection: 'row',
@@ -394,7 +635,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     amountValue: {
-        fontSize: 20,
+        fontSize: 16,
         fontWeight: '800',
         color: '#1E293B',
     },
@@ -412,13 +653,13 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
     },
     payGradient: {
-        paddingHorizontal: 20,
-        paddingVertical: 10,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
         alignItems: 'center',
         justifyContent: 'center',
     },
     payButtonText: {
-        fontSize: 13,
+        fontSize: 12,
         fontWeight: 'bold',
         color: '#FFFFFF',
     },
@@ -490,4 +731,41 @@ const styles = StyleSheet.create({
         color: '#94A3B8',
         fontWeight: '500',
     },
+    // Payment Modal
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+    modalSheet: { backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '90%' },
+    modalHandle: { width: 40, height: 4, backgroundColor: '#E2E8F0', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+    modalTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+    modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1A1A1A' },
+    payBillSummary: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, marginBottom: 20 },
+    payBillIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+    payBillProvider: { fontSize: 15, fontWeight: 'bold', color: '#1E293B' },
+    payBillCategory: { fontSize: 12, color: '#64748B', marginTop: 2 },
+    payBillAmount: { fontSize: 18, fontWeight: 'bold', color: '#0D47A1' },
+    payModeLabel: { fontSize: 13, fontWeight: 'bold', color: '#475569', marginBottom: 10 },
+    paymentModes: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
+    paymentModeCard: { flex: 1, minWidth: '45%', flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', gap: 8 },
+    selectedPaymentModeCard: { borderColor: '#0D47A1', backgroundColor: '#F0F7FF' },
+    paymentModeText: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+    selectedPaymentModeText: { color: '#0D47A1' },
+    cardForm: { backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' },
+    cardFieldGroup: { marginBottom: 12 },
+    cardFieldLabel: { fontSize: 11, fontWeight: 'bold', color: '#475569', marginBottom: 5 },
+    cardInput: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 10, paddingHorizontal: 12, height: 42, borderWidth: 1, borderColor: '#E0E0E0', gap: 8 },
+    cardInputText: { flex: 1, fontSize: 14, color: '#333' },
+    declarationRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
+    declarationText: { flex: 1, fontSize: 11, color: '#64748B', lineHeight: 16 },
+    proceedButton: { paddingVertical: 16, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    proceedButtonText: { fontSize: 16, fontWeight: 'bold', color: '#FFF' },
+    // Success Modal
+    successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+    successCard: { backgroundColor: '#FFF', borderRadius: 24, width: '100%', padding: 30, alignItems: 'center' },
+    successIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#4CAF50', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+    successTitle: { fontSize: 22, fontWeight: '800', color: '#1A1A1A', marginBottom: 24, textAlign: 'center' },
+    receipt: { width: '100%', backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, marginBottom: 24 },
+    receiptRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+    receiptLabel: { fontSize: 13, color: '#64748B' },
+    receiptValue: { fontSize: 13, fontWeight: 'bold', color: '#1E293B' },
+    backHomeButton: { width: '100%', height: 52, backgroundColor: '#1E293B', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+    backHomeText: { color: '#FFF', fontSize: 16, fontWeight: 'bold' },
 });

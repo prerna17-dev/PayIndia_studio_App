@@ -51,7 +51,7 @@ export default function WalletScreen() {
   const fetchTransactions = async () => {
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(API_ENDPOINTS.WALLET_TRANSACTIONS, {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -67,12 +67,12 @@ export default function WalletScreen() {
     setIsFetchingBalance(true);
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(API_ENDPOINTS.WALLET_BALANCE, {
+      const response = await fetch(`${API_ENDPOINTS.USER_PROFILE}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
       if (response.ok) {
-        setBalance(data.balance?.toString() || "0.00");
+        setBalance(data.wallet_balance || "0.00");
         fetchTransactions(); // Fetch transactions whenever balance is updated
       }
     } catch (error) {
@@ -91,9 +91,13 @@ export default function WalletScreen() {
   };
 
   const handleBackPress = useCallback(() => {
-    router.replace("/(tabs)/explore");
+    if (isPaymentFlow) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/explore');
+    }
     return true;
-  }, [router]);
+  }, [router, isPaymentFlow]);
 
   useFocusEffect(
     useCallback(() => {
@@ -107,14 +111,49 @@ export default function WalletScreen() {
     }, [handleBackPress])
   );
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     setIsLoading(true);
-    // Simulate payment process
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Deduct from wallet via API
+      const token = await AsyncStorage.getItem('userToken');
+      const response = await fetch(`${API_BASE_URL}/api/wallet/withdraw`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ amount: parseFloat(String(amount)) }),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        Alert.alert('Payment Failed', data.message || 'Insufficient wallet balance.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Mark the bill as paid in AsyncStorage (if it is a manual bill)
+      if (loanAccountNumber) {
+        const today = new Date().toLocaleDateString();
+        const saved = await AsyncStorage.getItem('@my_manual_bills');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const updated = parsed.map((b: any) =>
+            b.consumerNumber === String(loanAccountNumber)
+              ? { ...b, status: 'paid', paidDate: today }
+              : b
+          );
+          await AsyncStorage.setItem('@my_manual_bills', JSON.stringify(updated));
+        }
+      }
+
+      fetchBalance(); // Refresh wallet balance
       setShowPaymentSuccess(true);
-      fetchBalance(); // Refresh balance after payment
-    }, 2000);
+    } catch (error) {
+      Alert.alert('Error', 'Payment failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAddMoney = async () => {
@@ -127,7 +166,7 @@ export default function WalletScreen() {
     setIsProcessing(true);
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(API_ENDPOINTS.WALLET_ADD, {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/add`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -167,7 +206,7 @@ export default function WalletScreen() {
     setIsProcessing(true);
     try {
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(API_ENDPOINTS.WALLET_WITHDRAW, {
+      const response = await fetch(`${API_BASE_URL}/api/wallet/withdraw`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -469,18 +508,33 @@ export default function WalletScreen() {
 
               {isFetchingBalance ? (
                 <ActivityIndicator color="#0D47A1" style={{ marginTop: 20 }} />
-              ) : transactions.filter(t => !["WALLET_CREDIT", "WALLET_DEBIT", "WALLET CREDIT", "WALLET DEBIT"].includes(t.transaction_type.toUpperCase().replace('_', ' '))).length > 0 ? (
+              ) : transactions.length > 0 ? (
                 transactions
-                  .filter(t => !["WALLET_CREDIT", "WALLET_DEBIT", "WALLET CREDIT", "WALLET DEBIT"].includes(t.transaction_type.toUpperCase().replace('_', ' ')))
                   .slice(0, 5)
                   .map((transaction, index) => {
-                    const type = transaction.transaction_type.toUpperCase();
+                    const type = transaction.transaction_type.toUpperCase().replace('_', ' ');
                     const isRecharge = type === "RECHARGE" || type === "MOBILE RECHARGE";
                     const isBill = type === "BILL" || type === "BILL PAYMENT";
+                    const isWalletAdd = type === "WALLET CREDIT" || type === "WALLET_CREDIT";
+                    const isWalletWithdraw = type === "WALLET DEBIT" || type === "WALLET_DEBIT";
 
-                    let label = isRecharge ? "Mobile Recharge" : isBill ? "Bill Payment" : transaction.transaction_type;
-                    let icon = isRecharge ? "phone-portrait" : isBill ? "receipt" : "card-outline";
-                    let iconColor = isRecharge ? "#2196F3" : isBill ? "#FF9800" : "#9C27B0";
+                    let label = isRecharge ? "Mobile Recharge" : 
+                                isBill ? "Bill Payment" : 
+                                isWalletAdd ? "Money Added" : 
+                                isWalletWithdraw ? "Money Spent/Paid" : 
+                                transaction.transaction_type;
+                    
+                    let icon = isRecharge ? "phone-portrait" : 
+                               isBill ? "receipt" : 
+                               isWalletAdd ? "add-circle" : 
+                               isWalletWithdraw ? "arrow-up-circle" : 
+                               "card-outline";
+                    
+                    let iconColor = isRecharge ? "#2196F3" : 
+                                    isBill ? "#FF9800" : 
+                                    isWalletAdd ? "#4CAF50" : 
+                                    isWalletWithdraw ? "#FF6B6B" : 
+                                    "#9C27B0";
 
                     return (
                       <View
@@ -489,15 +543,7 @@ export default function WalletScreen() {
                       >
                         <View style={styles.transactionLeftCompact}>
                           <View style={[styles.iconCircleCompact, { backgroundColor: `${iconColor}15` }]}>
-                            {isRecharge || icon === 'card-outline' ? (
-                              <Ionicons name={icon as any} size={18} color={iconColor} />
-                            ) : (
-                              <MaterialCommunityIcons
-                                name={icon as any}
-                                size={18}
-                                color={iconColor}
-                              />
-                            )}
+                            <Ionicons name={icon as any} size={18} color={iconColor} />
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={styles.transTypeCompact} numberOfLines={1}>{label}</Text>
@@ -507,8 +553,8 @@ export default function WalletScreen() {
                             <Text style={styles.transDateCompact}>{new Date(transaction.created_at).toLocaleDateString()}</Text>
                           </View>
                         </View>
-                        <Text style={[styles.transAmountCompact, { color: "#1A1A1A" }]}>
-                          -₹{transaction.amount}
+                        <Text style={[styles.transAmountCompact, { color: isWalletAdd ? "#4CAF50" : "#FF6B6B" }]}>
+                          {isWalletAdd ? "+" : "-"}₹{transaction.amount}
                         </Text>
                       </View>
                     );
@@ -838,7 +884,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 45, // Reduced padding
+    paddingTop: 60, // Increased padding
     paddingBottom: 15,
     zIndex: 1,
   },
@@ -1513,6 +1559,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "#F8FAFC",
     padding: 12,
+    paddingRight: 16, // Extra space on right
     borderRadius: 16,
     marginBottom: 10,
   },
@@ -1520,6 +1567,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    flex: 1,
   },
   iconCircleCompact: {
     width: 36,
@@ -1544,8 +1592,10 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   transAmountCompact: {
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "bold",
+    textAlign: "right",
+    minWidth: 70, // Ensure enough space for amount
   },
   emptyActivity: {
     alignItems: "center",

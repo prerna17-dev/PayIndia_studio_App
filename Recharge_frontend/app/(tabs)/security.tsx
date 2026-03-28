@@ -11,14 +11,26 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function SecurityScreen() {
     const router = useRouter();
+    const [hasAppPin, setHasAppPin] = useState(false);
     const [isBiometricEnabled, setIsBiometricEnabled] = useState(false);
 
     // Handle hardware back button - go to account screen
     useFocusEffect(
         React.useCallback(() => {
+            const checkPinStatus = async () => {
+                try {
+                    const pin = await AsyncStorage.getItem("@user_app_pin");
+                    setHasAppPin(!!pin);
+                } catch (e) {
+                    console.error("Error fetching PIN status", e);
+                }
+            };
+            checkPinStatus();
+
             const backAction = () => {
                 router.push("/account");
                 return true;
@@ -58,28 +70,52 @@ export default function SecurityScreen() {
                 <ScrollView showsVerticalScrollIndicator={false}>
                     {/* Security Options Section */}
                     <View style={styles.section}>
-                        {/* Change App PIN */}
-                        <TouchableOpacity
-                            style={styles.securityCard}
-                            onPress={() => router.push("/change-pin")}
-                        >
-                            <View style={styles.cardLeft}>
-                                <View style={[styles.iconCircle, { backgroundColor: "#E3F2FD" }]}>
-                                    <MaterialCommunityIcons
-                                        name="lock-reset"
-                                        size={22}
-                                        color="#1976D2"
-                                    />
+                        {/* Set / Change App PIN */}
+                        {hasAppPin ? (
+                            <TouchableOpacity
+                                style={styles.securityCard}
+                                onPress={() => router.push("/change-pin")}
+                            >
+                                <View style={styles.cardLeft}>
+                                    <View style={[styles.iconCircle, { backgroundColor: "#E3F2FD" }]}>
+                                        <MaterialCommunityIcons
+                                            name="lock-reset"
+                                            size={22}
+                                            color="#1976D2"
+                                        />
+                                    </View>
+                                    <View style={styles.textContainer}>
+                                        <Text style={styles.cardTitle}>Change App PIN</Text>
+                                        <Text style={styles.cardSubtext}>
+                                            Update your 4-digit security PIN
+                                        </Text>
+                                    </View>
                                 </View>
-                                <View style={styles.textContainer}>
-                                    <Text style={styles.cardTitle}>Change App PIN</Text>
-                                    <Text style={styles.cardSubtext}>
-                                        Update your 4-digit security PIN
-                                    </Text>
+                                <Ionicons name="chevron-forward" size={20} color="#999" />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                style={styles.securityCard}
+                                onPress={() => router.push("/set-pin")}
+                            >
+                                <View style={styles.cardLeft}>
+                                    <View style={[styles.iconCircle, { backgroundColor: "#E3F2FD" }]}>
+                                        <MaterialCommunityIcons
+                                            name="lock-plus"
+                                            size={22}
+                                            color="#1976D2"
+                                        />
+                                    </View>
+                                    <View style={styles.textContainer}>
+                                        <Text style={styles.cardTitle}>Set App PIN</Text>
+                                        <Text style={styles.cardSubtext}>
+                                            Create a 4-digit security PIN
+                                        </Text>
+                                    </View>
                                 </View>
-                            </View>
-                            <Ionicons name="chevron-forward" size={20} color="#999" />
-                        </TouchableOpacity>
+                                <Ionicons name="chevron-forward" size={20} color="#999" />
+                            </TouchableOpacity>
+                        )}
 
                         {/* Biometric Login */}
                         <View style={styles.securityCard}>

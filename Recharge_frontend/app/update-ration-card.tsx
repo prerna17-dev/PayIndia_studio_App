@@ -316,7 +316,7 @@ export default function UpdateRationCardScreen() {
         try {
             const token = await AsyncStorage.getItem("userToken");
             const data = new FormData();
-            
+
             data.append("ration_card_number", rationCardNumber);
             data.append("head_aadhaar", headAadhaar);
             data.append("update_types", selectedTypes.map(t => t.id).join(","));
@@ -394,8 +394,8 @@ export default function UpdateRationCardScreen() {
                             <Ionicons name="arrow-forward" size={18} color="#FFF" />
                         </LinearGradient>
                     </TouchableOpacity>
-                </SafeAreaView>
-            </View>
+                </SafeAreaView >
+            </View >
         );
     }
 
@@ -472,7 +472,7 @@ export default function UpdateRationCardScreen() {
                                                 <Ionicons name="call-outline" size={18} color="#94A3B8" />
                                                 <TextInput style={styles.input} placeholder="10 digit mobile" keyboardType="phone-pad" maxLength={10} value={mobileNumber} onChangeText={setMobileNumber} />
                                             </View>
-                                            
+
                                             <Text style={styles.inputLabel}>Head Aadhaar Number *</Text>
                                             <View style={styles.otpSection}>
                                                 <View style={[styles.inputContainer, { flex: 1, marginBottom: 0 }]}>
@@ -480,9 +480,9 @@ export default function UpdateRationCardScreen() {
                                                     <TextInput style={styles.input} placeholder="12 digit Aadhaar" keyboardType="number-pad" maxLength={12} value={headAadhaar} onChangeText={setHeadAadhaar} editable={!isOtpVerified} />
                                                 </View>
                                                 {!isOtpVerified && (
-                                                    <TouchableOpacity 
-                                                        style={[styles.otpButton, (headAadhaar.replace(/\s/g, "").length !== 12 || mobileNumber.length !== 10) && styles.otpButtonDisabled]} 
-                                                        onPress={handleSendOtp} 
+                                                    <TouchableOpacity
+                                                        style={[styles.otpButton, (headAadhaar.replace(/\s/g, "").length !== 12 || mobileNumber.length !== 10) && styles.otpButtonDisabled]}
+                                                        onPress={handleSendOtp}
                                                         disabled={headAadhaar.replace(/\s/g, "").length !== 12 || mobileNumber.length !== 10}
                                                     >
                                                         <Text style={styles.otpButtonText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
@@ -725,7 +725,7 @@ export default function UpdateRationCardScreen() {
                         )}
 
                     </ScrollView>
-                </KeyboardAvoidingView>
+                </KeyboardAvoidingView >
 
                 <View style={styles.bottomBar}>
                     <TouchableOpacity
@@ -747,8 +747,8 @@ export default function UpdateRationCardScreen() {
                         </LinearGradient>
                     </TouchableOpacity>
                 </View>
-            </SafeAreaView>
-        </View>
+            </SafeAreaView >
+        </View >
     );
 }
 
@@ -789,7 +789,7 @@ const styles = StyleSheet.create({
     verifyText: { color: "#FFF", fontWeight: "800", fontSize: 15 },
     verifiedBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#E8F5E9', padding: 12, borderRadius: 12, marginBottom: 20 },
     verifiedText: { color: '#2E7D32', fontWeight: '800' },
-    
+
     otpSection: { flexDirection: 'row', gap: 10, alignItems: 'center' },
     otpButton: { backgroundColor: '#0D47A1', paddingHorizontal: 16, height: 48, borderRadius: 12, justifyContent: 'center' },
     otpButtonDisabled: { opacity: 0.5 },

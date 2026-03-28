@@ -12,7 +12,9 @@ import {
     Text,
     TouchableOpacity,
     View,
+    Platform,
 } from "react-native";
+import Constants from "expo-constants";
 
 interface Device {
     id: number;
@@ -28,29 +30,26 @@ export default function ManageDevicesScreen() {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
 
+    const defaultDeviceName = Platform.OS === 'ios' ? 'iOS Device' : (Platform.OS === 'android' ? 'Android Device' : 'Unknown Device');
+    const currentDeviceName = Constants.deviceName || defaultDeviceName;
+    const isDesktop = Platform.OS === 'windows' || Platform.OS === 'macos' || Platform.OS === 'web';
+    const currentIcon = isDesktop ? 'laptop' : 'phone-portrait';
+
     // Sample devices data
     const [devices, setDevices] = useState<Device[]>([
         {
             id: 1,
-            name: "Samsung Galaxy S23",
-            location: "Mumbai, India",
+            name: currentDeviceName,
+            location: "Current Location",
             lastActive: "Active Now",
             isCurrentDevice: true,
-            icon: "phone-portrait",
+            icon: currentIcon,
         },
         {
             id: 2,
-            name: "iPhone 13 Pro",
+            name: "Chrome on Windows",
             location: "Delhi, India",
             lastActive: "2 hours ago",
-            isCurrentDevice: false,
-            icon: "phone-portrait",
-        },
-        {
-            id: 3,
-            name: "Chrome on Windows",
-            location: "Pune, India",
-            lastActive: "Yesterday, 8:30 PM",
             isCurrentDevice: false,
             icon: "laptop",
         },

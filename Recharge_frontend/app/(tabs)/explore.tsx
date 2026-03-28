@@ -145,6 +145,7 @@ export default function HomeScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [userData, setUserData] = useState<any>(null);
+  const [reminders, setReminders] = useState<any[]>([]);
 
   const fetchProfile = async () => {
     try {
@@ -166,9 +167,26 @@ export default function HomeScreen({
     }
   };
 
+  const fetchReminders = async () => {
+    try {
+      const saved = await AsyncStorage.getItem("@my_manual_bills");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Only show pending or overdue reminders
+        const pendingReminders = parsed.filter((b: any) => b.status === 'pending' || b.status === 'overdue');
+        setReminders(pendingReminders);
+      } else {
+        setReminders([]);
+      }
+    } catch (e) {
+      console.error("Error fetching reminders:", e);
+    }
+  };
+
   useFocusEffect(
     React.useCallback(() => {
       fetchProfile();
+      fetchReminders();
     }, [])
   );
 
@@ -737,76 +755,65 @@ export default function HomeScreen({
             <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                 <Text style={{ fontSize: 16, fontWeight: "700", color: "#1E293B", letterSpacing: 0.3 }}>Due Reminders</Text>
-                <TouchableOpacity style={{ backgroundColor: "rgba(56, 189, 248, 0.15)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: "rgba(56, 189, 248, 0.2)" }}>
+                <TouchableOpacity
+                  onPress={() => router.push("/my-bills")}
+                  style={{ backgroundColor: "rgba(56, 189, 248, 0.15)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: "rgba(56, 189, 248, 0.2)" }}
+                >
                   <Text style={{ fontSize: 11, color: "#0284C7", fontWeight: "600" }}>Manage →</Text>
                 </TouchableOpacity>
               </View>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 20 }}>
-                {/* Electricity Due - Aesthetic Red/Pink (Compact) */}
+              {reminders.length > 0 ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 20 }}>
+                  {reminders.map((item, index) => (
+                    <LinearGradient
+                      key={item.id || index}
+                      colors={item.category.includes("Electricity") ? ["#FFF1F2", "#FFE4E6"] : ["#F0F9FF", "#E0F2FE"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={{ width: 180, borderRadius: 16, padding: 14, shadowColor: item.category.includes("Electricity") ? "#E11D48" : "#0284C7", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3, borderWidth: 1, borderColor: item.category.includes("Electricity") ? "#FECDD3" : "#BAE6FD", position: "relative", overflow: "hidden" }}
+                    >
+                      <View style={{ position: "absolute", top: -15, right: -15, width: 60, height: 60, borderRadius: 30, backgroundColor: item.category.includes("Electricity") ? "rgba(225, 29, 72, 0.05)" : "rgba(2, 132, 199, 0.05)" }} />
+
+                      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                          <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#FFFFFF", justifyContent: "center", alignItems: "center", shadowColor: item.category.includes("Electricity") ? "#E11D48" : "#0284C7", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }}>
+                            <Ionicons name={item.icon as any || "document-text"} size={18} color={item.iconColor || (item.category.includes("Electricity") ? "#E11D48" : "#0284C7")} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E293B" }} numberOfLines={1}>{item.provider}</Text>
+                            <Text style={{ fontSize: 10, color: item.status === "overdue" ? "#E11D48" : "#64748B", fontWeight: "600", marginTop: 2 }}>
+                              {item.status === "overdue" ? "Overdue" : `Due: ${item.dueDate}`}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
+                        <View>
+                          <Text style={{ fontSize: 9, color: "#94A3B8", fontWeight: "500", marginBottom: 2 }}>AMOUNT</Text>
+                          <Text style={{ fontSize: 18, fontWeight: "800", color: "#0F172A", letterSpacing: 0.5 }}>{item.amount}</Text>
+                        </View>
+                        <TouchableOpacity
+                          onPress={() => router.push("/my-bills")}
+                          style={{ backgroundColor: item.category.includes("Electricity") ? "#E11D48" : "#0284C7", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, shadowColor: item.category.includes("Electricity") ? "#E11D48" : "#0284C7", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 }}
+                        >
+                          <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700", letterSpacing: 0.3 }}>Pay Now</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </LinearGradient>
+                  ))}
+                </ScrollView>
+              ) : (
                 <LinearGradient
-                  colors={["#FFF1F2", "#FFE4E6"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{ width: 180, borderRadius: 16, padding: 14, shadowColor: "#E11D48", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3, borderWidth: 1, borderColor: "#FECDD3", position: "relative", overflow: "hidden" }}
+                  colors={["#F8FAFC", "#F1F5F9"]}
+                  style={{ borderRadius: 16, padding: 20, alignItems: "center", justifyContent: "center", borderStyle: "dashed", borderWidth: 1, borderColor: "#CBD5E1" }}
                 >
-                  <View style={{ position: "absolute", top: -15, right: -15, width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(225, 29, 72, 0.05)" }} />
-
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#FFFFFF", justifyContent: "center", alignItems: "center", shadowColor: "#E11D48", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }}>
-                        <Ionicons name="bulb" size={18} color="#E11D48" />
-                      </View>
-                      <View>
-                        <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E293B" }}>Electricity</Text>
-                        <Text style={{ fontSize: 10, color: "#E11D48", fontWeight: "600", marginTop: 2 }}>Due in 2 days</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
-                    <View>
-                      <Text style={{ fontSize: 9, color: "#94A3B8", fontWeight: "500", marginBottom: 2 }}>AMOUNT</Text>
-                      <Text style={{ fontSize: 18, fontWeight: "800", color: "#0F172A", letterSpacing: 0.5 }}>₹1,240</Text>
-                    </View>
-                    <TouchableOpacity style={{ backgroundColor: "#E11D48", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, shadowColor: "#E11D48", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 }}>
-                      <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700", letterSpacing: 0.3 }}>Pay Now</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <Ionicons name="shield-checkmark-outline" size={32} color="#94A3B8" style={{ marginBottom: 8 }} />
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#475569" }}>All caught up!</Text>
+                  <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>No pending bills for now.</Text>
                 </LinearGradient>
-
-                {/* Mobile Recharge Due - Aesthetic Blue/Purple (Compact) */}
-                <LinearGradient
-                  colors={["#F0F9FF", "#E0F2FE"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={{ width: 180, borderRadius: 16, padding: 14, shadowColor: "#0284C7", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3, borderWidth: 1, borderColor: "#BAE6FD", position: "relative", overflow: "hidden" }}
-                >
-                  <View style={{ position: "absolute", top: -15, right: -15, width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(2, 132, 199, 0.05)" }} />
-
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                      <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: "#FFFFFF", justifyContent: "center", alignItems: "center", shadowColor: "#0284C7", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }}>
-                        <Ionicons name="phone-portrait" size={18} color="#0284C7" />
-                      </View>
-                      <View>
-                        <Text style={{ fontSize: 13, fontWeight: "700", color: "#1E293B" }}>Jio Prepaid</Text>
-                        <Text style={{ fontSize: 10, color: "#64748B", fontWeight: "500", marginTop: 2 }}>Expiring: 24 Oct</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
-                    <View>
-                      <Text style={{ fontSize: 9, color: "#94A3B8", fontWeight: "500", marginBottom: 2 }}>PLAN</Text>
-                      <Text style={{ fontSize: 18, fontWeight: "800", color: "#0F172A", letterSpacing: 0.5 }}>₹299</Text>
-                    </View>
-                    <TouchableOpacity style={{ backgroundColor: "#0284C7", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, shadowColor: "#0284C7", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 }}>
-                      <Text style={{ color: "#FFFFFF", fontSize: 11, fontWeight: "700", letterSpacing: 0.3 }}>Repeat</Text>
-                    </TouchableOpacity>
-                  </View>
-                </LinearGradient>
-              </ScrollView>
+              )}
             </View>
 
             {/* Smart Analytics Mini-Summary */}
@@ -925,7 +932,7 @@ export default function HomeScreen({
 
                   <Text style={styles.dealsTitle}>Deals & Offers</Text>
                 </View>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push("/deals-offers")}>
                   <Text style={styles.dealsSeeAll}>See All</Text>
                 </TouchableOpacity>
               </View>
@@ -1005,70 +1012,36 @@ export default function HomeScreen({
 
             {/* Gift Cards & Vouchers Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Gift Cards & Vouchers</Text>
-
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.vouchersScroll}
-              >
-                {/* MakeMyTrip */}
-                <TouchableOpacity style={styles.voucherCard}>
-                  <View style={styles.voucherIconCircle}>
-                    <MaterialCommunityIcons
-                      name="airplane"
-                      size={28}
-                      color="#1976D2"
-                    />
-                  </View>
-                  <Text style={styles.voucherName}>MakeMyTrip</Text>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 15, marginHorizontal: 20 }}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, marginBottom: 0 }]}>Gift Cards & Vouchers</Text>
+                <TouchableOpacity onPress={() => router.push("/gift-cards-vouchers")}>
+                  <Text style={styles.dealsSeeAll}>See All</Text>
                 </TouchableOpacity>
+              </View>
 
-                {/* BookMyShow */}
-                <TouchableOpacity style={styles.voucherCard}>
-                  <View style={styles.voucherIconCircle}>
-                    <MaterialCommunityIcons
-                      name="movie-open"
-                      size={28}
-                      color="#C2185B"
-                    />
-                  </View>
-                  <Text style={styles.voucherName}>BookMyShow</Text>
-                </TouchableOpacity>
-
-                {/* Zomato */}
-                <TouchableOpacity style={styles.voucherCard}>
-                  <View style={styles.voucherIconCircle}>
-                    <Ionicons name="fast-food" size={28} color="#E23744" />
-                  </View>
-                  <Text style={styles.voucherName}>Zomato</Text>
-                </TouchableOpacity>
-
-                {/* Amazon */}
-                <TouchableOpacity style={styles.voucherCard}>
-                  <View style={styles.voucherIconCircle}>
-                    <Ionicons name="cart" size={28} color="#FF9900" />
-                  </View>
-                  <Text style={styles.voucherName}>Amazon</Text>
-                </TouchableOpacity>
-
-                {/* Giva */}
-                <TouchableOpacity style={styles.voucherCard}>
-                  <View style={styles.voucherIconCircle}>
-                    <MaterialCommunityIcons
-                      name="diamond-stone"
-                      size={28}
-                      color="#8E24AA"
-                    />
-                  </View>
-                  <Text style={styles.voucherName}>Giva</Text>
-                </TouchableOpacity>
-
-                {/* View All Arrow */}
-                <TouchableOpacity style={styles.viewAllArrow}>
-                  <Ionicons name="chevron-forward" size={28} color="#1A1A1A" />
-                </TouchableOpacity>
-              </ScrollView>
+              <View style={[styles.cardContainer, { paddingHorizontal: 0, paddingVertical: 10 }]}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.vouchersScroll, { paddingHorizontal: 15 }]}>
+                  {[
+                    { name: "Amazon", icon: "cart", lib: "Ionicons", color: "#FF9900", bg: "#FFF7ED" },
+                    { name: "Flipkart", icon: "cart", lib: "Ionicons", color: "#2874F0", bg: "#F0F9FF" },
+                    { name: "Swiggy", icon: "hamburger", lib: "MaterialCommunityIcons", color: "#F97316", bg: "#FFF7ED" },
+                    { name: "Zomato", icon: "alpha-z", lib: "MaterialCommunityIcons", color: "#E23744", bg: "#FFF1F2" },
+                    { name: "MMT", icon: "airplane", lib: "Ionicons", color: "#1976D2", bg: "#F0F9FF" },
+                    { name: "Netflix", icon: "netflix", lib: "MaterialCommunityIcons", color: "#E50914", bg: "#FEE2E2" },
+                  ].map((v, i) => (
+                    <TouchableOpacity key={i} style={styles.voucherCard} onPress={() => router.push("/gift-cards-vouchers")}>
+                      <View style={[styles.voucherIconCircle, { backgroundColor: v.bg, borderWidth: 1, borderColor: "rgba(0,0,0,0.05)" }]}>
+                        {v.lib === "Ionicons" ? (
+                          <Ionicons name={v.icon as any} size={28} color={v.color} />
+                        ) : (
+                          <MaterialCommunityIcons name={v.icon as any} size={v.name === "Zomato" ? 34 : 28} color={v.color} />
+                        )}
+                      </View>
+                      <Text style={styles.voucherName} numberOfLines={1}>{v.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
             </View>
 
             {/* Rate Us & Feedback Card */}
@@ -1109,7 +1082,7 @@ export default function HomeScreen({
             </View>
 
             {/* "Made in India" Footer */}
-            <View style={{ alignItems: "center", marginBottom: 10 }}>
+            <View style={{ alignItems: "center", marginTop: 40, marginBottom: 30 }}>
               <Text style={{ fontSize: 13, fontWeight: "800", color: "#64748B" }}>
                 Made with <Ionicons name="heart" size={14} color="#EF4444" /> in India
               </Text>

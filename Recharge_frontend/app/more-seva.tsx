@@ -56,37 +56,39 @@ export default function MoreSevaScreen() {
             <StatusBar style="dark" />
 
             <SafeAreaView style={styles.safeArea}>
-                <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Fixed Header Content */}
+                <View style={styles.fixedHeader}>
                     {/* Tracking Banner */}
                     <View style={styles.trackingCard}>
                         <View style={styles.trackingContent}>
                             <Text style={styles.trackingTitle}>
-                                Track your applications in{" "}
+                                Track applications in{" "}
                                 <Text style={styles.trackingHighlight}>real-time</Text>
                             </Text>
                             <Text style={styles.trackingSubtitle}>
-                                Check the status of your Aadhaar, PAN, and other certificates
-                                instantly.
+                                Check status of Aadhaar, PAN & certificates
                             </Text>
                             <TouchableOpacity style={styles.trackNowButton}
                                 onPress={() => router.push("/track-status")}>
                                 <Text style={styles.trackNowButtonText}>Track Status</Text>
                             </TouchableOpacity>
                             <Text style={styles.trackingFootnote}>
-                                *Application ID required
+                                *ID required
                             </Text>
                         </View>
                         <View style={styles.trackingIconContainer}>
                             <View style={styles.trackingIconCircle}>
                                 <MaterialCommunityIcons
                                     name="file-search-outline"
-                                    size={40}
+                                    size={24}
                                     color="#2196F3"
                                 />
                             </View>
                         </View>
                     </View>
+                </View>
 
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                     {/* Identity & Documents */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
@@ -544,15 +546,21 @@ const styles = StyleSheet.create({
         elevation: 3,
         zIndex: 999,
     },
+    fixedHeader: {
+        paddingTop: 100, // Space for back button
+        backgroundColor: "#F5F5F5",
+    },
+    scrollContent: {
+        paddingBottom: 20,
+    },
 
     // Tracking Card Styles
     trackingCard: {
         backgroundColor: "#FFFFFF",
         marginHorizontal: 20,
-        marginTop: 100, // Space for back button
-        marginBottom: 20,
-        borderRadius: 16,
-        padding: 20,
+        marginBottom: 10,
+        borderRadius: 12,
+        padding: 12,
         flexDirection: "row",
         justifyContent: "space-between",
         shadowColor: "#000",
@@ -575,20 +583,20 @@ const styles = StyleSheet.create({
         color: "#2196F3",
     },
     trackingSubtitle: {
-        fontSize: 12,
+        fontSize: 11,
         color: "#666",
-        lineHeight: 18,
-        marginBottom: 15,
+        lineHeight: 16,
+        marginBottom: 10,
     },
     trackNowButton: {
         backgroundColor: "#FFFFFF",
-        borderWidth: 1.5,
+        borderWidth: 1.2,
         borderColor: "#1A1A1A",
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 8,
+        paddingVertical: 6,
+        paddingHorizontal: 15,
+        borderRadius: 6,
         alignSelf: "flex-start",
-        marginBottom: 8,
+        marginBottom: 6,
     },
     trackNowButtonText: {
         fontSize: 14,
@@ -604,9 +612,9 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     trackingIconCircle: {
-        width: 80,
-        height: 80,
-        borderRadius: 40,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
         backgroundColor: "#F1F8FE",
         justifyContent: "center",
         alignItems: "center",

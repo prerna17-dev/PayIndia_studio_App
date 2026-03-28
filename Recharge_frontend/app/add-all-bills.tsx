@@ -2,17 +2,22 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    BackHandler,
     SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
+    Animated,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Bill {
     id: string;
@@ -36,52 +41,36 @@ export default function AddAllBillsScreen() {
     const [selectedBills, setSelectedBills] = useState<string[]>([]);
 
     // Mock detected bills (will come from SMS scanning)
-    const mockDetectedBills = [
-        {
-            id: '1',
-            category: 'Electricity',
-            icon: 'flash',
-            iconBg: '#FFF3E0',
-            iconColor: '#FF9800',
-            provider: 'TNEB',
-            consumerNumber: 'XXXXX567890',
-            lastBill: '₹1450',
-            dueDate: '25 Feb 2026',
-        },
-        {
-            id: '2',
-            category: 'DTH',
-            icon: 'tv',
-            iconBg: '#F3E5F5',
-            iconColor: '#9C27B0',
-            provider: 'Tata Play',
-            consumerNumber: 'XXXXX234567',
-            lastBill: '₹350',
-            dueDate: '20 Feb 2026',
-        },
-        {
-            id: '3',
-            category: 'Postpaid',
-            icon: 'phone-portrait',
-            iconBg: '#E3F2FD',
-            iconColor: '#2196F3',
-            provider: 'Airtel',
-            consumerNumber: '9876543210',
-            lastBill: '₹799',
-            dueDate: '28 Feb 2026',
-        },
-        {
-            id: '4',
-            category: 'Broadband',
-            icon: 'wifi',
-            iconBg: '#E8F5E9',
-            iconColor: '#4CAF50',
-            provider: 'ACT Fibernet',
-            consumerNumber: 'XXXXX789012',
-            lastBill: '₹899',
-            dueDate: '22 Feb 2026',
-        },
-    ];
+    const mockDetectedBills: Bill[] = [];
+
+    const progressAnim = useRef(new Animated.Value(0)).current;
+
+    // Manual Add State
+    const [manualBill, setManualBill] = useState({
+        category: '',
+        provider: '',
+        consumerNumber: '',
+        amount: '',
+    });
+
+    const handleBack = useCallback(() => {
+        if (currentStep === 'manual_add') {
+            setCurrentStep('detected');
+            return true;
+        } else if (currentStep === 'detected' || currentStep === 'scanning') {
+            setCurrentStep('permission');
+            return true;
+        }
+        router.back();
+        return true;
+    }, [currentStep, router]);
+
+    useFocusEffect(
+        useCallback(() => {
+            const sub = BackHandler.addEventListener('hardwareBackPress', handleBack);
+            return () => sub.remove();
+        }, [handleBack])
+    );
 
     // Handle SMS Permission
     const handleAllowAccess = () => {
@@ -90,6 +79,13 @@ export default function AddAllBillsScreen() {
 
         setCurrentStep('scanning');
         setIsScanning(true);
+        progressAnim.setValue(0);
+        
+        Animated.timing(progressAnim, {
+            toValue: 100,
+            duration: 3000,
+            useNativeDriver: false,
+        }).start();
 
         // Simulate SMS scanning
         setTimeout(() => {
@@ -106,10 +102,46 @@ export default function AddAllBillsScreen() {
             'SMS Access Required',
             'We need SMS access to automatically detect your bills. You can add them manually instead.',
             [
-                { text: 'Add Manually', onPress: () => router.back() },
+                { text: 'Add Manually', onPress: () => setCurrentStep('manual_add') },
                 { text: 'Try Again', style: 'cancel' },
             ]
         );
+    };
+
+    // Handle Manual Submit
+    const handleManualSubmit = async () => {
+        if (!manualBill.category || !manualBill.provider || !manualBill.amount) {
+            Alert.alert('Missing Fields', 'Please fill in category, provider, and amount.');
+            return;
+        }
+        
+        const newBill = {
+            id: Date.now().toString(),
+            category: manualBill.category,
+            icon: 'document-text',
+            iconBg: '#E3F2FD',
+            iconColor: '#2196F3',
+            provider: manualBill.provider,
+            consumerNumber: manualBill.consumerNumber || 'N/A',
+            amount: `₹${manualBill.amount}`,
+            dueDate: 'N/A',
+            status: 'pending',
+            lastBill: `₹${manualBill.amount}`,
+        };
+
+        try {
+            const existingBillsString = await AsyncStorage.getItem('@my_manual_bills');
+            const existingBills = existingBillsString ? JSON.parse(existingBillsString) : [];
+            const updatedBills = [...existingBills, newBill];
+            await AsyncStorage.setItem('@my_manual_bills', JSON.stringify(updatedBills));
+            
+            Alert.alert('Success 🎉', 'Bill added manually!', [
+                { text: 'OK', onPress: () => router.back() }
+            ]);
+        } catch (error) {
+            console.error('Error saving manual bill', error);
+            Alert.alert('Error', 'Failed to save bill');
+        }
     };
 
     // Toggle Bill Selection
@@ -152,13 +184,25 @@ export default function AddAllBillsScreen() {
             <SafeAreaView style={styles.safeArea}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                    <TouchableOpacity 
+                        style={styles.backButton} 
+                        onPress={() => {
+                            if (currentStep === 'manual_add') {
+                                setCurrentStep('detected');
+                            } else if (currentStep === 'detected' || currentStep === 'scanning') {
+                                setCurrentStep('permission');
+                            } else {
+                                router.back();
+                            }
+                        }}
+                    >
                         <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>
                         {currentStep === 'permission' && 'Add Bills Automatically'}
                         {currentStep === 'scanning' && 'Scanning Bills'}
                         {currentStep === 'detected' && 'Detected Bills'}
+                        {currentStep === 'manual_add' && 'Add Bill Manually'}
                     </Text>
                     <View style={styles.placeholder} />
                 </View>
@@ -239,7 +283,15 @@ export default function AddAllBillsScreen() {
 
                                 {/* Progress Animation */}
                                 <View style={styles.progressBar}>
-                                    <View style={styles.progressFill} />
+                                    <Animated.View style={[
+                                        styles.progressFill, 
+                                        { 
+                                            width: progressAnim.interpolate({
+                                                inputRange: [0, 100],
+                                                outputRange: ['0%', '100%']
+                                            })
+                                        }
+                                    ]} />
                                 </View>
 
                                 <Text style={styles.scanningHint}>Looking for bill messages</Text>
@@ -250,75 +302,170 @@ export default function AddAllBillsScreen() {
                     {/* STEP 3: Detected Bills List */}
                     {currentStep === 'detected' && (
                         <View style={styles.detectedContainer}>
-                            {/* Header */}
-                            <View style={styles.detectedHeader}>
-                                <Text style={styles.detectedTitle}>We found these bills 🎉</Text>
-                                <Text style={styles.detectedSubtext}>
-                                    Select the bills you want to add
-                                </Text>
-                            </View>
+                            {detectedBills.length > 0 ? (
+                                <>
+                                    {/* Header */}
+                                    <View style={styles.detectedHeader}>
+                                        <Text style={styles.detectedTitle}>We found these bills 🎉</Text>
+                                        <Text style={styles.detectedSubtext}>
+                                            Select the bills you want to add
+                                        </Text>
+                                    </View>
 
-                            {/* Bills List */}
-                            <View style={styles.billsList}>
-                                {detectedBills.map((bill) => (
+                                    {/* Bills List */}
+                                    <View style={styles.billsList}>
+                                        {detectedBills.map((bill) => (
+                                            <TouchableOpacity
+                                                key={bill.id}
+                                                style={[
+                                                    styles.billCard,
+                                                    selectedBills.includes(bill.id) && styles.billCardSelected,
+                                                ]}
+                                                onPress={() => toggleBillSelection(bill.id)}
+                                            >
+                                                {/* Left: Icon */}
+                                                <View style={[styles.billIcon, { backgroundColor: bill.iconBg }]}>
+                                                    <Ionicons name={bill.icon as any} size={24} color={bill.iconColor} />
+                                                </View>
+
+                                                {/* Center: Details */}
+                                                <View style={styles.billDetails}>
+                                                    <Text style={styles.billCategory}>{bill.category}</Text>
+                                                    <Text style={styles.billProvider}>{bill.provider}</Text>
+                                                    <Text style={styles.billConsumer}>ID: {bill.consumerNumber}</Text>
+                                                    <View style={styles.billMeta}>
+                                                        <Text style={styles.billAmount}>{bill.lastBill}</Text>
+                                                        <Text style={styles.billDue}>Due: {bill.dueDate}</Text>
+                                                    </View>
+                                                </View>
+
+                                                {/* Right: Checkbox */}
+                                                <View style={styles.checkboxContainer}>
+                                                    {selectedBills.includes(bill.id) ? (
+                                                        <Ionicons name="checkmark-circle" size={28} color="#4CAF50" />
+                                                    ) : (
+                                                        <View style={styles.uncheckedCircle} />
+                                                    )}
+                                                </View>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+
+                                    {/* Select All Option */}
                                     <TouchableOpacity
-                                        key={bill.id}
-                                        style={[
-                                            styles.billCard,
-                                            selectedBills.includes(bill.id) && styles.billCardSelected,
-                                        ]}
-                                        onPress={() => toggleBillSelection(bill.id)}
+                                        style={styles.selectAllButton}
+                                        onPress={() => {
+                                            if (selectedBills.length === detectedBills.length) {
+                                                setSelectedBills([]);
+                                            } else {
+                                                setSelectedBills(detectedBills.map(b => b.id));
+                                            }
+                                        }}
                                     >
-                                        {/* Left: Icon */}
-                                        <View style={[styles.billIcon, { backgroundColor: bill.iconBg }]}>
-                                            <Ionicons name={bill.icon as any} size={24} color={bill.iconColor} />
-                                        </View>
-
-                                        {/* Center: Details */}
-                                        <View style={styles.billDetails}>
-                                            <Text style={styles.billCategory}>{bill.category}</Text>
-                                            <Text style={styles.billProvider}>{bill.provider}</Text>
-                                            <Text style={styles.billConsumer}>ID: {bill.consumerNumber}</Text>
-                                            <View style={styles.billMeta}>
-                                                <Text style={styles.billAmount}>{bill.lastBill}</Text>
-                                                <Text style={styles.billDue}>Due: {bill.dueDate}</Text>
-                                            </View>
-                                        </View>
-
-                                        {/* Right: Checkbox */}
-                                        <View style={styles.checkboxContainer}>
-                                            {selectedBills.includes(bill.id) ? (
-                                                <Ionicons name="checkmark-circle" size={28} color="#4CAF50" />
-                                            ) : (
-                                                <View style={styles.uncheckedCircle} />
-                                            )}
-                                        </View>
+                                        <Ionicons
+                                            name={selectedBills.length === detectedBills.length ? "checkbox" : "square-outline"}
+                                            size={20}
+                                            color="#2196F3"
+                                        />
+                                        <Text style={styles.selectAllText}>
+                                            {selectedBills.length === detectedBills.length ? 'Deselect All' : 'Select All'}
+                                        </Text>
                                     </TouchableOpacity>
-                                ))}
-                            </View>
-
-                            {/* Select All Option */}
-                            <TouchableOpacity
-                                style={styles.selectAllButton}
-                                onPress={() => {
-                                    if (selectedBills.length === detectedBills.length) {
-                                        setSelectedBills([]);
-                                    } else {
-                                        setSelectedBills(detectedBills.map(b => b.id));
-                                    }
-                                }}
-                            >
-                                <Ionicons
-                                    name={selectedBills.length === detectedBills.length ? "checkbox" : "square-outline"}
-                                    size={20}
-                                    color="#2196F3"
-                                />
-                                <Text style={styles.selectAllText}>
-                                    {selectedBills.length === detectedBills.length ? 'Deselect All' : 'Select All'}
-                                </Text>
-                            </TouchableOpacity>
+                                </>
+                            ) : (
+                                /* Empty State */
+                                <View style={styles.emptyStateContainer}>
+                                    <View style={styles.emptyIconContainer}>
+                                        <Ionicons name="document-text-outline" size={64} color="#B0BEC5" />
+                                    </View>
+                                    <Text style={styles.permissionTitle}>No bills detected</Text>
+                                    <Text style={styles.permissionDescription}>
+                                        We couldn't find any pending bills in your SMS. You can add them manually.
+                                    </Text>
+                                    <TouchableOpacity 
+                                        style={styles.allowButton} 
+                                        onPress={() => setCurrentStep('manual_add')}
+                                    >
+                                        <Text style={styles.allowButtonText}>Add Bills Manually</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
 
                             {/* Bottom Spacing */}
+                            <View style={{ height: 100 }} />
+                        </View>
+                    )}
+
+                    {/* STEP 4: Manual Add Screen */}
+                    {currentStep === 'manual_add' && (
+                        <View style={styles.manualContainer}>
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Provider Name *</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="business-outline" size={16} color="#94A3B8" />
+                                    <TextInput
+                                        style={styles.inputField}
+                                        placeholder="e.g., TNEB, Airtel"
+                                        placeholderTextColor="#94A3B8"
+                                        value={manualBill.provider}
+                                        onChangeText={(text) => setManualBill({ ...manualBill, provider: text })}
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Category *</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="grid-outline" size={16} color="#94A3B8" />
+                                    <TextInput
+                                        style={styles.inputField}
+                                        placeholder="e.g., Electricity, Mobile"
+                                        placeholderTextColor="#94A3B8"
+                                        value={manualBill.category}
+                                        onChangeText={(text) => setManualBill({ ...manualBill, category: text })}
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Consumer/Account Number</Text>
+                                <View style={styles.inputContainer}>
+                                    <Ionicons name="document-text-outline" size={16} color="#94A3B8" />
+                                    <TextInput
+                                        style={styles.inputField}
+                                        placeholder="e.g., 04234567890"
+                                        placeholderTextColor="#94A3B8"
+                                        keyboardType="numeric"
+                                        value={manualBill.consumerNumber}
+                                        onChangeText={(text) => setManualBill({ ...manualBill, consumerNumber: text })}
+                                    />
+                                </View>
+                            </View>
+
+                            <View style={styles.inputGroup}>
+                                <Text style={styles.inputLabel}>Amount *</Text>
+                                <View style={styles.amountInputContainer}>
+                                    <Text style={styles.currencySymbol}>₹</Text>
+                                    <TextInput
+                                        style={styles.amountField}
+                                        placeholder="0"
+                                        placeholderTextColor="#94A3B8"
+                                        keyboardType="numeric"
+                                        value={manualBill.amount}
+                                        onChangeText={(text) => setManualBill({ ...manualBill, amount: text })}
+                                    />
+                                </View>
+                            </View>
+
+                            <TouchableOpacity style={styles.saveButtonContainer} onPress={handleManualSubmit}>
+                                <LinearGradient
+                                    colors={['#42A5F5', '#1E88E5']}
+                                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                                    style={styles.saveActionButton}
+                                >
+                                    <Text style={styles.saveActionButtonText}>Save Bill</Text>
+                                </LinearGradient>
+                            </TouchableOpacity>
                             <View style={{ height: 100 }} />
                         </View>
                     )}
@@ -686,5 +833,102 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         color: '#FFFFFF',
+    },
+
+    // Empty State
+    emptyStateContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 20,
+        padding: 30,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 12,
+        elevation: 4,
+        marginTop: 20,
+    },
+    emptyIconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#F5F7FA',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
+    },
+
+    // Manual Add Screen
+    manualContainer: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 24,
+        elevation: 2,
+        marginHorizontal: 16,
+        marginTop: 10,
+    },
+    inputGroup: {
+        marginBottom: 15,
+    },
+    inputLabel: {
+        fontSize: 12,
+        fontWeight: "bold",
+        color: "#475569",
+        marginBottom: 6,
+    },
+    inputContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "#F5F7FA",
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        height: 44,
+        borderWidth: 1,
+        borderColor: "#E0E0E0",
+    },
+    inputField: {
+        flex: 1,
+        marginLeft: 8,
+        fontSize: 14,
+        color: '#333',
+        fontWeight: '500',
+    },
+    amountInputContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: "#F5F7FA",
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 10,
+        paddingHorizontal: 12,
+        height: 44,
+    },
+    currencySymbol: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#1E293B',
+        marginRight: 8,
+    },
+    amountField: {
+        flex: 1,
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    saveButtonContainer: {
+        marginTop: 10,
+        marginBottom: 24,
+    },
+    saveActionButton: {
+        paddingVertical: 16,
+        borderRadius: 12,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    saveActionButtonText: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: "#FFFFFF",
     },
 });

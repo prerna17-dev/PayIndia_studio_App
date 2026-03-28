@@ -68,8 +68,8 @@ export default function RechargePlansScreen() {
     };
 
     const renderPlanCard = ({ item }: { item: any }) => (
-        <TouchableOpacity
-            style={styles.planCard}
+        <TouchableOpacity 
+            style={styles.planCard} 
             onPress={() => handleSelectPlan(item)}
             activeOpacity={0.7}
             delayPressIn={100}

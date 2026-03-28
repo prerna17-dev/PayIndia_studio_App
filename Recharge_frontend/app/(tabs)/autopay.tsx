@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
     Alert,
     BackHandler,
@@ -13,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function AutopayScreen() {
     const router = useRouter();
@@ -34,54 +35,51 @@ export default function AutopayScreen() {
         }, [router]),
     );
 
-    // Sample autopay data - Change hasAutopay to false to see empty state
-    const [hasAutopay, setHasAutopay] = useState(true);
-    const [autopayList, setAutopayList] = useState([
-        {
-            id: 1,
-            type: "Mobile Recharge",
-            amount: 299,
-            frequency: "Every 28 days",
-            nextPayment: "15 March 2026",
-            icon: "phone-portrait",
-            color: "#4CAF50",
-            isPaused: false,
-        },
-        {
-            id: 2,
-            type: "DTH Recharge",
-            amount: 599,
-            frequency: "Every 30 days",
-            nextPayment: "20 March 2026",
-            icon: "tv",
-            color: "#FF9800",
-            isPaused: false,
-        },
-    ]);
+    // Initialized without mock data for a clean professional start
+    const [autopayList, setAutopayList] = useState<any[]>([]);
 
-    const handlePauseAutopay = (id: number) => {
-        setAutopayList(
-            autopayList.map((item) =>
-                item.id === id ? { ...item, isPaused: !item.isPaused } : item,
-            ),
+    const hasAutopay = autopayList.length > 0;
+
+    // Load mandates from AsyncStorage every time the screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            const loadMandates = async () => {
+                try {
+                    const saved = await AsyncStorage.getItem("@autopay_mandates");
+                    if (saved) {
+                        setAutopayList(JSON.parse(saved));
+                    } else {
+                        setAutopayList([]);
+                    }
+                } catch (e) {
+                    console.error("Failed to load mandates", e);
+                }
+            };
+            loadMandates();
+        }, [])
+    );
+
+    const handlePauseAutopay = async (id: number) => {
+        const updatedList = autopayList.map((item) =>
+            item.id === id ? { ...item, isPaused: !item.isPaused } : item,
         );
+        setAutopayList(updatedList);
+        await AsyncStorage.setItem("@autopay_mandates", JSON.stringify(updatedList));
     };
 
     const handleCancelAutopay = (id: number, type: string) => {
         Alert.alert(
             "Cancel Autopay?",
-            `Are you sure you want to cancel autopay for ${type}?`,
+            `Are you sure you want to completely cancel autopay for ${type}?`,
             [
-                { text: "No", style: "cancel" },
+                { text: "Keep Active", style: "cancel" },
                 {
-                    text: "Yes, Cancel",
+                    text: "Cancel Autopay",
                     style: "destructive",
-                    onPress: () => {
-                        setAutopayList(autopayList.filter((item) => item.id !== id));
-                        if (autopayList.length === 1) {
-                            setHasAutopay(false);
-                        }
-                        Alert.alert("Success", `Autopay cancelled for ${type}`);
+                    onPress: async () => {
+                        const updatedList = autopayList.filter((item) => item.id !== id);
+                        setAutopayList(updatedList);
+                        await AsyncStorage.setItem("@autopay_mandates", JSON.stringify(updatedList));
                     },
                 },
             ],
@@ -98,229 +96,178 @@ export default function AutopayScreen() {
             <StatusBar style="dark" />
 
             <SafeAreaView style={styles.safeArea}>
-                {/* Header */}
+                {/* Premium Header */}
                 <View style={styles.header}>
                     <TouchableOpacity
                         style={styles.backButton}
                         onPress={() => router.push("/account")}
                     >
-                        <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
+                        <Ionicons name="arrow-back" size={24} color="#0F172A" />
                     </TouchableOpacity>
                     <Text style={styles.headerTitle}>Autopay</Text>
                     <View style={styles.placeholder} />
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false}>
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={!hasAutopay && styles.scrollEmpty}>
                     {hasAutopay && autopayList.length > 0 ? (
                         /* Active Autopay View */
                         <View style={styles.content}>
-                            {/* Active Autopay Cards */}
+                            <Text style={styles.sectionHeading}>Your Active Autopays</Text>
+
                             <View style={styles.autopaySection}>
                                 {autopayList.map((autopay) => (
-                                    <View key={autopay.id} style={styles.autopayCard}>
-                                        <LinearGradient
-                                            colors={
-                                                autopay.isPaused
-                                                    ? ["#F5F5F5", "#E0E0E0"]
-                                                    : ["#E8F5E9", "#C8E6C9"]
-                                            }
-                                            start={{ x: 0, y: 0 }}
-                                            end={{ x: 1, y: 1 }}
-                                            style={styles.autopayGradient}
-                                        >
-                                            {/* Header Row */}
-                                            <View style={styles.cardHeader}>
-                                                <View style={styles.iconCircle}>
+                                    <View key={autopay.id} style={styles.premiumCard}>
+                                        <View style={styles.cardHeader}>
+                                            <View style={styles.cardHeaderLeft}>
+                                                <View style={[styles.iconBox, { backgroundColor: `${autopay.color}15` }]}>
                                                     <Ionicons
                                                         name={autopay.icon as any}
-                                                        size={24}
-                                                        color={autopay.isPaused ? "#999" : autopay.color}
+                                                        size={20}
+                                                        color={autopay.isPaused ? "#94A3B8" : autopay.color}
                                                     />
                                                 </View>
-
-                                                {autopay.isPaused && (
-                                                    <View style={styles.pausedBadge}>
-                                                        <Ionicons
-                                                            name="pause-circle"
-                                                            size={16}
-                                                            color="#FF9800"
-                                                        />
-                                                        <Text style={styles.pausedText}>Paused</Text>
-                                                    </View>
-                                                )}
+                                                <View>
+                                                    <Text style={[styles.autopayType, autopay.isPaused && styles.textMuted]}>
+                                                        {autopay.type}
+                                                    </Text>
+                                                    <Text style={[styles.frequency, autopay.isPaused && styles.textMuted]}>
+                                                        {autopay.frequency}
+                                                    </Text>
+                                                </View>
                                             </View>
 
-                                            {/* Autopay Details */}
-                                            <Text
-                                                style={[
-                                                    styles.autopayType,
-                                                    autopay.isPaused && styles.mutedText,
-                                                ]}
-                                            >
-                                                {autopay.type}
-                                            </Text>
+                                            {autopay.isPaused ? (
+                                                <View style={styles.statusBadgePaused}>
+                                                    <Text style={styles.statusTextPaused}>Paused</Text>
+                                                </View>
+                                            ) : (
+                                                <View style={styles.statusBadgeActive}>
+                                                    <Text style={styles.statusTextActive}>Active</Text>
+                                                </View>
+                                            )}
+                                        </View>
 
-                                            <View style={styles.amountRow}>
-                                                <Text
-                                                    style={[
-                                                        styles.autopayAmount,
-                                                        autopay.isPaused && styles.mutedText,
-                                                    ]}
-                                                >
+                                        <View style={styles.divider} />
+
+                                        <View style={styles.cardDetails}>
+                                            <View>
+                                                <Text style={styles.detailLabel}>Amount Limit</Text>
+                                                <Text style={[styles.autopayAmount, autopay.isPaused && styles.textMuted]}>
                                                     ₹{autopay.amount}
                                                 </Text>
-                                                <Text
-                                                    style={[
-                                                        styles.frequency,
-                                                        autopay.isPaused && styles.mutedText,
-                                                    ]}
-                                                >
-                                                    {autopay.frequency}
+                                            </View>
+                                            <View style={styles.nextPaymentBox}>
+                                                <Text style={styles.detailLabel}>Next Payment</Text>
+                                                <Text style={[styles.nextPaymentText, autopay.isPaused && styles.textMuted]}>
+                                                    {autopay.nextPayment}
                                                 </Text>
                                             </View>
+                                        </View>
 
-                                            {/* Next Payment */}
-                                            <View style={styles.nextPaymentRow}>
+                                        {/* Action Buttons */}
+                                        <View style={styles.actionButtons}>
+                                            <TouchableOpacity
+                                                style={[styles.outlineBtn, autopay.isPaused && styles.outlineBtnActive]}
+                                                onPress={() => handlePauseAutopay(autopay.id)}
+                                            >
                                                 <Ionicons
-                                                    name="calendar-outline"
+                                                    name={autopay.isPaused ? "play" : "pause"}
                                                     size={16}
-                                                    color={autopay.isPaused ? "#999" : "#4CAF50"}
+                                                    color={autopay.isPaused ? "#0F172A" : "#64748B"}
                                                 />
-                                                <Text
-                                                    style={[
-                                                        styles.nextPaymentText,
-                                                        autopay.isPaused && styles.mutedText,
-                                                    ]}
-                                                >
-                                                    Next Payment: {autopay.nextPayment}
+                                                <Text style={[styles.outlineBtnText, autopay.isPaused && styles.outlineBtnTextActive]}>
+                                                    {autopay.isPaused ? "Resume" : "Pause"}
                                                 </Text>
-                                            </View>
+                                            </TouchableOpacity>
 
-                                            {/* Action Buttons */}
-                                            <View style={styles.actionButtons}>
-                                                <TouchableOpacity
-                                                    style={[
-                                                        styles.pauseButton,
-                                                        autopay.isPaused && styles.resumeButton,
-                                                    ]}
-                                                    onPress={() => handlePauseAutopay(autopay.id)}
-                                                >
-                                                    <Ionicons
-                                                        name={autopay.isPaused ? "play" : "pause"}
-                                                        size={16}
-                                                        color={autopay.isPaused ? "#4CAF50" : "#FF9800"}
-                                                    />
-                                                    <Text
-                                                        style={[
-                                                            styles.pauseButtonText,
-                                                            autopay.isPaused && styles.resumeButtonText,
-                                                        ]}
-                                                    >
-                                                        {autopay.isPaused ? "Resume" : "Pause"}
-                                                    </Text>
-                                                </TouchableOpacity>
-
-                                                <TouchableOpacity
-                                                    style={styles.cancelButton}
-                                                    onPress={() =>
-                                                        handleCancelAutopay(autopay.id, autopay.type)
-                                                    }
-                                                >
-                                                    <Ionicons
-                                                        name="close-circle"
-                                                        size={16}
-                                                        color="#E53935"
-                                                    />
-                                                    <Text style={styles.cancelButtonText}>Cancel</Text>
-                                                </TouchableOpacity>
-                                            </View>
-                                        </LinearGradient>
+                                            <TouchableOpacity
+                                                style={styles.outlineBtnDanger}
+                                                onPress={() => handleCancelAutopay(autopay.id, autopay.type)}
+                                            >
+                                                <Text style={styles.outlineBtnTextDanger}>Cancel</Text>
+                                            </TouchableOpacity>
+                                        </View>
                                     </View>
                                 ))}
                             </View>
 
                             {/* Setup New Autopay Button */}
-                            <View style={styles.setupButtonContainer}>
-                                <TouchableOpacity
-                                    style={styles.setupButton}
-                                    onPress={handleSetupAutopay}
-                                >
-                                    <Ionicons name="add-circle" size={24} color="#FFFFFF" />
-                                    <Text style={styles.setupButtonText}>Setup New Autopay</Text>
-                                </TouchableOpacity>
-                            </View>
-
-                            {/* Info Card */}
-                            <View style={styles.infoCard}>
-                                <Ionicons name="information-circle" size={20} color="#2196F3" />
-                                <Text style={styles.infoText}>
-                                    Autopay ensures you never miss a recharge. Payments are
-                                    automatically processed on the scheduled date.
-                                </Text>
-                            </View>
-                        </View>
-                    ) : (
-                        /* Empty State View */
-                        <View style={styles.emptyStateContainer}>
-                            {/* Illustration */}
-                            <View style={styles.illustrationContainer}>
-                                <View style={styles.illustrationCircle}>
-                                    <MaterialCommunityIcons
-                                        name="calendar-sync-outline"
-                                        size={80}
-                                        color="#BBDEFB"
-                                    />
-                                </View>
-                            </View>
-
-                            {/* Empty State Text */}
-                            <Text style={styles.emptyTitle}>No active autopay found</Text>
-                            <Text style={styles.emptySubtext}>
-                                Never miss a recharge again
-                            </Text>
-                            <Text style={styles.emptyDescription}>
-                                Set up autopay to automatically recharge your services on time,
-                                every time.
-                            </Text>
-
-                            {/* Setup Autopay Button */}
                             <TouchableOpacity
-                                style={styles.emptySetupButton}
+                                style={styles.addMandateBtn}
                                 onPress={handleSetupAutopay}
                             >
-                                <Ionicons name="add-circle" size={24} color="#FFFFFF" />
-                                <Text style={styles.emptySetupButtonText}>Setup Autopay</Text>
+                                <MaterialCommunityIcons name="plus" size={18} color="#0F172A" />
+                                <Text style={styles.addMandateText}>Set Up New Autopay</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        /* Premium Empty State */
+                        <View style={styles.emptyStateContainer}>
+                            <View style={styles.emptyIllustrationWrapper}>
+                                <LinearGradient
+                                    colors={["#F1F5F9", "#E2E8F0"]}
+                                    style={styles.emptyCircleLarge}
+                                >
+                                    <View style={styles.emptyCircleSmall}>
+                                        <MaterialCommunityIcons name="credit-card-sync-outline" size={48} color="#0F172A" />
+                                    </View>
+                                </LinearGradient>
+                                <View style={styles.floatingBadge}>
+                                    <MaterialCommunityIcons name="shield-check" size={16} color="#059669" />
+                                </View>
+                            </View>
+
+                            <Text style={styles.emptyTitle}>Automate Your Payments</Text>
+                            <Text style={styles.emptyDescription}>
+                                Set up secure autopay mandates and never worry about late fees or service interruptions again.
+                            </Text>
+
+                            <TouchableOpacity
+                                style={styles.primaryBtn}
+                                onPress={handleSetupAutopay}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={["#0F172A", "#1E293B"]}
+                                    start={{ x: 0, y: 0 }}
+                                    end={{ x: 1, y: 0 }}
+                                    style={styles.primaryBtnGradient}
+                                >
+                                    <Text style={styles.primaryBtnText}>Set Up Autopay</Text>
+                                    <MaterialCommunityIcons name="arrow-right" size={18} color="#FFFFFF" />
+                                </LinearGradient>
                             </TouchableOpacity>
 
-                            {/* Benefits */}
-                            <View style={styles.benefitsContainer}>
-                                <Text style={styles.benefitsTitle}>Benefits of Autopay:</Text>
-
-                                <View style={styles.benefitItem}>
-                                    <View style={styles.benefitIconCircle}>
-                                        <Ionicons name="checkmark" size={18} color="#4CAF50" />
+                            {/* Crisp Benefits List */}
+                            <View style={styles.featuresWrapper}>
+                                <View style={styles.featureItem}>
+                                    <View style={styles.featureIcon}>
+                                        <MaterialCommunityIcons name="clock-fast" size={18} color="#3B82F6" />
                                     </View>
-                                    <Text style={styles.benefitText}>
-                                        Never miss a recharge deadline
-                                    </Text>
+                                    <View>
+                                        <Text style={styles.featureTitle}>Punctual Payments</Text>
+                                        <Text style={styles.featureText}>Bills are paid exactly when they're due.</Text>
+                                    </View>
                                 </View>
 
-                                <View style={styles.benefitItem}>
-                                    <View style={styles.benefitIconCircle}>
-                                        <Ionicons name="checkmark" size={18} color="#4CAF50" />
+                                <View style={styles.featureItem}>
+                                    <View style={styles.featureIcon}>
+                                        <MaterialCommunityIcons name="tune" size={18} color="#8B5CF6" />
                                     </View>
-                                    <Text style={styles.benefitText}>
-                                        Save time with automatic payments
-                                    </Text>
+                                    <View>
+                                        <Text style={styles.featureTitle}>Full Control</Text>
+                                        <Text style={styles.featureText}>Pause, modify, or cancel at any time.</Text>
+                                    </View>
                                 </View>
 
-                                <View style={styles.benefitItem}>
-                                    <View style={styles.benefitIconCircle}>
-                                        <Ionicons name="checkmark" size={18} color="#4CAF50" />
+                                <View style={styles.featureItem}>
+                                    <View style={styles.featureIcon}>
+                                        <MaterialCommunityIcons name="lock-outline" size={18} color="#10B981" />
                                     </View>
-                                    <Text style={styles.benefitText}>
-                                        Pause or cancel anytime you want
-                                    </Text>
+                                    <View>
+                                        <Text style={styles.featureTitle}>Bank-grade Security</Text>
+                                        <Text style={styles.featureText}>Fully encrypted and safely processed.</Text>
+                                    </View>
                                 </View>
                             </View>
                         </View>
@@ -334,7 +281,7 @@ export default function AutopayScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#F5F7FA",
+        backgroundColor: "#F8FAFC", // Sleek cool gray
     },
     safeArea: {
         flex: 1,
@@ -347,314 +294,309 @@ const styles = StyleSheet.create({
         paddingTop: 50,
         paddingBottom: 20,
         backgroundColor: "#FFFFFF",
-        borderBottomWidth: 1,
-        borderBottomColor: "#F0F0F0",
     },
     backButton: {
         padding: 5,
     },
     headerTitle: {
         fontSize: 18,
-        fontWeight: "bold",
-        color: "#1A1A1A",
+        fontWeight: "700",
+        color: "#0F172A",
+        letterSpacing: -0.5,
     },
     placeholder: {
-        width: 34,
+        width: 40,
     },
 
-    // Active Autopay View
-    content: {
-        padding: 20,
+    scrollEmpty: {
+        flexGrow: 1,
+        justifyContent: "center",
+        paddingBottom: 40,
     },
 
-    autopaySection: {
-        marginBottom: 20,
+    /* Premium Empty State */
+    emptyStateContainer: {
+        paddingHorizontal: 24,
+        alignItems: "center",
     },
-
-    autopayCard: {
-        borderRadius: 16,
-        overflow: "hidden",
-        marginBottom: 16,
+    emptyIllustrationWrapper: {
+        position: "relative",
+        marginBottom: 32,
+        marginTop: 20,
+    },
+    emptyCircleLarge: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    emptyCircleSmall: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: "#FFFFFF",
+        justifyContent: "center",
+        alignItems: "center",
         shadowColor: "#000",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.1,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 3,
+    },
+    floatingBadge: {
+        position: "absolute",
+        bottom: 5,
+        right: 5,
+        backgroundColor: "#D1FAE5",
+        padding: 6,
+        borderRadius: 12,
+        borderWidth: 2,
+        borderColor: "#FFFFFF",
+    },
+    emptyTitle: {
+        fontSize: 24,
+        fontWeight: "800",
+        color: "#0F172A",
+        marginBottom: 12,
+        letterSpacing: -0.5,
+        textAlign: "center",
+    },
+    emptyDescription: {
+        fontSize: 15,
+        color: "#64748B",
+        textAlign: "center",
+        lineHeight: 22,
+        marginBottom: 36,
+        paddingHorizontal: 10,
+    },
+    primaryBtn: {
+        width: "100%",
+        marginBottom: 40,
+        shadowColor: "#0F172A",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
+        shadowRadius: 16,
+        elevation: 8,
+    },
+    primaryBtnGradient: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 18,
+        borderRadius: 16,
+        gap: 8,
+    },
+    primaryBtnText: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#FFFFFF",
+    },
+    featuresWrapper: {
+        width: "100%",
+        backgroundColor: "#FFFFFF",
+        borderRadius: 20,
+        padding: 24,
+        gap: 24,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 8,
+        elevation: 1,
+    },
+    featureItem: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 16,
+    },
+    featureIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "#F8FAFC",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    featureTitle: {
+        fontSize: 15,
+        fontWeight: "600",
+        color: "#1E293B",
+        marginBottom: 4,
+    },
+    featureText: {
+        fontSize: 13,
+        color: "#64748B",
+        lineHeight: 18,
+        paddingRight: 20,
+    },
+
+    /* Active State styling (if data exists) */
+    content: {
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        paddingBottom: 40,
+    },
+    sectionHeading: {
+        fontSize: 15,
+        fontWeight: "700",
+        color: "#64748B",
+        textTransform: "uppercase",
+        letterSpacing: 1,
+        marginBottom: 16,
+    },
+    autopaySection: {
+        marginBottom: 16,
+    },
+    premiumCard: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 16,
+        padding: 14,
+        marginBottom: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
         shadowRadius: 6,
-        elevation: 5,
+        elevation: 2,
     },
-
-    autopayGradient: {
-        padding: 16,
-    },
-
     cardHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
-        alignItems: "center",
+        alignItems: "flex-start",
         marginBottom: 12,
     },
-
-    iconCircle: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
-        backgroundColor: "rgba(255, 255, 255, 0.8)",
+    cardHeaderLeft: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+    },
+    iconBox: {
+        width: 36,
+        height: 36,
+        borderRadius: 10,
         justifyContent: "center",
         alignItems: "center",
     },
-
-    pausedBadge: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 4,
-        backgroundColor: "#FFF3E0",
+    autopayType: {
+        fontSize: 14,
+        fontWeight: "700",
+        color: "#0F172A",
+        marginBottom: 2,
+    },
+    frequency: {
+        fontSize: 12,
+        color: "#64748B",
+    },
+    statusBadgeActive: {
+        backgroundColor: "#ECFDF5",
         paddingHorizontal: 10,
         paddingVertical: 4,
-        borderRadius: 12,
+        borderRadius: 8,
     },
-
-    pausedText: {
+    statusTextActive: {
         fontSize: 12,
         fontWeight: "600",
-        color: "#FF9800",
+        color: "#059669",
     },
-
-    autopayType: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#1A1A1A",
-        marginBottom: 8,
+    statusBadgePaused: {
+        backgroundColor: "#FFF7ED",
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 8,
     },
-
-    amountRow: {
-        flexDirection: "row",
-        alignItems: "baseline",
-        gap: 8,
-        marginBottom: 8,
+    statusTextPaused: {
+        fontSize: 12,
+        fontWeight: "600",
+        color: "#EA580C",
     },
-
-    autopayAmount: {
-        fontSize: 24,
-        fontWeight: "bold",
-        color: "#4CAF50",
-    },
-
-    frequency: {
-        fontSize: 14,
-        color: "#666",
-    },
-
-    nextPaymentRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        gap: 6,
+    divider: {
+        height: 1,
+        backgroundColor: "#F1F5F9",
         marginBottom: 16,
     },
-
+    cardDetails: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        marginBottom: 14,
+    },
+    detailLabel: {
+        fontSize: 11,
+        color: "#94A3B8",
+        fontWeight: "500",
+        marginBottom: 3,
+        textTransform: "uppercase",
+        letterSpacing: 0.5,
+    },
+    autopayAmount: {
+        fontSize: 17,
+        fontWeight: "800",
+        color: "#0F172A",
+    },
+    nextPaymentBox: {
+        alignItems: "flex-end",
+    },
     nextPaymentText: {
         fontSize: 14,
-        color: "#4CAF50",
-        fontWeight: "500",
+        fontWeight: "600",
+        color: "#3B82F6",
     },
-
-    mutedText: {
-        color: "#999",
+    textMuted: {
+        color: "#94A3B8",
     },
-
     actionButtons: {
         flexDirection: "row",
-        gap: 10,
-    },
-
-    pauseButton: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 6,
-        backgroundColor: "#FFF3E0",
-        paddingVertical: 10,
-        borderRadius: 12,
-    },
-
-    pauseButtonText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#FF9800",
-    },
-
-    resumeButton: {
-        backgroundColor: "#E8F5E9",
-    },
-
-    resumeButtonText: {
-        color: "#4CAF50",
-    },
-
-    cancelButton: {
-        flex: 1,
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 6,
-        backgroundColor: "#FFEBEE",
-        paddingVertical: 10,
-        borderRadius: 12,
-    },
-
-    cancelButtonText: {
-        fontSize: 14,
-        fontWeight: "600",
-        color: "#E53935",
-    },
-
-    setupButtonContainer: {
-        marginBottom: 20,
-    },
-
-    setupButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#4CAF50",
-        paddingVertical: 16,
-        borderRadius: 25,
-        gap: 10,
-        shadowColor: "#4CAF50",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 5,
-    },
-
-    setupButtonText: {
-        fontSize: 16,
-        fontWeight: "bold",
-        color: "#FFFFFF",
-    },
-
-    infoCard: {
-        flexDirection: "row",
-        backgroundColor: "#E3F2FD",
-        padding: 16,
-        borderRadius: 16,
         gap: 12,
+    },
+    outlineBtn: {
+        flex: 1,
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 5,
+        paddingVertical: 10,
+        borderRadius: 10,
         borderWidth: 1,
-        borderColor: "#BBDEFB",
+        borderColor: "#E2E8F0",
+        backgroundColor: "#FFFFFF",
     },
-
-    infoText: {
-        flex: 1,
+    outlineBtnActive: {
+        borderColor: "#0F172A",
+        backgroundColor: "#0F172A",
+    },
+    outlineBtnText: {
         fontSize: 13,
-        color: "#0D47A1",
-        lineHeight: 18,
+        fontWeight: "600",
+        color: "#64748B",
     },
-
-    // Empty State
-    emptyStateContainer: {
-        flex: 1,
-        alignItems: "center",
-        padding: 40,
-    },
-
-    illustrationContainer: {
-        marginBottom: 30,
-        marginTop: 40,
-    },
-
-    illustrationCircle: {
-        width: 160,
-        height: 160,
-        borderRadius: 80,
-        backgroundColor: "#E3F2FD",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-
-    emptyTitle: {
-        fontSize: 22,
-        fontWeight: "bold",
-        color: "#1A1A1A",
-        marginBottom: 8,
-        textAlign: "center",
-    },
-
-    emptySubtext: {
-        fontSize: 16,
-        color: "#666",
-        marginBottom: 12,
-        textAlign: "center",
-    },
-
-    emptyDescription: {
-        fontSize: 14,
-        color: "#999",
-        textAlign: "center",
-        lineHeight: 20,
-        marginBottom: 32,
-        paddingHorizontal: 20,
-    },
-
-    emptySetupButton: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#4CAF50",
-        paddingVertical: 14,
-        paddingHorizontal: 40,
-        borderRadius: 25,
-        gap: 10,
-        shadowColor: "#4CAF50",
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 5,
-        marginBottom: 40,
-    },
-
-    emptySetupButtonText: {
-        fontSize: 16,
-        fontWeight: "bold",
+    outlineBtnTextActive: {
         color: "#FFFFFF",
     },
-
-    benefitsContainer: {
-        width: "100%",
-        backgroundColor: "#FFFFFF",
-        padding: 20,
-        borderRadius: 16,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 3,
-        elevation: 2,
+    outlineBtnDanger: {
+        flex: 1,
+        alignItems: "center",
+        justifyContent: "center",
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: "#FEF2F2",
     },
-
-    benefitsTitle: {
-        fontSize: 16,
+    outlineBtnTextDanger: {
+        fontSize: 13,
         fontWeight: "600",
-        color: "#1A1A1A",
-        marginBottom: 16,
+        color: "#EF4444",
     },
-
-    benefitItem: {
+    addMandateBtn: {
         flexDirection: "row",
         alignItems: "center",
-        gap: 12,
-        marginBottom: 12,
-    },
-
-    benefitIconCircle: {
-        width: 28,
-        height: 28,
-        borderRadius: 14,
-        backgroundColor: "#E8F5E9",
         justifyContent: "center",
-        alignItems: "center",
+        gap: 8,
+        paddingVertical: 14,
+        borderRadius: 14,
+        borderWidth: 2,
+        borderColor: "#E2E8F0",
+        borderStyle: "dashed",
     },
-
-    benefitText: {
-        flex: 1,
+    addMandateText: {
         fontSize: 14,
-        color: "#666",
+        fontWeight: "700",
+        color: "#0F172A",
     },
 });
