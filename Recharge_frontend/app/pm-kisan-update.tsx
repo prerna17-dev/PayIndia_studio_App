@@ -42,9 +42,10 @@ export default function PMKisanUpdateScreen() {
     // Section 2: Update Details
     const [selectedType, setSelectedType] = useState<string | null>(null);
     const [correctedName, setCorrectedName] = useState("");
+    const [correctedMobile, setCorrectedMobile] = useState("");
     const [correctedBank, setCorrectedBank] = useState("");
     const [correctedLand, setCorrectedLand] = useState("");
-    const [otherDetails, setOtherDetails] = useState("");
+    const [remarks, setRemarks] = useState("");
 
     const [uploadedDocs, setUploadedDocs] = useState<Record<string, DocumentType>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -127,13 +128,9 @@ export default function PMKisanUpdateScreen() {
 
     const validateStep2 = () => {
         if (!selectedType) return Alert.alert("Required", "Please select a correction type");
-        setStep(3);
-    };
-
-    const validateStep3 = () => {
         if (!uploadedDocs.id_proof) return Alert.alert("Required", "Please upload ID Proof (Aadhaar)");
         if (!uploadedDocs.supporting_doc) return Alert.alert("Required", "Please upload Correction Proof");
-        setStep(4);
+        setStep(3);
     };
 
     const handleSubmit = async () => {
@@ -144,9 +141,10 @@ export default function PMKisanUpdateScreen() {
             data.append("mobile_number", mobileNumber);
             data.append("aadhaar_number", aadhaarNumber.replace(/\s/g, ""));
             data.append("correction_type", selectedType as string);
-            data.append("other_details", otherDetails);
+            data.append("other_details", remarks);
 
             if (correctedName) data.append("corrected_name", correctedName);
+            if (correctedMobile) data.append("corrected_mobile", correctedMobile);
             if (correctedBank) data.append("corrected_bank", correctedBank);
             if (correctedLand) data.append("corrected_land", correctedLand);
 
@@ -230,17 +228,17 @@ export default function PMKisanUpdateScreen() {
 
                 {/* Step Indicator */}
                 <View style={styles.stepContainer}>
-                    {[1, 2, 3, 4].map((i) => (
+                    {[1, 2, 3].map((i) => (
                         <React.Fragment key={i}>
                             <View style={styles.stepItem}>
                                 <View style={[styles.stepCircle, step >= i && styles.stepCircleActive, step > i && styles.stepCircleDone]}>
                                     {step > i ? <Ionicons name="checkmark" size={16} color="#FFF" /> : <Text style={[styles.stepNum, step >= i && styles.stepNumActive]}>{i}</Text>}
                                 </View>
                                 <Text style={[styles.stepLabel, step >= i && styles.stepLabelActive]}>
-                                    {i === 1 ? "Verify" : i === 2 ? "Select" : i === 3 ? "Update" : "Confirm"}
+                                    {i === 1 ? "Verify" : i === 2 ? "Update" : "Confirm"}
                                 </Text>
                             </View>
-                            {i < 4 && <View style={[styles.stepLine, step > i && styles.stepLineDone]} />}
+                            {i < 3 && <View style={[styles.stepLine, step > i && styles.stepLineDone]} />}
                         </React.Fragment>
                     ))}
                 </View>
@@ -288,7 +286,7 @@ export default function PMKisanUpdateScreen() {
                             <View>
                                 <View style={styles.sectionHeader}>
                                     <View style={[styles.iconBadge, { backgroundColor: '#E0F2F1' }]}><Ionicons name="options" size={20} color="#007961" /></View>
-                                    <View><Text style={styles.sectionTitle}>Correction Selection</Text><Text style={styles.sectionSub}>Select the field you want to update</Text></View>
+                                    <View><Text style={styles.sectionTitle}>Update Selection</Text><Text style={styles.sectionSub}>Select the field you want to update</Text></View>
                                 </View>
                                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeList}>
                                     {([
@@ -303,39 +301,31 @@ export default function PMKisanUpdateScreen() {
                                         </TouchableOpacity>
                                     ))}
                                 </ScrollView>
+
+                                {selectedType && (
+                                    <View>
+                                        <View style={styles.card}>
+                                            {selectedType === "mobile" && <InputGroup label="New Mobile Number *" icon="phone-portrait-outline" placeholder="Enter 10-digit mobile" value={correctedMobile} onChangeText={setCorrectedMobile} keyboardType="numeric" maxLength={10} />}
+                                            {selectedType === "aadhaar" && <InputGroup label="Correct Name as per Aadhaar *" icon="person-outline" placeholder="Enter Full Name" value={correctedName} onChangeText={setCorrectedName} />}
+                                            {selectedType === "bank" && <InputGroup label="Correct Bank Account Info *" icon="business-outline" placeholder="Bank Name / IFSC / Acc No" value={correctedBank} onChangeText={setCorrectedBank} multiline style={{ height: 60 }} />}
+                                            {selectedType === "land" && <InputGroup label="Correct Land Record Info *" icon="map-outline" placeholder="Survey No / Area" value={correctedLand} onChangeText={setCorrectedLand} multiline style={{ height: 60 }} />}
+                                            <InputGroup label="Additional Remarks" icon="document-text-outline" placeholder="Optional notes" value={remarks} onChangeText={setRemarks} multiline style={{ height: 60 }} />
+                                        </View>
+                                        <View style={styles.card}>
+                                            <Text style={styles.formHeader}>Required Documents</Text>
+                                            <DocUpload label="Aadhaar Card (ID Proof) *" id="id_proof" file={uploadedDocs.id_proof} onUpload={handleFileUpload} onRemove={(id: string) => setUploadedDocs(p => { const n = { ...p }; delete n[id]; return n; })} />
+                                            <DocUpload label="Supporting Proof for Correction *" id="supporting_doc" file={uploadedDocs.supporting_doc} onUpload={handleFileUpload} onRemove={(id: string) => setUploadedDocs(p => { const n = { ...p }; delete n[id]; return n; })} />
+                                        </View>
+                                    </View>
+                                )}
                                 
                                 <TouchableOpacity style={[styles.mainBtn, !selectedType && styles.btnDisabled]} disabled={!selectedType} onPress={validateStep2}>
-                                    <LinearGradient colors={['#1565C0', '#0D47A1']} style={styles.btnGrad}><Text style={styles.mainBtnText}>Continue</Text><Ionicons name="arrow-forward" size={20} color="#FFF" /></LinearGradient>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-
-                        {step === 3 && (
-                            <View>
-                                <View style={styles.sectionHeader}>
-                                    <View style={[styles.iconBadge, { backgroundColor: '#F3E5F5' }]}><Ionicons name="create" size={20} color="#7B1FA2" /></View>
-                                    <View><Text style={styles.sectionTitle}>Update Details</Text><Text style={styles.sectionSub}>Enter correct values and upload proofs</Text></View>
-                                </View>
-                                <View style={styles.card}>
-                                    {selectedType === "mobile" && <InputGroup label="New Mobile Number *" icon="phone-portrait-outline" placeholder="Enter 10-digit mobile" value={otherDetails} onChangeText={setOtherDetails} keyboardType="numeric" maxLength={10} />}
-                                    {selectedType === "aadhaar" && <InputGroup label="Correct Name as per Aadhaar *" icon="person-outline" placeholder="Enter Full Name" value={correctedName} onChangeText={setCorrectedName} />}
-                                    {selectedType === "bank" && <InputGroup label="Correct Bank Account Info *" icon="business-outline" placeholder="Bank Name / IFSC / Acc No" value={correctedBank} onChangeText={setCorrectedBank} multiline style={{ height: 60 }} />}
-                                    {selectedType === "land" && <InputGroup label="Correct Land Record Info *" icon="map-outline" placeholder="Survey No / Area" value={correctedLand} onChangeText={setCorrectedLand} multiline style={{ height: 60 }} />}
-                                    <InputGroup label="Additional Remarks" icon="document-text-outline" placeholder="Optional notes" value={otherDetails} onChangeText={setOtherDetails} multiline style={{ height: 60 }} />
-                                </View>
-                                <View style={styles.card}>
-                                    <Text style={styles.formHeader}>Required Documents</Text>
-                                    <DocUpload label="Aadhaar Card (ID Proof) *" id="id_proof" file={uploadedDocs.id_proof} onUpload={handleFileUpload} onRemove={(id: string) => setUploadedDocs(p => { const n = { ...p }; delete n[id]; return n; })} />
-                                    <DocUpload label="Supporting Proof for Correction *" id="supporting_doc" file={uploadedDocs.supporting_doc} onUpload={handleFileUpload} onRemove={(id: string) => setUploadedDocs(p => { const n = { ...p }; delete n[id]; return n; })} />
-                                </View>
-
-                                <TouchableOpacity style={styles.mainBtn} onPress={validateStep3}>
                                     <LinearGradient colors={['#1565C0', '#0D47A1']} style={styles.btnGrad}><Text style={styles.mainBtnText}>Continue to Review</Text><Ionicons name="arrow-forward" size={20} color="#FFF" /></LinearGradient>
                                 </TouchableOpacity>
                             </View>
                         )}
 
-                        {step === 4 && (
+                        {step === 3 && (
                             <View>
                                 <View style={styles.sectionHeader}>
                                     <View style={[styles.iconBadge, { backgroundColor: '#FBE9E7' }]}><Ionicons name="eye" size={20} color="#D84315" /></View>
@@ -346,6 +336,7 @@ export default function PMKisanUpdateScreen() {
                                     <ReviewRow label="Registration Mobile" value={mobileNumber} />
                                     <ReviewRow label="Correction Proof" value={uploadedDocs.supporting_doc?.name} isGreen />
                                     {correctedName && <ReviewRow label="New Name" value={correctedName} />}
+                                    {correctedMobile && <ReviewRow label="New mobile" value={correctedMobile} />}
                                     {correctedBank && <ReviewRow label="Bank Info" value={correctedBank} />}
                                     {correctedLand && <ReviewRow label="Land Info" value={correctedLand} />}
                                 </View>

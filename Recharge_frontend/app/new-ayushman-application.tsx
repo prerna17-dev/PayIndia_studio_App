@@ -5,6 +5,7 @@ import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     BackHandler,
     SafeAreaView,
@@ -16,7 +17,10 @@ import {
     View,
     Modal,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -42,6 +46,7 @@ interface FormDataType {
     state: string;
     district: string;
     village: string;
+    taluka: string;
 
     // Family Details
     rationCardNumber: string;
@@ -72,6 +77,7 @@ export default function NewAyushmanApplicationScreen() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
     const [showMemberModal, setShowMemberModal] = useState(false);
+    const [showCopied, setShowCopied] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
 
     // Temp Member State
@@ -97,8 +103,9 @@ export default function NewAyushmanApplicationScreen() {
         mobileNumber: "",
         gender: "",
         dob: "",
-        state: "Maharashtra",
+        state: "",
         district: "",
+        taluka: "",
         village: "",
         rationCardNumber: "",
         familyMembers: [],
@@ -106,6 +113,13 @@ export default function NewAyushmanApplicationScreen() {
         isEligible: null,
         declaration: false,
     });
+
+    // Aadhaar OTP State
+    const [isAadhaarVerified, setIsAadhaarVerified] = useState(false);
+    const [otpSent, setOtpSent] = useState(false);
+    const [otp, setOtp] = useState("");
+    const [isOtpSending, setIsOtpSending] = useState(false);
+    const [isOtpVerifyingProgress, setIsOtpVerifyingProgress] = useState(false);
 
     useEffect(() => {
         const backAction = () => {
@@ -154,6 +168,9 @@ export default function NewAyushmanApplicationScreen() {
         if (formData.eligibilityType === "Aadhaar" && !formData.aadhaarNumber) {
             Alert.alert("Wait", "Enter Aadhaar Number first"); return;
         }
+        if (formData.eligibilityType === "Aadhaar" && !isAadhaarVerified) {
+            Alert.alert("Wait", "Please verify Aadhaar via OTP first"); return;
+        }
         if (formData.eligibilityType === "Ration Card" && !formData.rationCardNumber) {
             Alert.alert("Wait", "Enter Ration Card Number first"); return;
         }
@@ -164,6 +181,68 @@ export default function NewAyushmanApplicationScreen() {
             setFormData(prev => ({ ...prev, isEligible: true }));
             Alert.alert("Success", "You are eligible for PM-JAY scheme benefits!");
         }, 1500);
+    };
+
+    const sendAadhaarOtp = async () => {
+        if (!formData.aadhaarNumber || formData.aadhaarNumber.length !== 12) {
+            Alert.alert("Error", "Please enter a valid 12-digit Aadhaar number");
+            return;
+        }
+        if (!formData.mobileNumber || formData.mobileNumber.length !== 10) {
+            Alert.alert("Error", "Please enter a valid 10-digit mobile number first");
+            return;
+        }
+
+        setIsOtpSending(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const res = await axios.post(API_ENDPOINTS.AYUSHMAN_APPLY_OTP_SEND, {
+                aadhaar_number: formData.aadhaarNumber,
+                mobile_number: formData.mobileNumber
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success) {
+                setOtpSent(true);
+                Alert.alert("OTP Sent", "Verification code sent to your mobile number");
+            } else {
+                Alert.alert("Error", res.data.message);
+            }
+        } catch (err) {
+            Alert.alert("Error", "Failed to send OTP");
+        } finally {
+            setIsOtpSending(false);
+        }
+    };
+
+    const verifyAadhaarOtp = async () => {
+        if (!otp || otp.length !== 6) {
+            Alert.alert("Error", "Please enter 6-digit OTP");
+            return;
+        }
+
+        setIsOtpVerifyingProgress(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const res = await axios.post(API_ENDPOINTS.AYUSHMAN_APPLY_OTP_VERIFY, {
+                mobile_number: formData.mobileNumber,
+                otp: otp
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (res.data.success) {
+                setIsAadhaarVerified(true);
+                Alert.alert("Success", "Aadhaar verified successfully!");
+            } else {
+                Alert.alert("Error", res.data.message);
+            }
+        } catch (err) {
+            Alert.alert("Error", "OTP verification failed");
+        } finally {
+            setIsOtpVerifyingProgress(false);
+        }
     };
 
     const pickDocument = async (docType: keyof DocumentsState) => {
@@ -186,10 +265,19 @@ export default function NewAyushmanApplicationScreen() {
         setFormData(prev => ({ ...prev, dob: formatted }));
     };
 
-    const handleContinue = () => {
+    const handleContinue = async () => {
         if (currentStep === 1) {
             if (!formData.fullName || !formData.aadhaarNumber || !formData.mobileNumber || !formData.gender || !formData.dob) {
                 Alert.alert("Wait", "Please fill applicant details"); return;
+            }
+            if (!isAadhaarVerified) {
+                Alert.alert("Wait", "Please verify Aadhaar first"); return;
+            }
+            if (!formData.state || !formData.district || !formData.taluka || !formData.village) {
+                Alert.alert("Wait", "Please fill location details"); return;
+            }
+            if (!formData.rationCardNumber) {
+                Alert.alert("Wait", "Please enter ration card number"); return;
             }
             if (!formData.isEligible) {
                 Alert.alert("Wait", "Please verify eligibility first"); return;
@@ -203,11 +291,44 @@ export default function NewAyushmanApplicationScreen() {
         } else {
             if (!formData.declaration) { Alert.alert("Wait", "Confirm declaration"); return; }
             setIsSubmitting(true);
-            setTimeout(() => {
-                setApplicationId("PMJAY-" + Math.random().toString(36).substr(2, 6).toUpperCase());
+            try {
+                const token = await AsyncStorage.getItem("userToken");
+                const data = new FormData();
+                data.append("full_name", formData.fullName);
+                data.append("aadhaar_number", formData.aadhaarNumber);
+                data.append("mobile_number", formData.mobileNumber);
+                data.append("gender", formData.gender);
+                data.append("dob", formData.dob);
+                data.append("state", formData.state);
+                data.append("district", formData.district);
+                data.append("taluka", formData.taluka);
+                data.append("village", formData.village);
+                data.append("ration_card_number", formData.rationCardNumber);
+                data.append("eligibility_type", formData.eligibilityType);
+                data.append("is_eligible", "true");
+                data.append("family_members", JSON.stringify(formData.familyMembers));
+
+                if (documents.aadhaarHead) data.append("aadhaar_head", { uri: documents.aadhaarHead.uri, name: documents.aadhaarHead.name, type: "application/pdf" } as any);
+                if (documents.rationCard) data.append("ration_card", { uri: documents.rationCard.uri, name: documents.rationCard.name, type: "application/pdf" } as any);
+                if (documents.addressProof) data.append("address_proof", { uri: documents.addressProof.uri, name: documents.addressProof.name, type: "application/pdf" } as any);
+                if (documents.photo) data.append("photo", { uri: documents.photo.uri, name: documents.photo.name, type: "image/jpeg" } as any);
+                if (documents.seccProof) data.append("secc_proof", { uri: documents.seccProof.uri, name: documents.seccProof.name, type: "application/pdf" } as any);
+
+                const res = await axios.post(API_ENDPOINTS.AYUSHMAN_APPLY, data, {
+                    headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${token}` }
+                });
+
+                if (res.data.success) {
+                    setApplicationId(res.data.data.reference_id);
+                    setIsSubmitted(true);
+                } else {
+                    Alert.alert("Error", res.data.message);
+                }
+            } catch (err) {
+                Alert.alert("Error", "Submission failed. Please check your network.");
+            } finally {
                 setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            }
         }
     };
 
@@ -245,10 +366,26 @@ export default function NewAyushmanApplicationScreen() {
                     </View>
                     <Text style={styles.successTitle}>Application Submitted!</Text>
                     <Text style={styles.successSubtitle}>Your Ayushman Card application has been received and is under verification.</Text>
-                    <View style={styles.idCard}>
+                    <TouchableOpacity
+                        style={styles.idCard}
+                        onPress={async () => {
+                            await Clipboard.setStringAsync(applicationId);
+                            setShowCopied(true);
+                            setTimeout(() => setShowCopied(false), 2000);
+                        }}
+                    >
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <Ionicons name="copy-outline" size={20} color="#0D47A1" />
+                        </View>
+                    </TouchableOpacity>
+
+                    {showCopied && (
+                        <View style={styles.toast}>
+                            <Text style={styles.toastText}>Copied to clipboard</Text>
+                        </View>
+                    )}
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.replace("/ayushman-services")}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
@@ -286,14 +423,68 @@ export default function NewAyushmanApplicationScreen() {
                                 <Label text="Full Name (as per Aadhaar) *" />
                                 <Input value={formData.fullName} onChangeText={(t: string) => setFormData({ ...formData, fullName: t })} placeholder="Enter full name" />
 
+                                <Label text="Mobile Number *" />
+                                <Input value={formData.mobileNumber} onChangeText={(t: string) => setFormData({ ...formData, mobileNumber: t })} placeholder="10-digit mobile" keyboardType="phone-pad" maxLength={10} icon="phone-portrait-outline" editable={!isAadhaarVerified} />
+
                                 <Label text="Aadhaar Number *" />
-                                <Input value={formData.aadhaarNumber} onChangeText={(t: string) => setFormData({ ...formData, aadhaarNumber: t })} placeholder="12-digit Aadhaar" keyboardType="number-pad" maxLength={12} icon="card-outline" />
+                                <View style={styles.otpInputRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Input
+                                            value={formData.aadhaarNumber}
+                                            onChangeText={(t: string) => setFormData({ ...formData, aadhaarNumber: t.replace(/\D/g, '').substring(0, 12) })}
+                                            placeholder="12 digit Aadhaar number"
+                                            keyboardType="number-pad"
+                                            maxLength={12}
+                                            editable={!isAadhaarVerified}
+                                            icon="card-outline"
+                                        />
+                                    </View>
+                                    <TouchableOpacity
+                                        style={[styles.inlineOtpBtn, (otpSent || isAadhaarVerified) && styles.inlineOtpBtnDisabled]}
+                                        onPress={sendAadhaarOtp}
+                                        disabled={isAadhaarVerified || isOtpSending}
+                                    >
+                                        {isOtpSending ? (
+                                            <ActivityIndicator size="small" color="#FFF" />
+                                        ) : (
+                                            <Text style={styles.inlineOtpBtnText}>
+                                                {isAadhaarVerified ? "Verified" : otpSent ? "Resend" : "Send OTP"}
+                                            </Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+
+                                {otpSent && !isAadhaarVerified && (
+                                    <View style={{ marginTop: 10 }}>
+                                        <Label text="Enter 6-digit OTP *" />
+                                        <View style={styles.otpInputRow}>
+                                            <View style={{ flex: 1 }}>
+                                                <Input
+                                                    value={otp}
+                                                    onChangeText={setOtp}
+                                                    placeholder="X X X X X X"
+                                                    keyboardType="number-pad"
+                                                    maxLength={6}
+                                                    icon="shield-checkmark-outline"
+                                                />
+                                            </View>
+                                            <TouchableOpacity
+                                                style={styles.verifyBtnInline}
+                                                onPress={verifyAadhaarOtp}
+                                                disabled={isOtpVerifyingProgress}
+                                            >
+                                                {isOtpVerifyingProgress ? (
+                                                    <ActivityIndicator size="small" color="#FFF" />
+                                                ) : (
+                                                    <Text style={styles.verifyBtnTextInline}>Verify</Text>
+                                                )}
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                )}
 
                                 <Label text="Date of Birth *" />
                                 <Input value={formData.dob} onChangeText={handleDOBChange} placeholder="DD/MM/YYYY" maxLength={10} keyboardType="number-pad" icon="calendar-outline" />
-
-                                <Label text="Mobile Number *" />
-                                <Input value={formData.mobileNumber} onChangeText={(t: string) => setFormData({ ...formData, mobileNumber: t })} placeholder="10-digit mobile" keyboardType="phone-pad" maxLength={10} icon="phone-portrait-outline" />
 
                                 <Label text="Gender *" />
                                 <View style={styles.genderContainer}>
@@ -302,6 +493,18 @@ export default function NewAyushmanApplicationScreen() {
                                             <Text style={[styles.genderText, formData.gender === g && styles.genderTextActive]}>{g}</Text>
                                         </TouchableOpacity>
                                     ))}
+                                </View>
+                            </View>
+
+                            <SectionTitle title="Location Details" icon="location" />
+                            <View style={styles.formCard}>
+                                <Label text="State *" />
+                                <Input value={formData.state} onChangeText={(t: string) => setFormData({ ...formData, state: t })} placeholder="Enter state" />
+                                <Label text="District *" />
+                                <Input value={formData.district} onChangeText={(t: string) => setFormData({ ...formData, district: t })} placeholder="Enter district" />
+                                <View style={styles.inputRow}>
+                                    <View style={{ flex: 1, marginRight: 10 }}><Label text="Taluka *" /><Input value={formData.taluka} onChangeText={(t: string) => setFormData({ ...formData, taluka: t })} placeholder="Taluka" /></View>
+                                    <View style={{ flex: 1 }}><Label text="Village *" /><Input value={formData.village} onChangeText={(t: string) => setFormData({ ...formData, village: t })} placeholder="Village" /></View>
                                 </View>
                             </View>
 
@@ -378,16 +581,22 @@ export default function NewAyushmanApplicationScreen() {
                                 { label: "Gender", value: formData.gender },
                             ]} onEdit={() => setCurrentStep(1)} />
 
+                            <ReviewCard title="Location Details" data={[
+                                { label: "State", value: formData.state },
+                                { label: "District", value: formData.district },
+                                { label: "Taluka/Village", value: `${formData.taluka}, ${formData.village}` },
+                            ]} onEdit={() => setCurrentStep(1)} />
+
                             <ReviewCard title="Family members" data={[
                                 { label: "Ration Card", value: formData.rationCardNumber },
                                 { label: "Total Members", value: formData.familyMembers.length.toString() },
-                                { label: "Eligibility", value: formData.isEligible ? "Verified ✅" : "Not Verified ❌" },
+                                { label: "Eligibility", value: formData.isEligible ? "Verified" : "Not Verified" },
                             ]} onEdit={() => setCurrentStep(1)} />
 
                             <ReviewCard title="Documents" data={[
-                                { label: "Aadhaar (Head)", value: documents.aadhaarHead ? "Uploaded ✅" : "Missing ❌" },
-                                { label: "Ration Card", value: documents.rationCard ? "Uploaded ✅" : "Missing ❌" },
-                                { label: "Other Docs", value: (!!documents.addressProof && !!documents.photo) ? "Uploaded ✅" : "Incomplete ❌" },
+                                { label: "Aadhaar (Head)", value: documents.aadhaarHead ? "Uploaded" : "Missing" },
+                                { label: "Ration Card", value: documents.rationCard ? "Uploaded" : "Missing" },
+                                { label: "Other Docs", value: (!!documents.addressProof && !!documents.photo) ? "Uploaded" : "Incomplete" },
                             ]} onEdit={() => setCurrentStep(2)} />
 
                             <TouchableOpacity style={styles.declarationRow} onPress={() => setFormData({ ...formData, declaration: !formData.declaration })}>
@@ -396,17 +605,23 @@ export default function NewAyushmanApplicationScreen() {
                             </TouchableOpacity>
                         </View>
                     )}
-                    <View style={{ height: 100 }} />
+                    {/* Continue Button inside ScrollView */}
+                    <View style={styles.bottomBarInside}>
+                        <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8} disabled={isSubmitting}>
+                            <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.buttonGradient}>
+                                {isSubmitting ? (
+                                    <ActivityIndicator color="#FFF" size="small" />
+                                ) : (
+                                    <>
+                                        <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
+                                        <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
+                                    </>
+                                )}
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                    <View style={{ height: 40 }} />
                 </ScrollView>
-
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.buttonGradient}>
-                            <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
-                            <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
 
                 {/* Add Member Modal */}
                 <Modal visible={showMemberModal} transparent animationType="fade">
@@ -454,7 +669,7 @@ const Input = ({ icon, ...props }: any) => (
 const DocCard = ({ title, hint, isUploaded, onPress, icon }: any) => (
     <TouchableOpacity style={[styles.docUploadCard, isUploaded && styles.docUploadCardActive]} onPress={onPress}>
         <View style={styles.docIconCircle}><MaterialCommunityIcons name={icon} size={24} color={isUploaded ? "#0D47A1" : "#64748B"} /></View>
-        <View style={{ flex: 1, marginLeft: 12 }}><Text style={styles.docTitle}>{title}</Text><Text style={styles.docHint}>{isUploaded ? "File selected ✅" : hint}</Text></View>
+        <View style={{ flex: 1, marginLeft: 12 }}><Text style={styles.docTitle}>{title}</Text><Text style={styles.docHint}>{isUploaded ? "File selected" : hint}</Text></View>
         <Ionicons name={isUploaded ? "checkmark-circle" : "cloud-upload"} size={22} color={isUploaded ? "#2E7D32" : "#94A3B8"} />
     </TouchableOpacity>
 );
@@ -534,7 +749,7 @@ const styles = StyleSheet.create({
     reviewValue: { fontSize: 13, fontWeight: "600", color: "#1E293B" },
     declarationRow: { flexDirection: "row", gap: 10, marginTop: 10, paddingHorizontal: 4 },
     declarationLabel: { flex: 1, fontSize: 12, color: "#64748B", lineHeight: 18 },
-    bottomBar: { padding: 20, backgroundColor: "#FFF", borderTopWidth: 1, borderTopColor: "#F1F5F9" },
+    bottomBarInside: { paddingVertical: 20, paddingHorizontal: 4, marginTop: 10 },
     continueButton: { height: 54, borderRadius: 16, overflow: "hidden" },
     buttonGradient: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
     buttonText: { fontSize: 16, fontWeight: "800", color: "#FFF" },
@@ -555,4 +770,13 @@ const styles = StyleSheet.create({
     modalBtn: { height: 50, borderRadius: 12, overflow: "hidden", marginTop: 10 },
     modalBtnGrad: { flex: 1, alignItems: "center", justifyContent: "center" },
     modalBtnText: { color: "#FFF", fontWeight: "800", fontSize: 15 },
+    otpInputRow: { flexDirection: "row", gap: 10, alignItems: "center" },
+    inlineOtpBtn: { backgroundColor: "#1565C0", paddingHorizontal: 15, height: 48, borderRadius: 12, justifyContent: "center", borderWidth: 1, borderColor: "#0D47A1" },
+    inlineOtpBtnDisabled: { opacity: 0.6, borderColor: "#E2E8F0" },
+    inlineOtpBtnText: { color: "#FFFFFF", fontWeight: "700", fontSize: 12 },
+    verifyBtnInline: { backgroundColor: "#2E7D32", paddingHorizontal: 20, height: 48, borderRadius: 12, justifyContent: "center" },
+    verifyBtnTextInline: { color: "#FFF", fontWeight: "700", fontSize: 14 },
+    // Toast
+    toast: { position: 'absolute', bottom: 50, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, zIndex: 99 },
+    toastText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
 });

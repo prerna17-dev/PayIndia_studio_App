@@ -55,11 +55,6 @@ export default function PMKisanStatusScreen() {
         }
     };
 
-    const installments = [
-        { num: 15, date: "15 Nov 2025", status: "Success", amount: "₹2,000", bank: "State Bank of India" },
-        { num: 14, date: "28 Jul 2025", status: "Success", amount: "₹2,000", bank: "State Bank of India" },
-    ];
-
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
@@ -149,26 +144,12 @@ export default function PMKisanStatusScreen() {
                             </View>
 
                             <Text style={styles.sectionTitle}>Installment History</Text>
-                            <View style={styles.historyList}>
-                                {installments.map((item, idx) => (
-                                    <View key={idx} style={styles.installmentCard}>
-                                        <View style={styles.instHeader}>
-                                            <View style={styles.instBadge}><Text style={styles.instBadgeText}>{item.num}th Installment</Text></View>
-                                            <Text style={styles.instAmount}>{item.amount}</Text>
-                                        </View>
-                                        <View style={styles.instRow}>
-                                            <Ionicons name="calendar-outline" size={14} color="#64748B" />
-                                            <Text style={styles.instDate}>Date: {item.date}</Text>
-                                        </View>
-                                        <View style={styles.instRow}>
-                                            <Ionicons name="business-outline" size={14} color="#64748B" />
-                                            <Text style={styles.instBank}>Bank: {item.bank}</Text>
-                                        </View>
-                                        <View style={styles.instFooter}>
-                                            <View style={styles.statusBadge}><View style={styles.statusDot} /><Text style={styles.statusText}>Payment {item.status}</Text></View>
-                                        </View>
-                                    </View>
-                                ))}
+                            <View style={styles.emptyHistoryCard}>
+                                <View style={styles.emptyIconCircle}>
+                                    <MaterialCommunityIcons name="calendar-clock" size={32} color="#64748B" />
+                                </View>
+                                <Text style={styles.emptyTitle}>No Installments Found</Text>
+                                <Text style={styles.emptySubtitle}>There are no installments started or made for this beneficiary until now.</Text>
                             </View>
 
                             <TouchableOpacity style={styles.resetBtn} onPress={() => setShowStatus(false)}>
@@ -218,19 +199,10 @@ const styles = StyleSheet.create({
     benInfoValue: { fontSize: 14, fontWeight: "700", color: "#1E293B", marginTop: 4 },
 
     sectionTitle: { fontSize: 16, fontWeight: "800", color: "#1E293B", marginBottom: 15, marginLeft: 4 },
-    historyList: { gap: 12 },
-    installmentCard: { backgroundColor: "#FFF", borderRadius: 16, padding: 16, borderWidth: 1, borderColor: "#F1F5F9" },
-    instHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-    instBadge: { backgroundColor: "#F1F5F9", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-    instBadgeText: { fontSize: 11, fontWeight: "700", color: "#475569" },
-    instAmount: { fontSize: 16, fontWeight: "800", color: "#1E293B" },
-    instRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
-    instDate: { fontSize: 12, color: "#64748B", fontWeight: "500" },
-    instBank: { fontSize: 12, color: "#64748B", fontWeight: "500" },
-    instFooter: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#F8FAFC" },
-    statusBadge: { flexDirection: "row", alignItems: "center", gap: 6 },
-    statusDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#2E7D32" },
-    statusText: { fontSize: 12, fontWeight: "700", color: "#2E7D32" },
+    emptyHistoryCard: { backgroundColor: "#FFF", borderRadius: 24, padding: 40, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#F1F5F9", borderStyle: 'dashed' },
+    emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: "#F8FAFC", alignItems: "center", justifyContent: "center", marginBottom: 16 },
+    emptyTitle: { fontSize: 16, fontWeight: "800", color: "#1E293B", marginBottom: 8 },
+    emptySubtitle: { fontSize: 13, color: "#64748B", textAlign: "center", lineHeight: 20 },
 
     resetBtn: { marginTop: 30, alignItems: "center", paddingVertical: 15 },
     resetBtnText: { fontSize: 14, fontWeight: "700", color: "#1565C0" },

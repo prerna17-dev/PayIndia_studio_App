@@ -26,12 +26,18 @@ const seniorCitizenUpload = upload.fields([
     { name: "age_proof", maxCount: 1 },
     { name: "address_proof", maxCount: 1 },
     { name: "photo", maxCount: 1 },
+    { name: "supporting_doc", maxCount: 1 },
 ]);
 
 // All routes require authentication
 router.use(authMiddleware);
 
 router.post("/apply", seniorCitizenUpload, seniorCitizenController.createApplication);
+router.post("/otp/send", seniorCitizenController.sendOtp);
+router.post("/otp/verify", seniorCitizenController.verifyOtp);
+router.post("/apply/otp/send", seniorCitizenController.sendApplyOtp);
+router.post("/apply/otp/verify", seniorCitizenController.verifyApplyOtp);
+router.post("/correction", seniorCitizenUpload, seniorCitizenController.submitCorrection);
 router.get("/list", seniorCitizenController.getApplications);
 router.get("/:referenceId", seniorCitizenController.getApplicationByRef);
 router.put("/update-status/:id", seniorCitizenController.updateStatus);

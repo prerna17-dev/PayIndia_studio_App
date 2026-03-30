@@ -5,6 +5,7 @@ import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     BackHandler,
     SafeAreaView,
@@ -15,7 +16,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
 
 interface DocumentType {
     name: string;
@@ -38,6 +42,7 @@ interface FormDataType {
     village: string;
     taluka: string;
     district: string;
+    state: string;
     pincode: string;
 
     declaration: boolean;
@@ -60,6 +65,14 @@ export default function NewSeniorCitizenApplicationScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [showCopied, setShowCopied] = useState(false);
+
+    // OTP States
+    const [isOtpSent, setIsOtpSent] = useState(false);
+    const [isOtpVerified, setIsOtpVerified] = useState(false);
+    const [otpCode, setOtpCode] = useState("");
+    const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
     const [documents, setDocuments] = useState<DocumentsState>({
         aadhaarCard: null,
@@ -80,6 +93,7 @@ export default function NewSeniorCitizenApplicationScreen() {
         village: "",
         taluka: "",
         district: "",
+        state: "",
         pincode: "",
         declaration: false,
         finalConfirmation: false,
@@ -131,6 +145,68 @@ export default function NewSeniorCitizenApplicationScreen() {
         setFormData(prev => ({ ...prev, dob: formatted }));
     };
 
+    const handleSendOTP = async () => {
+        if (formData.aadhaarNumber.length !== 12) {
+            Alert.alert("Error", "Please enter a valid 12-digit Aadhaar number");
+            return;
+        }
+        if (formData.mobileNumber.length !== 10) {
+            Alert.alert("Error", "Please enter a valid 10-digit mobile number");
+            return;
+        }
+
+        setIsSendingOtp(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.SENIOR_CITIZEN_APPLY_OTP_SEND, {
+                mobile_number: formData.mobileNumber,
+                aadhaar_number: formData.aadhaarNumber
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("OTP Sent", "Verification code sent to your mobile.");
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to send OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Service temporarily unavailable.");
+        } finally {
+            setIsSendingOtp(false);
+        }
+    };
+
+    const handleVerifyOTP = async () => {
+        if (otpCode.length !== 6) {
+            Alert.alert("Error", "Please enter 6-digit OTP");
+            return;
+        }
+
+        setIsVerifyingOtp(true);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.SENIOR_CITIZEN_APPLY_OTP_VERIFY, {
+                mobile_number: formData.mobileNumber,
+                otp: otpCode
+            }, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsOtpVerified(true);
+                Alert.alert("Success", "Aadhaar verified successfully!");
+            } else {
+                Alert.alert("Error", response.data.message || "Invalid OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "Verification failed.");
+        } finally {
+            setIsVerifyingOtp(false);
+        }
+    };
+
     const calculateAge = (dob: string) => {
         if (!dob || dob.length < 10) return 0;
         const [day, month, year] = dob.split('/').map(Number);
@@ -147,6 +223,10 @@ export default function NewSeniorCitizenApplicationScreen() {
             if (!formData.fullName || !formData.aadhaarNumber || !formData.dob || !formData.gender || !formData.mobileNumber) {
                 Alert.alert("Wait", "Please fill all mandatory applicant details"); return;
             }
+            if (!isOtpVerified) {
+                Alert.alert("Verification Required", "Please verify your Aadhaar via OTP before continuing.");
+                return;
+            }
             if (formData.aadhaarNumber.length !== 12) { Alert.alert("Wait", "Invalid Aadhaar"); return; }
             if (formData.mobileNumber.length !== 10) { Alert.alert("Wait", "Invalid Mobile"); return; }
 
@@ -156,7 +236,7 @@ export default function NewSeniorCitizenApplicationScreen() {
                 return;
             }
 
-            if (!formData.houseNo || !formData.village || !formData.taluka || !formData.pincode) {
+            if (!formData.houseNo || !formData.village || !formData.taluka || !formData.pincode || !formData.state) {
                 Alert.alert("Wait", "Please fill address details"); return;
             }
             setCurrentStep(2);
@@ -167,12 +247,65 @@ export default function NewSeniorCitizenApplicationScreen() {
             setCurrentStep(3);
         } else {
             if (!formData.finalConfirmation) { Alert.alert("Wait", "Confirm declaration"); return; }
-            setIsSubmitting(true);
-            setTimeout(() => {
-                setApplicationId("SC-" + Math.random().toString(36).substr(2, 6).toUpperCase());
-                setIsSubmitting(false);
-                setIsSubmitted(true);
-            }, 2000);
+            
+            const submitData = async () => {
+                setIsSubmitting(true);
+                try {
+                    const token = await AsyncStorage.getItem("userToken");
+                    const data = new FormData();
+
+                    // Personal Details
+                    data.append("full_name", formData.fullName);
+                    data.append("aadhaar_number", formData.aadhaarNumber);
+                    data.append("dob", formData.dob);
+                    data.append("gender", formData.gender);
+                    data.append("mobile_number", formData.mobileNumber);
+                    data.append("email", formData.email);
+
+                    // Address
+                    data.append("house_no", formData.houseNo);
+                    data.append("street", formData.street);
+                    data.append("village", formData.village);
+                    data.append("taluka", formData.taluka);
+                    data.append("district", formData.district);
+                    data.append("state", formData.state);
+                    data.append("pincode", formData.pincode);
+
+                    // Documents
+                    if (documents.aadhaarCard) {
+                        data.append("aadhaar_card", { uri: documents.aadhaarCard.uri, name: documents.aadhaarCard.name, type: "application/pdf" } as any);
+                    }
+                    if (documents.ageProof) {
+                        data.append("age_proof", { uri: documents.ageProof.uri, name: documents.ageProof.name, type: "application/pdf" } as any);
+                    }
+                    if (documents.addressProof) {
+                        data.append("address_proof", { uri: documents.addressProof.uri, name: documents.addressProof.name, type: "application/pdf" } as any);
+                    }
+                    if (documents.photo) {
+                        data.append("photo", { uri: documents.photo.uri, name: documents.photo.name, type: "image/jpeg" } as any);
+                    }
+
+                    const response = await axios.post(API_ENDPOINTS.SENIOR_CITIZEN_APPLY, data, {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                            Authorization: `Bearer ${token}`,
+                        },
+                    });
+
+                    if (response.data.success) {
+                        setApplicationId(response.data.data.reference_id);
+                        setIsSubmitted(true);
+                    } else {
+                        Alert.alert("Error", response.data.message || "Failed to submit application");
+                    }
+                } catch (error: any) {
+                    console.error("Submission error:", error.response?.data || error.message);
+                    Alert.alert("Error", error.response?.data?.message || "Failed to connect to server");
+                } finally {
+                    setIsSubmitting(false);
+                }
+            };
+            submitData();
         }
     };
 
@@ -210,10 +343,27 @@ export default function NewSeniorCitizenApplicationScreen() {
                     </View>
                     <Text style={styles.successTitle}>Application Submitted!</Text>
                     <Text style={styles.successSubtitle}>Your Senior Citizen Certificate application has been received.</Text>
-                    <View style={styles.idCard}>
+                    
+                    <TouchableOpacity 
+                        style={styles.idCard} 
+                        onPress={async () => {
+                            await Clipboard.setStringAsync(applicationId);
+                            setShowCopied(true);
+                            setTimeout(() => setShowCopied(false), 2000);
+                        }}
+                    >
                         <Text style={styles.idLabel}>Reference ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <Ionicons name="copy-outline" size={20} color="#0D47A1" />
+                        </View>
+                    </TouchableOpacity>
+
+                    {showCopied && (
+                        <View style={styles.toast}>
+                            <Text style={styles.toastText}>Copied to clipboard</Text>
+                        </View>
+                    )}
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.replace("/senior-citizen-services")}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
                             <Text style={styles.mainBtnText}>Return to Services</Text>
@@ -251,11 +401,78 @@ export default function NewSeniorCitizenApplicationScreen() {
                                 <Label text="Full Name (as per Aadhaar) *" />
                                 <Input value={formData.fullName} onChangeText={(t: string) => setFormData({ ...formData, fullName: t })} placeholder="Enter your full name" icon="person-outline" />
 
-                                <Label text="Aadhaar Number *" />
-                                <Input value={formData.aadhaarNumber} onChangeText={(t: string) => setFormData({ ...formData, aadhaarNumber: t })} placeholder="12-digit Aadhaar" keyboardType="number-pad" maxLength={12} icon="card-outline" />
+                                <Label text="Mobile Number *" />
+                                <Input value={formData.mobileNumber} onChangeText={(t: string) => setFormData({ ...formData, mobileNumber: t })} placeholder="10-digit mobile" keyboardType="phone-pad" maxLength={10} icon="phone-portrait-outline" />
 
-                                <Label text="Date of Birth *" />
-                                <Input value={formData.dob} onChangeText={handleDOBChange} placeholder="DD/MM/YYYY" maxLength={10} keyboardType="number-pad" icon="calendar-outline" />
+                                <Label text="Aadhaar Number *" />
+                                <View style={styles.otpRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <Input
+                                            value={formData.aadhaarNumber}
+                                            onChangeText={(text: string) => setFormData({ ...formData, aadhaarNumber: text.replace(/\D/g, '').substring(0, 12) })}
+                                            placeholder="12-digit Aadhaar"
+                                            keyboardType="number-pad"
+                                            maxLength={12}
+                                            icon="card-outline"
+                                            editable={!isOtpVerified}
+                                        />
+                                    </View>
+                                    {!isOtpVerified && (
+                                        <TouchableOpacity 
+                                            style={[styles.otpBtn, isSendingOtp && styles.btnDisabled]} 
+                                            onPress={handleSendOTP} 
+                                            disabled={isSendingOtp}
+                                        >
+                                            {isSendingOtp ? <ActivityIndicator size="small" color="#FFF" /> : (
+                                                <Text style={styles.otpBtnText}>{isOtpSent ? "Resend" : "Send OTP"}</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+
+                                {isOtpSent && !isOtpVerified && (
+                                    <View style={styles.otpVerifyContainer}>
+                                        <View style={{ flex: 1 }}>
+                                            <Input
+                                                value={otpCode}
+                                                onChangeText={setOtpCode}
+                                                placeholder="Enter 6-digit OTP"
+                                                keyboardType="number-pad"
+                                                maxLength={6}
+                                                icon="shield-checkmark-outline"
+                                            />
+                                        </View>
+                                        <TouchableOpacity 
+                                            style={[styles.otpBtn, isVerifyingOtp && styles.btnDisabled, { backgroundColor: '#2E7D32' }]} 
+                                            onPress={handleVerifyOTP} 
+                                            disabled={isVerifyingOtp}
+                                        >
+                                            {isVerifyingOtp ? <ActivityIndicator size="small" color="#FFF" /> : (
+                                                <Text style={styles.otpBtnText}>Verify</Text>
+                                            )}
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
+
+                                {isOtpVerified && (
+                                    <View style={styles.verifiedBadge}>
+                                        <Ionicons name="checkmark-circle" size={16} color="#2E7D32" />
+                                        <Text style={styles.verifiedText}>Aadhaar Verified</Text>
+                                    </View>
+                                )}
+
+                                <View style={styles.inputRow}>
+                                    <View style={{ flex: 1.5, marginRight: 10 }}>
+                                        <Label text="Date of Birth *" />
+                                        <Input value={formData.dob} onChangeText={handleDOBChange} placeholder="DD/MM/YYYY" maxLength={10} keyboardType="number-pad" icon="calendar-outline" />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Label text="Age" />
+                                        <View style={styles.ageBox}>
+                                            <Text style={styles.ageText}>{calculateAge(formData.dob) || "-"}</Text>
+                                        </View>
+                                    </View>
+                                </View>
 
                                 <Label text="Gender *" />
                                 <View style={styles.genderContainer}>
@@ -265,9 +482,6 @@ export default function NewSeniorCitizenApplicationScreen() {
                                         </TouchableOpacity>
                                     ))}
                                 </View>
-
-                                <Label text="Mobile Number *" />
-                                <Input value={formData.mobileNumber} onChangeText={(t: string) => setFormData({ ...formData, mobileNumber: t })} placeholder="10-digit mobile" keyboardType="phone-pad" maxLength={10} icon="phone-portrait-outline" />
 
                                 <Label text="Email (Optional)" />
                                 <Input value={formData.email} onChangeText={(t: string) => setFormData({ ...formData, email: t })} placeholder="Email address" keyboardType="email-address" icon="mail-outline" />
@@ -297,6 +511,13 @@ export default function NewSeniorCitizenApplicationScreen() {
                                         <Label text="District *" />
                                         <Input value={formData.district} onChangeText={(t: string) => setFormData({ ...formData, district: t })} placeholder="District" />
                                     </View>
+                                    <View style={{ flex: 1 }}>
+                                        <Label text="State *" />
+                                        <Input value={formData.state} onChangeText={(t: string) => setFormData({ ...formData, state: t })} placeholder="State" />
+                                    </View>
+                                </View>
+
+                                <View style={styles.inputRow}>
                                     <View style={{ flex: 1 }}>
                                         <Label text="PIN Code *" />
                                         <Input value={formData.pincode} onChangeText={(t: string) => setFormData({ ...formData, pincode: t })} placeholder="6-digit" keyboardType="number-pad" maxLength={6} />
@@ -364,17 +585,15 @@ export default function NewSeniorCitizenApplicationScreen() {
                             </TouchableOpacity>
                         </View>
                     )}
-                    <View style={{ height: 120 }} />
+                    <View style={styles.bottomBar}>
+                        <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
+                            <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
+                                <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
+                                <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
                 </ScrollView>
-
-                <View style={styles.bottomBar}>
-                    <TouchableOpacity style={styles.continueButton} onPress={handleContinue} activeOpacity={0.8}>
-                        <LinearGradient colors={['#0D47A1', '#1565C0']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.buttonGradient}>
-                            <Text style={styles.buttonText}>{currentStep === 3 ? "Submit Application" : "Continue"}</Text>
-                            <Ionicons name={currentStep === 3 ? "checkmark-done" : "arrow-forward"} size={20} color="#FFF" />
-                        </LinearGradient>
-                    </TouchableOpacity>
-                </View>
             </SafeAreaView>
         </View>
     );
@@ -463,7 +682,7 @@ const styles = StyleSheet.create({
     reviewValue: { fontSize: 13, fontWeight: "600", color: "#1E293B" },
     declarationRow: { flexDirection: "row", gap: 10, marginTop: 10, paddingHorizontal: 4 },
     declarationLabel: { flex: 1, fontSize: 12, color: "#64748B", lineHeight: 18 },
-    bottomBar: { padding: 20, backgroundColor: "#FFF", borderTopWidth: 1, borderTopColor: "#F1F5F9" },
+    bottomBar: { paddingVertical: 20, backgroundColor: "transparent", marginTop: 20 },
     continueButton: { height: 54, borderRadius: 16, overflow: "hidden" },
     buttonGradient: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
     buttonText: { fontSize: 16, fontWeight: "800", color: "#FFF" },
@@ -477,4 +696,21 @@ const styles = StyleSheet.create({
     mainBtn: { width: "100%", height: 56, borderRadius: 16, overflow: "hidden" },
     btnGrad: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
     mainBtnText: { fontSize: 16, fontWeight: "800", color: "#FFF" },
+    
+    // OTP Styles
+    otpRow: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+    otpBtn: { backgroundColor: '#0D47A1', paddingHorizontal: 15, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center', minWidth: 90 },
+    otpBtnText: { color: '#FFF', fontSize: 13, fontWeight: '700' },
+    btnDisabled: { opacity: 0.6 },
+    otpVerifyContainer: { flexDirection: 'row', gap: 10, alignItems: 'center', marginTop: -4 },
+    verifiedBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E8F5E9', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start' },
+    verifiedText: { fontSize: 12, color: '#2E7D32', fontWeight: '700' },
+    
+    // Age Box
+    ageBox: { height: 48, backgroundColor: '#F1F5F9', borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
+    ageText: { fontSize: 18, fontWeight: '800', color: '#0D47A1' },
+
+    // Toast
+    toast: { position: 'absolute', bottom: 50, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, zIndex: 99 },
+    toastText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
 });

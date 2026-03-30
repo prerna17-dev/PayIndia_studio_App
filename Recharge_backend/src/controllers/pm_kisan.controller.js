@@ -222,6 +222,7 @@ exports.submitCorrection = async (req, res, next) => {
             aadhaar_number,
             correction_type,
             corrected_name,
+            corrected_mobile,
             corrected_bank,
             corrected_land,
             other_details
@@ -246,6 +247,7 @@ exports.submitCorrection = async (req, res, next) => {
             aadhaar_number,
             correction_type,
             corrected_name,
+            corrected_mobile,
             corrected_bank,
             corrected_land,
             other_details,

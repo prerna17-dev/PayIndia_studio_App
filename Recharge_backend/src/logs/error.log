@@ -1055,3 +1055,326 @@ STACK: Error: Unknown column 'photo_url' in 'field list'
     at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
     at WriteStream.emit (node:events:520:35)
 ----------------------------------
+
+[2026-03-28T05:25:10.380Z]
+METHOD: POST
+URL: /api/social/pm-kisan/correction
+MESSAGE: Unexpected field
+STACK: MulterError: Unexpected field
+    at wrappedFileFilter (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\index.js:40:19)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:132:7)
+    at Multipart.emit (node:events:508:28)
+    at HeaderParser.cb (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:358:14)
+    at HeaderParser.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:162:20)
+    at SBMH.ssCb [as _cb] (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:394:37)
+    at feed (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:248:10)
+    at SBMH.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:104:16)
+    at Multipart._write (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:567:19)
+    at writeOrBuffer (node:internal/streams/writable:570:12)
+----------------------------------
+
+[2026-03-28T05:26:16.522Z]
+METHOD: POST
+URL: /api/social/pm-kisan/correction
+MESSAGE: Unexpected field
+STACK: MulterError: Unexpected field
+    at wrappedFileFilter (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\index.js:40:19)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:132:7)
+    at Multipart.emit (node:events:508:28)
+    at HeaderParser.cb (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:358:14)
+    at HeaderParser.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:162:20)
+    at SBMH.ssCb [as _cb] (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:394:37)
+    at feed (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:248:10)
+    at SBMH.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:104:16)
+    at Multipart._write (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:567:19)
+    at writeOrBuffer (node:internal/streams/writable:570:12)
+----------------------------------
+
+[2026-03-28T05:26:19.069Z]
+METHOD: POST
+URL: /api/social/pm-kisan/correction
+MESSAGE: Unexpected field
+STACK: MulterError: Unexpected field
+    at wrappedFileFilter (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\index.js:40:19)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:132:7)
+    at Multipart.emit (node:events:508:28)
+    at HeaderParser.cb (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:358:14)
+    at HeaderParser.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:162:20)
+    at SBMH.ssCb [as _cb] (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:394:37)
+    at feed (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:248:10)
+    at SBMH.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:104:16)
+    at Multipart._write (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:567:19)
+    at writeOrBuffer (node:internal/streams/writable:570:12)
+----------------------------------
+
+[2026-03-28T05:26:45.610Z]
+METHOD: POST
+URL: /api/social/pm-kisan/correction
+MESSAGE: Unexpected field
+STACK: MulterError: Unexpected field
+    at wrappedFileFilter (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\index.js:40:19)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:132:7)
+    at Multipart.emit (node:events:508:28)
+    at HeaderParser.cb (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:358:14)
+    at HeaderParser.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:162:20)
+    at SBMH.ssCb [as _cb] (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:394:37)
+    at feed (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:248:10)
+    at SBMH.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:104:16)
+    at Multipart._write (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:567:19)
+    at writeOrBuffer (node:internal/streams/writable:570:12)
+----------------------------------
+
+[2026-03-28T05:27:08.023Z]
+METHOD: POST
+URL: /api/social/pm-kisan/correction
+MESSAGE: Unexpected field
+STACK: MulterError: Unexpected field
+    at wrappedFileFilter (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\index.js:40:19)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:132:7)
+    at Multipart.emit (node:events:508:28)
+    at HeaderParser.cb (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:358:14)
+    at HeaderParser.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:162:20)
+    at SBMH.ssCb [as _cb] (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:394:37)
+    at feed (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:248:10)
+    at SBMH.push (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\streamsearch\lib\sbmh.js:104:16)
+    at Multipart._write (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\busboy\lib\types\multipart.js:567:19)
+    at writeOrBuffer (node:internal/streams/writable:570:12)
+----------------------------------
+
+[2026-03-28T06:02:16.487Z]
+METHOD: POST
+URL: /api/social/senior-citizen/apply/otp/send
+MESSAGE: Table 'payindia_studio.otp_verifications' doesn't exist
+STACK: Error: Table 'payindia_studio.otp_verifications' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\senior_citizen.model.js:97:16)
+    at exports.sendApplyOtp (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\senior_citizen.controller.js:188:34)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-28T06:03:07.578Z]
+METHOD: POST
+URL: /api/social/senior-citizen/apply/otp/send
+MESSAGE: Table 'payindia_studio.otp_verifications' doesn't exist
+STACK: Error: Table 'payindia_studio.otp_verifications' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\senior_citizen.model.js:97:16)
+    at exports.sendApplyOtp (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\senior_citizen.controller.js:188:34)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-28T06:04:36.877Z]
+METHOD: POST
+URL: /api/social/senior-citizen/apply/otp/send
+MESSAGE: Table 'payindia_studio.otp_verifications' doesn't exist
+STACK: Error: Table 'payindia_studio.otp_verifications' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.storeOTP (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\senior_citizen.model.js:97:16)
+    at exports.sendApplyOtp (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\senior_citizen.controller.js:188:34)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:295:15
+    at processParams (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:582:12)
+----------------------------------
+
+[2026-03-28T07:27:33.212Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+STACK: Error: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-28T07:28:36.977Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+STACK: Error: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:187:7)
+    at Multipart.emit (node:events:508:28)
+    at emitCloseNT (node:internal/streams/destroy:148:10)
+----------------------------------
+
+[2026-03-28T07:28:41.718Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+STACK: Error: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:187:7)
+    at Multipart.emit (node:events:508:28)
+    at emitCloseNT (node:internal/streams/destroy:148:10)
+----------------------------------
+
+[2026-03-28T07:28:54.411Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+STACK: Error: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:187:7)
+    at Multipart.emit (node:events:508:28)
+    at emitCloseNT (node:internal/streams/destroy:148:10)
+----------------------------------
+
+[2026-03-28T07:32:39.360Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+STACK: Error: Table 'payindia_studio.service_employment_registration_correction' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-28T07:41:34.693Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Column 'aadhaar_number' cannot be null
+STACK: Error: Column 'aadhaar_number' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-28T07:44:31.189Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Column 'aadhaar_number' cannot be null
+STACK: Error: Column 'aadhaar_number' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-28T07:45:39.388Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Column 'aadhaar_number' cannot be null
+STACK: Error: Column 'aadhaar_number' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:187:7)
+    at Multipart.emit (node:events:508:28)
+    at emitCloseNT (node:internal/streams/destroy:148:10)
+----------------------------------
+
+[2026-03-28T07:45:50.977Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Column 'aadhaar_number' cannot be null
+STACK: Error: Column 'aadhaar_number' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-28T07:45:59.676Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Column 'aadhaar_number' cannot be null
+STACK: Error: Column 'aadhaar_number' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:187:7)
+    at Multipart.emit (node:events:508:28)
+    at emitCloseNT (node:internal/streams/destroy:148:10)
+----------------------------------
+
+[2026-03-28T07:47:24.041Z]
+METHOD: POST
+URL: /api/social/employment/correction
+MESSAGE: Column 'aadhaar_number' cannot be null
+STACK: Error: Column 'aadhaar_number' cannot be null
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\employment.model.js:167:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\employment.controller.js:276:52)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:187:7)
+    at Multipart.emit (node:events:508:28)
+    at emitCloseNT (node:internal/streams/destroy:148:10)
+----------------------------------

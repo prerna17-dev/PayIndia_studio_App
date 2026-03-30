@@ -24,7 +24,8 @@ server.listen(PORT, async () => {
       "src/uploads/certificates/birth",
       "src/uploads/certificates/death",
       "src/uploads/certificates/caste",
-      "src/uploads/profiles"
+      "src/uploads/profiles",
+      "src/uploads/ayushman"
     ];
 
     uploadDirs.forEach(dir => {

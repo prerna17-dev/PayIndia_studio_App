@@ -134,4 +134,32 @@ export const API_ENDPOINTS = {
     PM_KISAN_OTP_VERIFY: `${API_BASE_URL}/api/social/pm-kisan/otp/verify`,
     PM_KISAN_CORRECTION_SUBMIT: `${API_BASE_URL}/api/social/pm-kisan/correction`,
     PM_KISAN_STATUS: `${API_BASE_URL}/api/social/pm-kisan/status`,
+
+    // Senior Citizen Certificate
+    SENIOR_CITIZEN_APPLY: `${API_BASE_URL}/api/social/senior-citizen/apply`,
+    SENIOR_CITIZEN_LIST: `${API_BASE_URL}/api/social/senior-citizen/list`,
+    SENIOR_CITIZEN_APPLY_OTP_SEND: `${API_BASE_URL}/api/social/senior-citizen/apply/otp/send`,
+    SENIOR_CITIZEN_APPLY_OTP_VERIFY: `${API_BASE_URL}/api/social/senior-citizen/apply/otp/verify`,
+    SENIOR_CITIZEN_OTP_SEND: `${API_BASE_URL}/api/social/senior-citizen/otp/send`,
+    SENIOR_CITIZEN_OTP_VERIFY: `${API_BASE_URL}/api/social/senior-citizen/otp/verify`,
+    SENIOR_CITIZEN_CORRECTION_SUBMIT: `${API_BASE_URL}/api/social/senior-citizen/correction`,
+
+    // Employment Registration
+    EMPLOYMENT_APPLY: `${API_BASE_URL}/api/social/employment/apply`,
+    EMPLOYMENT_APPLY_OTP_SEND: `${API_BASE_URL}/api/social/employment/apply/otp/send`,
+    EMPLOYMENT_APPLY_OTP_VERIFY: `${API_BASE_URL}/api/social/employment/apply/otp/verify`,
+    EMPLOYMENT_OTP_SEND: `${API_BASE_URL}/api/social/employment/otp/send`,
+    EMPLOYMENT_OTP_VERIFY: `${API_BASE_URL}/api/social/employment/otp/verify`,
+    EMPLOYMENT_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/social/employment/correction/otp/send`,
+    EMPLOYMENT_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/social/employment/correction/otp/verify`,
+    EMPLOYMENT_CORRECTION_SUBMIT: `${API_BASE_URL}/api/social/employment/correction`,
+    
+    // Ayushman Bharat
+    AYUSHMAN_APPLY: `${API_BASE_URL}/api/social/ayushman/apply`,
+    AYUSHMAN_LIST: `${API_BASE_URL}/api/social/ayushman/list`,
+    AYUSHMAN_APPLY_OTP_SEND: `${API_BASE_URL}/api/social/ayushman/apply/otp/send`,
+    AYUSHMAN_APPLY_OTP_VERIFY: `${API_BASE_URL}/api/social/ayushman/apply/otp/verify`,
+    AYUSHMAN_OTP_SEND: `${API_BASE_URL}/api/social/ayushman/otp/send`,
+    AYUSHMAN_OTP_VERIFY: `${API_BASE_URL}/api/social/ayushman/otp/verify`,
+    AYUSHMAN_CORRECTION_SUBMIT: `${API_BASE_URL}/api/social/ayushman/correction`,
 };

@@ -2,8 +2,9 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useEffect } from "react";
 import {
+    BackHandler,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -14,6 +15,15 @@ import {
 
 export default function EmploymentServicesScreen() {
     const router = useRouter();
+
+    useEffect(() => {
+        const backAction = () => {
+            router.back();
+            return true;
+        };
+        const backHandler = BackHandler.addEventListener("hardwareBackPress", backAction);
+        return () => backHandler.remove();
+    }, []);
 
     return (
         <View style={styles.container}>
@@ -106,6 +116,29 @@ export default function EmploymentServicesScreen() {
                                 >
                                     <Text style={styles.buttonTextBlue}>Start Registration</Text>
                                     <Ionicons name="arrow-forward" size={16} color="#0A4DA3" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
+                    {/* Service Card - Update Details */}
+                    <View style={styles.serviceCard}>
+                        <View style={styles.blueGradient}>
+                            <View style={styles.serviceHeaderRow}>
+                                <View style={styles.serviceIcon}>
+                                    <MaterialCommunityIcons name="file-edit" size={28} color="#0A4DA3" />
+                                </View>
+                                <View style={styles.serviceContent}>
+                                    <Text style={styles.serviceTitle}>Update Profile Details</Text>
+                                    <Text style={styles.serviceHindi}>प्रोफाइल तपशील अपडेट करा</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.serviceBottomRow}>
+                                <Text style={styles.serviceDesc}>Correct your education, experience or skills</Text>
+                                <TouchableOpacity style={[styles.blueButton, { borderColor: '#B0BEC5' }]} onPress={() => router.push("/update-employment")}>
+                                    <Text style={styles.buttonTextBlue}>Update Details</Text>
+                                    <Ionicons name="settings-outline" size={16} color="#0A4DA3" />
                                 </TouchableOpacity>
                             </View>
                         </View>

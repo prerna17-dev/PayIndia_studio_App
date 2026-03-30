@@ -35,10 +35,8 @@ router.post("/apply", pmKisanUpload, pmKisanController.createApplication);
 router.post("/otp/send", pmKisanController.sendOtp);
 router.post("/otp/verify", pmKisanController.verifyOtp);
 router.post("/correction", upload.fields([
-    { name: "aadhaar", maxCount: 1 },
-    { name: "bank", maxCount: 1 },
-    { name: "land", maxCount: 1 },
-    { name: "mobile", maxCount: 1 },
+    { name: "id_proof", maxCount: 1 },
+    { name: "supporting_doc", maxCount: 1 },
 ]), pmKisanController.submitCorrection);
 router.get("/list", pmKisanController.getApplications);
 router.get("/:referenceId", pmKisanController.getApplicationByRef);
