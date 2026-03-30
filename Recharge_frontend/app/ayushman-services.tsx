@@ -91,6 +91,29 @@ export default function AyushmanServicesScreen() {
                         </View>
                     </View>
 
+                    {/* Service Card - Update Application */}
+                    <View style={styles.serviceCard}>
+                        <View style={styles.blueGradient}>
+                            <View style={styles.serviceHeaderRow}>
+                                <View style={styles.serviceIcon}>
+                                    <MaterialCommunityIcons name="account-edit-outline" size={28} color="#0A4DA3" />
+                                </View>
+                                <View style={styles.serviceContent}>
+                                    <Text style={styles.serviceTitle}>Update Details</Text>
+                                    <Text style={styles.serviceHindi}>आयुष्मान कार्डमध्ये सुधारणा करा</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.serviceBottomRow}>
+                                <Text style={styles.serviceDesc}>Correct Name, DOB or Gender in your existing card</Text>
+                                <TouchableOpacity style={styles.blueButton} onPress={() => router.push('/update-ayushman')}>
+                                    <Text style={styles.buttonTextBlue}>Update Now</Text>
+                                    <Ionicons name="build-outline" size={16} color="#0A4DA3" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
                     {/* Eligibility Note */}
                     <View style={styles.noteCard}>
                         <View style={styles.noteHeader}>

@@ -122,6 +122,7 @@ exports.createCorrection = async (data) => {
         aadhaar_number,
         correction_type,
         corrected_name,
+        corrected_mobile,
         corrected_bank,
         corrected_land,
         other_details,
@@ -133,12 +134,12 @@ exports.createCorrection = async (data) => {
     const [result] = await pool.query(
         `INSERT INTO service_pm_kisan_correction 
         (user_id, mobile_number, aadhaar_number, correction_type, corrected_name, 
-        corrected_bank, corrected_land, other_details, id_proof_url, 
+        corrected_mobile, corrected_bank, corrected_land, other_details, id_proof_url, 
         supporting_doc_url, reference_id) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             user_id, mobile_number, aadhaar_number, correction_type, corrected_name,
-            corrected_bank, corrected_land, other_details, id_proof_url,
+            corrected_mobile, corrected_bank, corrected_land, other_details, id_proof_url,
             supporting_doc_url, reference_id
         ]
     );

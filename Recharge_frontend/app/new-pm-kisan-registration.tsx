@@ -79,7 +79,7 @@ export default function NewPMKisanRegistrationScreen() {
         village: "",
         surveyNumber: "",
         landArea: "",
-        ownershipType: "Single",
+        ownershipType: "",
         bankName: "",
         accountNumber: "",
         ifscCode: "",

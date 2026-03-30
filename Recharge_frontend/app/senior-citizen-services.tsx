@@ -92,6 +92,29 @@ export default function SeniorCitizenServicesScreen() {
                         </View>
                     </View>
 
+                    {/* Service Card - Update Application */}
+                    <View style={styles.serviceCard}>
+                        <View style={styles.blueGradient}>
+                            <View style={styles.serviceHeaderRow}>
+                                <View style={styles.serviceIcon}>
+                                    <MaterialCommunityIcons name="account-edit-outline" size={28} color="#0A4DA3" />
+                                </View>
+                                <View style={styles.serviceContent}>
+                                    <Text style={styles.serviceTitle}>Update Details</Text>
+                                    <Text style={styles.serviceHindi}>ज्येष्ठ नागरिक तपशील अद्यतन</Text>
+                                </View>
+                            </View>
+
+                            <View style={styles.serviceBottomRow}>
+                                <Text style={styles.serviceDesc}>Correct name, DOB or address in your certificate</Text>
+                                <TouchableOpacity style={styles.blueButton} onPress={() => router.push('/update-senior-citizen')}>
+                                    <Text style={styles.buttonTextBlue}>Update Now</Text>
+                                    <Ionicons name="build-outline" size={16} color="#0A4DA3" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+
                     {/* Important Note */}
                     <View style={styles.noteCard}>
                         <View style={styles.noteHeader}>
@@ -140,6 +163,9 @@ const styles = StyleSheet.create({
     serviceDesc: { flex: 1, fontSize: 12, color: '#777' },
     blueButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#E3F2FD', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: '#BBDEFB' },
     buttonTextBlue: { fontSize: 14, fontWeight: 'bold', color: '#0A4DA3' },
+    orangeGradient: { backgroundColor: '#FFF3E0', padding: 16 },
+    orangeButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFF3E0', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1, borderColor: '#FFE0B2' },
+    buttonTextOrange: { fontSize: 14, fontWeight: 'bold', color: '#E65100' },
     noteCard: { backgroundColor: '#FFF8E1', borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#FFECB3' },
     noteHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
     noteTitle: { fontSize: 14, fontWeight: 'bold', color: '#EF6C00' },

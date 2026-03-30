@@ -29,10 +29,24 @@ const ayushmanUpload = upload.fields([
     { name: "secc_proof", maxCount: 1 },
 ]);
 
+const ayushmanCorrectionUpload = upload.fields([
+    { name: "aadhaar_card", maxCount: 1 },
+    { name: "ration_card", maxCount: 1 },
+    { name: "address_proof", maxCount: 1 },
+    { name: "photo", maxCount: 1 },
+    { name: "secc_proof", maxCount: 1 },
+]);
+
 // All routes require authentication
 router.use(authMiddleware);
 
 router.post("/apply", ayushmanUpload, ayushmanController.createApplication);
+router.post("/otp/send", ayushmanController.sendOtp);
+router.post("/otp/verify", ayushmanController.verifyOtp);
+router.post("/apply/otp/send", ayushmanController.sendApplyOtp);
+router.post("/apply/otp/verify", ayushmanController.verifyApplyOtp);
+router.post("/correction", ayushmanCorrectionUpload, ayushmanController.submitCorrection);
+
 router.get("/list", ayushmanController.getApplications);
 router.get("/:referenceId", ayushmanController.getApplicationByRef);
 router.put("/update-status/:id", ayushmanController.updateStatus);

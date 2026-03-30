@@ -27,12 +27,18 @@ const employmentUpload = upload.fields([
     { name: "photo", maxCount: 1 },
     { name: "experience_cert", maxCount: 1 },
     { name: "caste_cert", maxCount: 1 },
+    { name: "supporting_doc", maxCount: 1 },
 ]);
 
 // All routes require authentication
 router.use(authMiddleware);
 
 router.post("/apply", employmentUpload, employmentController.createApplication);
+router.post("/correction/otp/send", employmentController.sendCorrectionOtp);
+router.post("/correction/otp/verify", employmentController.verifyCorrectionOtp);
+router.post("/apply/otp/send", employmentController.sendApplyOtp);
+router.post("/apply/otp/verify", employmentController.verifyApplyOtp);
+router.post("/correction", employmentUpload, employmentController.submitCorrection);
 router.get("/list", employmentController.getApplications);
 router.get("/:referenceId", employmentController.getApplicationByRef);
 router.put("/update-status/:id", employmentController.updateStatus);
