@@ -46,9 +46,23 @@ export default function AccountScreen() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowLogoutModal(false);
     setShowLogoutSuccess(true);
+
+    try {
+      // Clear user-specific data
+      await AsyncStorage.multiRemove([
+        "userToken",
+        "userData",
+        "@monthly_salary",
+        "@my_manual_bills",
+        "@wallet_balance",
+        "@last_analytics_fetch"
+      ]);
+    } catch (e) {
+      console.error("Error clearing local storage on logout:", e);
+    }
 
     // Redirect after a short delay
     setTimeout(() => {

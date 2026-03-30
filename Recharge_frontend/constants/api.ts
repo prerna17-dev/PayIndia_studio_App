@@ -6,7 +6,7 @@
 // Replace this IP address with your computer's current IP address (IPv4)
 // Run 'ipconfig' in terminal to find your IPv4 address
 
-export const API_BASE_URL = "http://192.168.1.16:5000";
+export const API_BASE_URL = "http://192.168.1.24:5000";
 
 
 export const API_ENDPOINTS = {
@@ -153,7 +153,7 @@ export const API_ENDPOINTS = {
     EMPLOYMENT_CORRECTION_OTP_SEND: `${API_BASE_URL}/api/social/employment/correction/otp/send`,
     EMPLOYMENT_CORRECTION_OTP_VERIFY: `${API_BASE_URL}/api/social/employment/correction/otp/verify`,
     EMPLOYMENT_CORRECTION_SUBMIT: `${API_BASE_URL}/api/social/employment/correction`,
-    
+
     // Ayushman Bharat
     AYUSHMAN_APPLY: `${API_BASE_URL}/api/social/ayushman/apply`,
     AYUSHMAN_LIST: `${API_BASE_URL}/api/social/ayushman/list`,
