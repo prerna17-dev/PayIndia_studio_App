@@ -305,7 +305,7 @@ export default function HistoryScreen() {
             style={[styles.filterTab, filter === f && styles.filterTabActive]}
             onPress={() => setFilter(f)}
           >
-            <Text style={filter === f ? styles.filterTabTextActive : styles.filterTabText}>{f}</Text>
+            <Text style={[styles.filterTabText, filter === f && styles.filterTabTextActive]}>{f}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -343,9 +343,7 @@ export default function HistoryScreen() {
               <Ionicons name="arrow-back" size={24} color="#0D47A1" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Transaction History</Text>
-            <TouchableOpacity style={styles.filterButton}>
-              <Ionicons name="filter-outline" size={24} color="#0D47A1" />
-            </TouchableOpacity>
+            <View style={{ width: 34 }} />
           </View>
         </LinearGradient>
 
@@ -443,7 +441,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 60, // Increased padding
+    paddingTop: 45,
     paddingBottom: 15,
     zIndex: 1,
   },
@@ -701,7 +699,9 @@ const styles = StyleSheet.create({
 
   filterTab: {
     paddingVertical: 8,
-    paddingHorizontal: 20,
+    width: 90,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
@@ -716,13 +716,11 @@ const styles = StyleSheet.create({
   filterTabText: {
     fontSize: 14,
     color: "#666",
-    fontWeight: "500",
+    fontWeight: "600",
   },
 
   filterTabTextActive: {
-    fontSize: 14,
-    color: "#0D47A1",
-    fontWeight: "bold",
+    color: "#FFFFFF",
   },
 
   transactionsList: {

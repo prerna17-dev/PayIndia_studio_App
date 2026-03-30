@@ -231,6 +231,27 @@ export default function WalletScreen() {
     }
   };
 
+  const cashbackTotal = transactions.reduce((acc, t) => {
+    if (t.transaction_type === "Wallet_Credit" && (t.description?.toUpperCase().includes("CASHBACK") || t.description?.toUpperCase().includes("REWARD"))) {
+      return acc + Number(t.amount);
+    }
+    return acc;
+  }, 0);
+
+  const refundTotal = transactions.reduce((acc, t) => {
+    if (t.transaction_type === "Wallet_Credit" && t.description?.toUpperCase().includes("REFUND")) {
+      return acc + Number(t.amount);
+    }
+    return acc;
+  }, 0);
+
+  const addedMoneyTotal = transactions.reduce((acc, t) => {
+    if (t.transaction_type === "Wallet_Credit" && !t.description?.toUpperCase().includes("CASHBACK") && !t.description?.toUpperCase().includes("REWARD") && !t.description?.toUpperCase().includes("REFUND")) {
+      return acc + Number(t.amount);
+    }
+    return acc;
+  }, 0);
+
   return (
     <View style={styles.container}>
       <Stack.Screen
@@ -306,7 +327,7 @@ export default function WalletScreen() {
                       />
                     </View>
                     <Text style={styles.statLabel}>Cashback</Text>
-                    <Text style={styles.statValue}>₹0</Text>
+                    <Text style={styles.statValue}>₹{cashbackTotal}</Text>
                   </View>
 
                   <View style={styles.statItem}>
@@ -323,7 +344,7 @@ export default function WalletScreen() {
                       />
                     </View>
                     <Text style={styles.statLabel}>Refunds</Text>
-                    <Text style={styles.statValue}>₹0</Text>
+                    <Text style={styles.statValue}>₹{refundTotal}</Text>
                   </View>
 
                   <View style={styles.statItem}>
@@ -340,7 +361,7 @@ export default function WalletScreen() {
                       />
                     </View>
                     <Text style={styles.statLabel}>Added Money</Text>
-                    <Text style={styles.statValue}>₹0</Text>
+                    <Text style={styles.statValue}>₹{addedMoneyTotal}</Text>
                   </View>
                 </View>
               </View>
@@ -567,7 +588,13 @@ export default function WalletScreen() {
             </View>
           )}
 
-          <TouchableOpacity style={styles.walletInfo}>
+          <TouchableOpacity 
+            style={styles.walletInfo}
+            onPress={() => Alert.alert(
+              "About PayIndia Wallet",
+              "Your PayIndia Wallet provides a seamless, one-click payment experience for all your bills, recharges, and bookings.\n\n• Fast & Secure Transactions\n• Add or Withdraw money anytime\n• Earn Cashback & Rewards automatically"
+            )}
+          >
             <Ionicons name="information-circle" size={20} color="#999" />
             <Text style={styles.walletInfoText}>Wallet Info</Text>
           </TouchableOpacity>
@@ -884,7 +911,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 60, // Increased padding
+    paddingTop: 45,
     paddingBottom: 15,
     zIndex: 1,
   },

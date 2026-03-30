@@ -60,9 +60,6 @@ export default function MoreServicesScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Suggested</Text>
-              <View style={styles.popularBadge}>
-                <Text style={styles.popularText}>Popular</Text>
-              </View>
             </View>
 
             <View style={styles.servicesGrid}>
@@ -74,15 +71,19 @@ export default function MoreServicesScreen() {
                   <Ionicons name="bulb-outline" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>Electricity{'\n'}bill</Text>
+                <View style={styles.popularIconBadge}>
+                  <Text style={styles.popularIconBadgeText}>Popular</Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.serviceCard}
-                onPress={() => router.push('/credit-card-bill')}>
+                onPress={() => router.push('/dth-recharge')}
+              >
                 <View style={styles.iconCircle}>
-                  <Ionicons name="card-outline" size={30} color="#0D47A1" />
+                  <MaterialCommunityIcons name="satellite-variant" size={30} color="#0D47A1" />
                 </View>
-                <Text style={styles.serviceText}>Credit{'\n'}card</Text>
+                <Text style={styles.serviceText}>DTH{'\n'}recharge</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -103,6 +104,9 @@ export default function MoreServicesScreen() {
                   <Ionicons name="phone-portrait-outline" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>Mobile{'\n'}recharge</Text>
+                <View style={styles.popularIconBadge}>
+                  <Text style={styles.popularIconBadgeText}>Popular</Text>
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -150,9 +154,6 @@ export default function MoreServicesScreen() {
                   <MaterialCommunityIcons name="satellite-variant" size={30} color="#0D47A1" />
                 </View>
                 <Text style={styles.serviceText}>DTH{'\n'}recharge</Text>
-                <View style={styles.newBadge}>
-                  <Text style={styles.newBadgeText}>New</Text>
-                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -188,10 +189,6 @@ export default function MoreServicesScreen() {
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Finance</Text>
-              {/* ✅ CHANGED: Yellow badge */}
-              <View style={styles.popularBadge}>
-                <Text style={styles.popularText}>Popular</Text>
-              </View>
             </View>
 
             <View style={styles.servicesGrid}>
@@ -570,17 +567,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 13,
   },
-  // ✅ CHANGED: Yellow "New" badge
-  newBadge: {
+  // ✅ CHANGED: Popular icon badge
+  popularIconBadge: {
     position: 'absolute',
-    top: 0,
-    right: 5,
-    backgroundColor: '#4CAF50', // Green for "New" badge
+    top: -8,
+    right: 0,
+    backgroundColor: '#4CAF50', // Green for popular highlight
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 8,
   },
-  newBadgeText: {
+  popularIconBadgeText: {
     fontSize: 9,
     fontWeight: '600',
     color: '#FFFFFF',

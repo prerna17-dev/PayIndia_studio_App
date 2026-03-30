@@ -93,9 +93,6 @@ export default function MoreSevaScreen() {
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Identity & Documents</Text>
-                            <View style={styles.popularBadge}>
-                                <Text style={styles.popularText}>Popular</Text>
-                            </View>
                         </View>
 
                         <View style={styles.servicesGrid}>
@@ -110,9 +107,6 @@ export default function MoreSevaScreen() {
                                     />
                                 </View>
                                 <Text style={styles.serviceText}>Aadhar{"\n"}Update</Text>
-                                <View style={styles.newBadge}>
-                                    <Text style={styles.newBadgeText}>New</Text>
-                                </View>
                             </TouchableOpacity>
 
                             <TouchableOpacity
@@ -280,68 +274,7 @@ export default function MoreSevaScreen() {
                         </View>
                     </View>
 
-                    {/* Utility & Bill Updates */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Utility & Bill Updates</Text>
 
-                        <View style={styles.servicesGrid}>
-                            <TouchableOpacity
-                                style={styles.serviceCard}
-                                onPress={() => router.push("/electricity-services")}
-                            >
-                                <View style={styles.iconCircle}>
-                                    <MaterialCommunityIcons
-                                        name="flash-outline"
-                                        size={30}
-                                        color="#0D47A1"
-                                    />
-                                </View>
-                                <Text style={styles.serviceText}>Electricity{"\n"}Services</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.serviceCard}
-                                onPress={() => router.push("/water-services")}
-                            >
-                                <View style={styles.iconCircle}>
-                                    <MaterialCommunityIcons
-                                        name="water-outline"
-                                        size={30}
-                                        color="#0D47A1"
-                                    />
-                                </View>
-                                <Text style={styles.serviceText}>Water{"\n"}Services</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.serviceCard}
-                                onPress={() => router.push("/gas-services")}
-                            >
-                                <View style={styles.iconCircle}>
-                                    <MaterialCommunityIcons
-                                        name="gas-cylinder"
-                                        size={30}
-                                        color="#0D47A1"
-                                    />
-                                </View>
-                                <Text style={styles.serviceText}>Gas{"\n"}Services</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={styles.serviceCard}
-                                onPress={() => router.push("/recharge-services")}
-                            >
-                                <View style={styles.iconCircle}>
-                                    <Ionicons
-                                        name="phone-portrait-outline"
-                                        size={30}
-                                        color="#0D47A1"
-                                    />
-                                </View>
-                                <Text style={styles.serviceText}>Recharge{"\n"}Services</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
 
                     {/* Land & Property */}
                     <View style={styles.section}>
@@ -415,9 +348,6 @@ export default function MoreSevaScreen() {
                                     />
                                 </View>
                                 <Text style={styles.serviceText}>Voter{"\n"}ID</Text>
-                                <View style={styles.newBadge}>
-                                    <Text style={styles.newBadgeText}>New</Text>
-                                </View>
                             </TouchableOpacity>
                         </View>
                     </View>
