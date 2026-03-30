@@ -145,6 +145,14 @@ export default function LoginScreen() {
           console.log("Login successful. Token:", data.token);
           console.log("User data:", data.user);
 
+          // Clear any previous user data before storing new session
+          await AsyncStorage.multiRemove([
+            "@monthly_salary",
+            "@my_manual_bills",
+            "@wallet_balance",
+            "@last_analytics_fetch"
+          ]);
+
           // Store token and user data securely
           await AsyncStorage.setItem("userToken", data.token);
           if (data.user) {

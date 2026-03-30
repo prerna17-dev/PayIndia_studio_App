@@ -21,9 +21,13 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, API_BASE_URL } from "../../constants/api";
+<<<<<<< HEAD
 import { CircularProfileProgress } from "../../components/CircularProfileProgress";
 import { calculateProfileCompletion } from "../../utils/profileCompletion";
 import { Modal } from "react-native";
+=======
+import Svg, { Circle } from "react-native-svg";
+>>>>>>> d1142ff3cf3f85edf1e6e75ca7978b53680a6c3d
 
 const { width } = Dimensions.get("window");
 
@@ -219,58 +223,63 @@ export default function HomeScreen({
       const savedSalary = await AsyncStorage.getItem("@monthly_salary");
       const salary = parseFloat(savedSalary || "0");
 
-      const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const transactions = await response.json();
+      let totalSpent = 0;
+      let totalCashback = 0;
+      let paidBillsCount = 0;
 
-      if (response.ok && Array.isArray(transactions)) {
-        const now = new Date();
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-        // Filter transactions for current month
-        const currentMonthTransactions = transactions.filter((t: any) => {
-          const tDate = new Date(t.created_at);
-          return tDate >= firstDayOfMonth;
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
+          headers: { Authorization: `Bearer ${token}` },
         });
+        const transactions = await response.json();
 
-        let totalSpent = 0;
-        let totalCashback = 0;
-        let paidBillsCount = 0;
+        if (response.ok && Array.isArray(transactions)) {
+          const now = new Date();
+          const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        currentMonthTransactions.forEach((t: any) => {
-          const type = (t.transaction_type || "").toUpperCase().replace('_', ' ');
-          const description = (t.description || "").toLowerCase();
+          // Filter transactions for current month
+          const currentMonthTransactions = transactions.filter((t: any) => {
+            const tDate = new Date(t.created_at);
+            return tDate >= firstDayOfMonth;
+          });
 
-          const isDebit = type === "WALLET DEBIT" || type === "WALLET_DEBIT" || type === "RECHARGE" || type === "BILL" || type === "BILL PAYMENT";
+          currentMonthTransactions.forEach((t: any) => {
+            const type = (t.transaction_type || "").toUpperCase().replace('_', ' ');
+            const description = (t.description || "").toLowerCase();
 
-          // Only count as Cashback if it's explicitly a reward, not a standard top-up
-          const isCashbackType = type === "CASHBACK" || type === "REWARD";
-          const isCashbackDescription = description.includes("cashback") || description.includes("reward") || description.includes("refer");
-          const isWalletCredit = type === "WALLET CREDIT" || type === "WALLET_CREDIT";
+            const isDebit = type === "WALLET DEBIT" || type === "WALLET_DEBIT" || type === "RECHARGE" || type === "BILL" || type === "BILL PAYMENT";
 
-          if (isDebit) {
-            totalSpent += parseFloat(t.amount);
-            if (type.includes("BILL") || type.includes("RECHARGE")) {
-              paidBillsCount++;
+            // Only count as Cashback if it's explicitly a reward, not a standard top-up
+            const isCashbackType = type === "CASHBACK" || type === "REWARD";
+            const isCashbackDescription = description.includes("cashback") || description.includes("reward") || description.includes("refer");
+            const isWalletCredit = type === "WALLET CREDIT" || type === "WALLET_CREDIT";
+
+            if (isDebit) {
+              totalSpent += parseFloat(t.amount);
+              if (type.includes("BILL") || type.includes("RECHARGE")) {
+                paidBillsCount++;
+              }
             }
-          }
 
-          // Exclude manual top-ups from cashback totals
-          if (isCashbackType || (isWalletCredit && isCashbackDescription)) {
-            totalCashback += parseFloat(t.amount);
-          }
-        });
-
-        const savings = salary > 0 ? Math.max(0, ((salary - totalSpent) / salary) * 100) : 0;
-
-        setAnalytics({
-          spent: totalSpent,
-          cashback: totalCashback,
-          paidBills: paidBillsCount,
-          savingsPercentage: Math.round(savings),
-        });
+            // Exclude manual top-ups from cashback totals
+            if (isCashbackType || (isWalletCredit && isCashbackDescription)) {
+              totalCashback += parseFloat(t.amount);
+            }
+          });
+        }
+      } catch (apiError) {
+        console.warn("Could not load transactions:", apiError);
       }
+
+      const savings = salary > 0 ? Math.max(0, ((salary - totalSpent) / salary) * 100) : 0;
+
+      setAnalytics({
+        spent: totalSpent,
+        cashback: totalCashback,
+        paidBills: paidBillsCount,
+        savingsPercentage: Math.round(savings),
+      });
+
     } catch (e) {
       console.error("Error fetching analytics:", e);
     }
@@ -1209,16 +1218,35 @@ export default function HomeScreen({
                       <Text style={{ fontSize: 11, color: "#FFFFFF", fontWeight: "800", letterSpacing: 0.5 }}>Insights  →</Text>
                     </TouchableOpacity>
 
-                    {/* CSS-based Circular Progress */}
+                    {/* SVG-based Circular Progress */}
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
                       <View>
                         <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.6)", fontWeight: "600", textAlign: "right", letterSpacing: 0.5 }}>SAVINGS</Text>
                         <Text style={{ fontSize: 12, color: "#FBCFE8", fontWeight: "bold", textAlign: "right" }}>Goal</Text>
                       </View>
-                      <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.05)", justifyContent: "center", alignItems: "center", borderWidth: 4, borderColor: "rgba(255,255,255,0.15)", borderTopColor: "#34D399", borderRightColor: "#34D399", borderBottomColor: "#34D399", transform: [{ rotate: "45deg" }], shadowColor: "#34D399", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 8 }}>
-                        <View style={{ transform: [{ rotate: "-45deg" }] }}>
-                          <Text style={{ fontSize: 11, fontWeight: "900", color: "#ffffffff" }}>{analytics.savingsPercentage}%</Text>
-                        </View>
+                      <View style={{ width: 44, height: 44, justifyContent: "center", alignItems: "center", shadowColor: "#34D399", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 8 }}>
+                        <Svg width={44} height={44} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
+                          <Circle
+                            cx={22}
+                            cy={22}
+                            r={18}
+                            stroke="rgba(255,255,255,0.15)"
+                            strokeWidth={4}
+                            fill="rgba(255,255,255,0.05)"
+                          />
+                          <Circle
+                            cx={22}
+                            cy={22}
+                            r={18}
+                            stroke="#34D399"
+                            strokeWidth={4}
+                            strokeDasharray={113.1}
+                            strokeDashoffset={113.1 - ((isNaN(analytics.savingsPercentage) ? 0 : Math.min(Math.max(analytics.savingsPercentage, 0), 100)) / 100) * 113.1}
+                            strokeLinecap="round"
+                            fill="transparent"
+                          />
+                        </Svg>
+                        <Text style={{ fontSize: 11, fontWeight: "900", color: "#ffffffff" }}>{analytics.savingsPercentage}%</Text>
                       </View>
                     </View>
                   </View>

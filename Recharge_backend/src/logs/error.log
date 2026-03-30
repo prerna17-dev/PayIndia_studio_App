@@ -1379,6 +1379,7 @@ STACK: Error: Column 'aadhaar_number' cannot be null
     at emitCloseNT (node:internal/streams/destroy:148:10)
 ----------------------------------
 
+<<<<<<< HEAD
 [2026-03-30T10:39:23.598Z]
 METHOD: POST
 URL: /api/aadhar/correction/submit
@@ -1426,10 +1427,94 @@ STACK: Error: Table 'payindia_studio.aadhar_corrections' doesn't exist
     at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
     at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
     at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:187:7)
+=======
+[2026-03-30T06:23:37.591Z]
+METHOD: GET
+URL: /api/user/profile
+MESSAGE: Table 'payindia_studio.users' doesn't exist
+STACK: Error: Table 'payindia_studio.users' doesn't exist
+    at PromisePool.query (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.getUserById (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\models\user.model.js:52:15)
+    at exports.getProfile (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\user.controller.js:7:36)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at module.exports (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\middlewares\auth.middleware.js:22:5)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+----------------------------------
+
+[2026-03-30T06:23:40.713Z]
+METHOD: GET
+URL: /api/user/profile
+MESSAGE: Table 'payindia_studio.users' doesn't exist
+STACK: Error: Table 'payindia_studio.users' doesn't exist
+    at PromisePool.query (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.getUserById (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\models\user.model.js:52:15)
+    at exports.getProfile (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\user.controller.js:7:36)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at module.exports (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\middlewares\auth.middleware.js:22:5)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+----------------------------------
+
+[2026-03-30T06:23:59.144Z]
+METHOD: GET
+URL: /api/user/profile
+MESSAGE: Table 'payindia_studio.users' doesn't exist
+STACK: Error: Table 'payindia_studio.users' doesn't exist
+    at PromisePool.query (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.getUserById (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\models\user.model.js:52:15)
+    at exports.getProfile (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\user.controller.js:7:36)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at module.exports (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\middlewares\auth.middleware.js:22:5)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+----------------------------------
+
+[2026-03-30T06:24:02.724Z]
+METHOD: GET
+URL: /api/user/profile
+MESSAGE: Table 'payindia_studio.users' doesn't exist
+STACK: Error: Table 'payindia_studio.users' doesn't exist
+    at PromisePool.query (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.getUserById (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\models\user.model.js:52:15)
+    at exports.getProfile (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\user.controller.js:7:36)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at module.exports (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\middlewares\auth.middleware.js:22:5)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at Route.dispatch (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:117:3)
+    at handle (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\index.js:435:11)
+----------------------------------
+
+[2026-03-30T10:47:20.650Z]
+METHOD: POST
+URL: /api/aadhar/enroll
+MESSAGE: Unknown column 'birth_certificate_url' in 'field list'
+STACK: Error: Unknown column 'birth_certificate_url' in 'field list'
+    at PromisePool.query (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:25:33)
+    at exports.createEnrollment (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:16:48)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at Multipart.<anonymous> (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:187:7)
+>>>>>>> d1142ff3cf3f85edf1e6e75ca7978b53680a6c3d
     at Multipart.emit (node:events:508:28)
     at emitCloseNT (node:internal/streams/destroy:148:10)
 ----------------------------------
 
+<<<<<<< HEAD
 [2026-03-30T10:44:42.229Z]
 METHOD: POST
 URL: /api/aadhar/correction/submit
@@ -1461,5 +1546,21 @@ STACK: Error: Table 'payindia_studio.aadhar_corrections' doesn't exist
     at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
     at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
     at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+=======
+[2026-03-30T10:47:32.345Z]
+METHOD: POST
+URL: /api/aadhar/enroll
+MESSAGE: Unknown column 'birth_certificate_url' in 'field list'
+STACK: Error: Unknown column 'birth_certificate_url' in 'field list'
+    at PromisePool.query (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.create (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:25:33)
+    at exports.createEnrollment (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:16:48)
+    at Layer.handleRequest (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\ADMIN\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+>>>>>>> d1142ff3cf3f85edf1e6e75ca7978b53680a6c3d
     at WriteStream.emit (node:events:520:35)
 ----------------------------------
