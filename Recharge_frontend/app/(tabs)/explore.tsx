@@ -285,25 +285,136 @@ export default function HomeScreen({
     }, [])
   );
 
-  // Searchable services data
-  const SEARCHABLE_SERVICES: { label: string; route: string; icon: string; color: string; bg: string; category: string }[] = [
-    { label: "Mobile Recharge", route: "/mobile-recharge", icon: "phone-portrait", color: "#0D47A1", bg: "#E3F2FD", category: "Recharge & Bills" },
-    { label: "Electricity Bill", route: "/electricity-bill", icon: "flash", color: "#F59E0B", bg: "#FFFBEB", category: "Recharge & Bills" },
-    { label: "DTH Recharge", route: "/dth-recharge", icon: "tv", color: "#6A1B9A", bg: "#F3E5F5", category: "Recharge & Bills" },
-    { label: "LPG Cylinder", route: "/lpg-cylinder", icon: "flame", color: "#E65100", bg: "#FFF3E0", category: "Recharge & Bills" },
-    { label: "Water Bill", route: "/water-services", icon: "water", color: "#0277BD", bg: "#E1F5FE", category: "Utility Services" },
-    { label: "Broadband Bill", route: "/more-services", icon: "wifi", color: "#16A34A", bg: "#F0FDF4", category: "Utility Services" },
-    { label: "Aadhaar Update", route: "/aadhaar-services?from=explore", icon: "card", color: "#0D47A1", bg: "#E3F2FD", category: "Maha E Seva" },
-    { label: "Pan Card", route: "/pan-card-services?from=explore", icon: "document-text", color: "#0D47A1", bg: "#E3F2FD", category: "Maha E Seva" },
-    { label: "Udyam Registration", route: "/udyam-services?from=explore", icon: "business", color: "#0D47A1", bg: "#E3F2FD", category: "Maha E Seva" },
-    { label: "Income Certificate", route: "/income-certificate-services?from=explore", icon: "document", color: "#0D47A1", bg: "#E3F2FD", category: "Maha E Seva" },
-    { label: "Flight Booking", route: "/flight-booking", icon: "airplane", color: "#1976D2", bg: "#E3F2FD", category: "Travel" },
-    { label: "Train Booking", route: "/train-booking", icon: "train", color: "#C62828", bg: "#FCE4EC", category: "Travel" },
-    { label: "Bus Booking", route: "/bus-booking", icon: "bus", color: "#2E7D32", bg: "#E8F5E9", category: "Travel" },
-    { label: "Hotel Booking", route: "/hotel-booking", icon: "business", color: "#C62828", bg: "#FCE4EC", category: "Travel" },
-    { label: "Refer & Earn", route: "/refer-earn", icon: "gift", color: "#E65100", bg: "#FFF3E0", category: "Offers" },
-    { label: "My Money", route: "/mymoney", icon: "wallet", color: "#4F46E5", bg: "#EDE9FE", category: "Finance" },
-  ];
+  // --- DYNAMIC SERVICE DISCOVERY ENGINE ---
+  // This avoids hardcoding every single screen and automatically picks up new files
+  const discoveredServices = React.useMemo(() => {
+    try {
+      // @ts-ignore - require.context is a Metro-specific feature for Expo
+      const context = require.context("../", true, /\.tsx$/);
+      const keys = context.keys();
+
+      const SERVICE_MAP: Record<string, { icon: string; library: string; category: string; color: string; bg: string }> = {
+        recharge: { icon: "phone-portrait-outline", library: "Ionicons", category: "Recharge & Bills", color: "#0D47A1", bg: "#E3F2FD" },
+        bill: { icon: "receipt-outline", library: "Ionicons", category: "Recharge & Bills", color: "#F59E0B", bg: "#FFFBEB" },
+        cylinder: { icon: "gas-cylinder", library: "MaterialCommunityIcons", category: "Recharge & Bills", color: "#E65100", bg: "#FFF3E0" },
+        electricity: { icon: "bulb-outline", library: "Ionicons", category: "Recharge & Bills", color: "#F59E0B", bg: "#FFFBEB" },
+        dth: { icon: "satellite-variant", library: "MaterialCommunityIcons", category: "Recharge & Bills", color: "#6A1B9A", bg: "#F3E5F5" },
+        fastag: { icon: "highway", library: "MaterialCommunityIcons", category: "Recharge & Bills", color: "#0D47A1", bg: "#E3F2FD" },
+        water: { icon: "water-outline", library: "Ionicons", category: "Recharge & Bills", color: "#0277BD", bg: "#E1F5FE" },
+        gas: { icon: "pipe", library: "MaterialCommunityIcons", category: "Recharge & Bills", color: "#E65100", bg: "#FFF3E0" },
+        landline: { icon: "phone-classic", library: "MaterialCommunityIcons", category: "Recharge & Bills", color: "#0D47A1", bg: "#E3F2FD" },
+        cable: { icon: "television", library: "MaterialCommunityIcons", category: "Recharge & Bills", color: "#6A1B9A", bg: "#F3E5F5" },
+        education: { icon: "school-outline", library: "Ionicons", category: "Recharge & Bills", color: "#0D47A1", bg: "#E3F2FD" },
+        hospital: { icon: "medical-outline", library: "Ionicons", category: "Recharge & Bills", color: "#E11D48", bg: "#FFF1F2" },
+        ott: { icon: "play-circle-outline", library: "Ionicons", category: "Recharge & Bills", color: "#6A1B9A", bg: "#F3E5F5" },
+        municipal: { icon: "office-building", library: "MaterialCommunityIcons", category: "Recharge & Bills", color: "#0D47A1", bg: "#E3F2FD" },
+        taxes: { icon: "home-city-outline", library: "MaterialCommunityIcons", category: "Recharge & Bills", color: "#0D47A1", bg: "#E3F2FD" },
+        postpaid: { icon: "phone-portrait", library: "Ionicons", category: "Recharge & Bills", color: "#0D47A1", bg: "#E3F2FD" },
+        broadband: { icon: "wifi-outline", library: "Ionicons", category: "Recharge & Bills", color: "#16A34A", bg: "#F0FDF4" },
+        certificate: { icon: "file-certificate", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        caste: { icon: "certificate-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        income: { icon: "file-certificate", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        domicile: { icon: "home-heart", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        birth: { icon: "baby-face-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        death: { icon: "account-off-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        marriage: { icon: "ring", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        ews: { icon: "school-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        creamy: { icon: "shield-account-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        seva: { icon: "card-outline", library: "Ionicons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        aadhaar: { icon: "card-account-details", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        pan: { icon: "card-text", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        voter: { icon: "card-account-mail", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        ration: { icon: "book-open-page-variant", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        satbara: { icon: "map-marker-path", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        "7/12": { icon: "map-marker-path", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        "8a": { icon: "file-document-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        property: { icon: "home-city-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        ferfar: { icon: "map-marker-distance", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        udyam: { icon: "factory", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        kisan: { icon: "sprout-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#16A34A", bg: "#F0FDF4" },
+        senior: { icon: "account-tie-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        employment: { icon: "briefcase-outline", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#0D47A1", bg: "#E3F2FD" },
+        ayushman: { icon: "heart-flash", library: "MaterialCommunityIcons", category: "Maha E Seva", color: "#E11D48", bg: "#FFF1F2" },
+        booking: { icon: "airplane-outline", library: "Ionicons", category: "Travel", color: "#1976D2", bg: "#E3F2FD" },
+        flight: { icon: "airplane-outline", library: "Ionicons", category: "Travel", color: "#1976D2", bg: "#E3F2FD" },
+        train: { icon: "train-outline", library: "Ionicons", category: "Travel", color: "#C62828", bg: "#FCE4EC" },
+        bus: { icon: "bus-outline", library: "Ionicons", category: "Travel", color: "#2E7D32", bg: "#E8F5E9" },
+        hotel: { icon: "bed-outline", library: "Ionicons", category: "Travel", color: "#C62828", bg: "#FCE4EC" },
+        wallet: { icon: "wallet-outline", library: "Ionicons", category: "Finance", color: "#4F46E5", bg: "#EDE9FE" },
+        money: { icon: "analytics-outline", library: "Ionicons", category: "Finance", color: "#4F46E5", bg: "#EDE9FE" },
+        bank: { icon: "office-building-outline", library: "MaterialCommunityIcons", category: "Finance", color: "#0D47A1", bg: "#E3F2FD" },
+        loan: { icon: "cash-multiple", library: "MaterialCommunityIcons", category: "Finance", color: "#16A34A", bg: "#F0FDF4" },
+        insurance: { icon: "shield-check-outline", library: "MaterialCommunityIcons", category: "Finance", color: "#0D47A1", bg: "#E3F2FD" },
+        deposit: { icon: "calendar-clock", library: "MaterialCommunityIcons", category: "Finance", color: "#0D47A1", bg: "#E3F2FD" },
+        transaction: { icon: "list-outline", library: "Ionicons", category: "Finance", color: "#4F46E5", bg: "#EDE9FE" },
+        refer: { icon: "gift-outline", library: "Ionicons", category: "Offers", color: "#E65100", bg: "#FFF3E0" },
+        deal: { icon: "pricetag-outline", library: "Ionicons", category: "Offers", color: "#E65100", bg: "#FFF3E0" },
+        gift: { icon: "card-outline", library: "Ionicons", category: "Offers", color: "#6A1B9A", bg: "#F3E5F5" },
+        autopay: { icon: "calendar-sync", library: "MaterialCommunityIcons", category: "Finance", color: "#4F46E5", bg: "#EDE9FE" },
+        support: { icon: "help-circle-outline", library: "Ionicons", category: "Support", color: "#0D47A1", bg: "#E3F2FD" },
+        settings: { icon: "settings-outline", library: "Ionicons", category: "Support", color: "#64748B", bg: "#F1F5F9" },
+        notification: { icon: "notifications-outline", library: "Ionicons", category: "Support", color: "#1976D2", bg: "#E3F2FD" },
+        account: { icon: "person-outline", library: "Ionicons", category: "Support", color: "#1976D2", bg: "#E3F2FD" },
+        track: { icon: "search-outline", library: "Ionicons", category: "Support", color: "#0D47A1", bg: "#E3F2FD" },
+        logout: { icon: "log-out-outline", library: "Ionicons", category: "Security", color: "#E53935", bg: "#FFEBEE" },
+      };
+
+      const services = keys
+        .filter((key: string) => {
+          const filename = key.split("/").pop() || "";
+          return (
+            !filename.startsWith("_") &&
+            !filename.startsWith("+") &&
+            filename !== "index.tsx" &&
+            filename !== "modal.tsx"
+          );
+        })
+        .map((key: string) => {
+          let route = key.replace("./", "/").replace(".tsx", "");
+          if (route.endsWith("/index")) route = route.replace("/index", "");
+
+          const basename = key.split("/").pop()?.replace(".tsx", "") || "";
+          const label = basename
+            .split("-")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")
+            .replace("Aadhaar", "Aadhar")
+            .replace("Udyam", "Udyam Registration")
+            .replace("My Money", "My Money Analytics");
+
+          const lowerBasename = basename.toLowerCase();
+          let config = { icon: "apps-outline", library: "Ionicons", category: "Other Services", color: "#64748B", bg: "#F1F5F9" };
+
+          for (const [keyword, value] of Object.entries(SERVICE_MAP)) {
+            if (lowerBasename.includes(keyword)) {
+              config = value;
+              break;
+            }
+          }
+
+          return { label, route, ...config };
+        });
+
+      // Add Virtual Services (Actions that are not screens)
+      services.push({
+        label: "Logout",
+        route: "/account", // Direct to account for logout modal trigger
+        icon: "log-out-outline",
+        library: "Ionicons",
+        category: "Security",
+        color: "#E53935",
+        bg: "#FFEBEE"
+      });
+
+      return services;
+    } catch (e) {
+      console.warn("Discovery failed", e);
+      return [];
+    }
+  }, []);
+
+  const SEARCHABLE_SERVICES = discoveredServices;
+
 
   // Ads data
   const ads = [
@@ -514,29 +625,54 @@ export default function HomeScreen({
 
             {/* Search Results Dropdown */}
             {searchQuery.length > 0 && (
-              <View style={{ position: "absolute", top: 52, left: 0, right: 0, backgroundColor: "#FFFFFF", borderRadius: 16, shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8, maxHeight: 320, borderWidth: 1, borderColor: "#F1F5F9", overflow: "hidden" }}>
+              <View style={{ position: "absolute", top: 60, left: 0, right: 0, backgroundColor: "#FFFFFF", borderRadius: 20, shadowColor: "#0D47A1", shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 15, maxHeight: 400, borderWidth: 1, borderColor: "#E2E8F0", overflow: "hidden" }}>
+                <View style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: "#F8FAFC", borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: "#64748B", letterSpacing: 0.5 }}>SEARCH RESULTS</Text>
+                </View>
                 <ScrollView keyboardShouldPersistTaps="handled" nestedScrollEnabled={true} showsVerticalScrollIndicator={true}>
-                  {SEARCHABLE_SERVICES.filter(s => s.label.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
-                    <View style={{ padding: 20, alignItems: "center" }}>
-                      <Ionicons name="search-outline" size={32} color="#CBD5E1" />
-                      <Text style={{ fontSize: 14, color: "#94A3B8", marginTop: 8, fontWeight: "600" }}>No services found</Text>
-                      <Text style={{ fontSize: 12, color: "#CBD5E1", marginTop: 2 }}>Try a different keyword</Text>
+                  {SEARCHABLE_SERVICES.filter(s =>
+                    s.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    s.category.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length === 0 ? (
+                    <View style={{ padding: 40, alignItems: "center" }}>
+                      <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#F1F5F9", justifyContent: "center", alignItems: "center", marginBottom: 12 }}>
+                        <Ionicons name="search-outline" size={32} color="#94A3B8" />
+                      </View>
+                      <Text style={{ fontSize: 16, color: "#475569", fontWeight: "700" }}>No services found</Text>
+                      <Text style={{ fontSize: 13, color: "#94A3B8", marginTop: 4, textAlign: "center" }}>We couldn't find anything matching "{searchQuery}"</Text>
                     </View>
                   ) : (
-                    SEARCHABLE_SERVICES.filter(s => s.label.toLowerCase().includes(searchQuery.toLowerCase())).map((item, idx) => (
+                    SEARCHABLE_SERVICES.filter(s =>
+                      s.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      s.category.toLowerCase().includes(searchQuery.toLowerCase())
+                    ).map((item, idx) => (
                       <TouchableOpacity
                         key={idx}
-                        onPress={() => { setSearchQuery(""); if (item.route) router.push(item.route as any); }}
-                        style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: "#F8FAFC" }}
+                        onPress={() => {
+                          setSearchQuery("");
+                          Keyboard.dismiss();
+                          if (item.route) router.push(item.route as any);
+                        }}
+                        style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "#F1F5F9" }}
                       >
-                        <View style={{ width: 38, height: 38, borderRadius: 12, backgroundColor: item.bg, justifyContent: "center", alignItems: "center" }}>
-                          <Ionicons name={item.icon as any} size={18} color={item.color} />
+                        <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: item.bg, justifyContent: "center", alignItems: "center", shadowColor: item.color, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
+                          {item.library === "MaterialCommunityIcons" ? (
+                            <MaterialCommunityIcons name={item.icon as any} size={22} color={item.color} />
+                          ) : (
+                            <Ionicons name={item.icon as any} size={22} color={item.color} />
+                          )}
                         </View>
-                        <View style={{ flex: 1, marginLeft: 12 }}>
-                          <Text style={{ fontSize: 14, fontWeight: "700", color: "#1F2937" }}>{item.label}</Text>
-                          <Text style={{ fontSize: 11, color: "#9CA3AF", marginTop: 1 }}>{item.category}</Text>
+                        <View style={{ flex: 1, marginLeft: 14 }}>
+                          <Text style={{ fontSize: 15, fontWeight: "700", color: "#1E293B" }}>{item.label}</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", marginTop: 2 }}>
+                            <Text style={{ fontSize: 11, color: "#64748B", fontWeight: "500" }}>{item.category}</Text>
+                            <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: "#CBD5E1", marginHorizontal: 6 }} />
+                            <Text style={{ fontSize: 10, color: "#94A3B8" }}>Service</Text>
+                          </View>
                         </View>
-                        <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
+                        <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: "#F8FAFC", justifyContent: "center", alignItems: "center" }}>
+                          <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                        </View>
                       </TouchableOpacity>
                     ))
                   )}
