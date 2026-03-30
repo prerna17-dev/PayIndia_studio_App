@@ -1378,3 +1378,88 @@ STACK: Error: Column 'aadhaar_number' cannot be null
     at Multipart.emit (node:events:508:28)
     at emitCloseNT (node:internal/streams/destroy:148:10)
 ----------------------------------
+
+[2026-03-30T10:39:23.598Z]
+METHOD: POST
+URL: /api/aadhar/correction/submit
+MESSAGE: Table 'payindia_studio.aadhar_corrections' doesn't exist
+STACK: Error: Table 'payindia_studio.aadhar_corrections' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:139:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:184:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-30T10:42:41.550Z]
+METHOD: POST
+URL: /api/aadhar/correction/submit
+MESSAGE: Table 'payindia_studio.aadhar_corrections' doesn't exist
+STACK: Error: Table 'payindia_studio.aadhar_corrections' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:139:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:184:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-30T10:42:43.609Z]
+METHOD: POST
+URL: /api/aadhar/correction/submit
+MESSAGE: Table 'payindia_studio.aadhar_corrections' doesn't exist
+STACK: Error: Table 'payindia_studio.aadhar_corrections' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:139:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:184:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at Multipart.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:187:7)
+    at Multipart.emit (node:events:508:28)
+    at emitCloseNT (node:internal/streams/destroy:148:10)
+----------------------------------
+
+[2026-03-30T10:44:42.229Z]
+METHOD: POST
+URL: /api/aadhar/correction/submit
+MESSAGE: Table 'payindia_studio.aadhar_corrections' doesn't exist
+STACK: Error: Table 'payindia_studio.aadhar_corrections' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:139:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:184:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------
+
+[2026-03-30T10:44:47.327Z]
+METHOD: POST
+URL: /api/aadhar/correction/submit
+MESSAGE: Table 'payindia_studio.aadhar_corrections' doesn't exist
+STACK: Error: Table 'payindia_studio.aadhar_corrections' doesn't exist
+    at PromisePool.query (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\mysql2\lib\promise\pool.js:36:22)
+    at exports.createCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\models\aadhar.model.js:139:33)
+    at exports.submitCorrection (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\src\controllers\aadhar.controller.js:184:48)
+    at Layer.handleRequest (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\layer.js:152:17)
+    at next (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\router\lib\route.js:157:13)
+    at done (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:59:7)
+    at indicateDone (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:63:68)
+    at C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\lib\make-middleware.js:176:11
+    at WriteStream.<anonymous> (C:\Users\Admin\Desktop\PayIndia_studio_App\Recharge_backend\node_modules\multer\storage\disk.js:43:9)
+    at WriteStream.emit (node:events:520:35)
+----------------------------------

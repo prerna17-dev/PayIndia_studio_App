@@ -134,13 +134,14 @@ exports.createCorrection = async (data) => {
         corrected_name,
         corrected_dob,
         correction_type,
+        reference_id,
     } = data;
 
     const [result] = await pool.query(
         `INSERT INTO aadhar_corrections 
-     (user_id, aadhar_number, mobile_number, corrected_name, corrected_dob, correction_type) 
-     VALUES (?, ?, ?, ?, ?, ?)`,
-        [user_id, aadhar_number, mobile_number, corrected_name, corrected_dob, correction_type]
+     (user_id, reference_id, aadhar_number, mobile_number, corrected_name, corrected_dob, correction_type) 
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [user_id, reference_id, aadhar_number, mobile_number, corrected_name, corrected_dob, correction_type]
     );
     return result.insertId;
 };

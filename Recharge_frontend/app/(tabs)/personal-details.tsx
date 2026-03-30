@@ -22,6 +22,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS } from "../../constants/api";
+import { calculateProfileCompletion } from "../../utils/profileCompletion";
 
 export default function PersonalDetailsScreen() {
   const router = useRouter();
@@ -38,6 +39,7 @@ export default function PersonalDetailsScreen() {
   const [isProfileComplete, setIsProfileComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
 
   // Date Picker States
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
@@ -53,6 +55,20 @@ export default function PersonalDetailsScreen() {
   const fetchProfile = async () => {
     setIsFetching(true);
     try {
+      // 1. Instantly load cached profile to avoid layout shift
+      const cachedData = await AsyncStorage.getItem("userData");
+      if (cachedData) {
+        const data = JSON.parse(cachedData);
+        setFullName(data.name || "");
+        setMobileNumber(data.mobile_number || "");
+        setEmail(data.user_email || "");
+        setGender(data.gender || "");
+        const rawDOB = data.date_of_birth || "";
+        setDateOfBirth(rawDOB.length > 10 ? rawDOB.substring(0, 10) : rawDOB);
+        setProfileImage(data.profile_image || null);
+      }
+
+      // 2. Fetch fresh profile data
       const token = await AsyncStorage.getItem("userToken");
       const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
         headers: {
@@ -70,6 +86,8 @@ export default function PersonalDetailsScreen() {
         const rawDOB = data.date_of_birth || "";
         setDateOfBirth(rawDOB.length > 10 ? rawDOB.substring(0, 10) : rawDOB);
         setProfileImage(data.profile_image || null);
+        
+        await AsyncStorage.setItem("userData", JSON.stringify(data));
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -82,8 +100,8 @@ export default function PersonalDetailsScreen() {
   useFocusEffect(
     React.useCallback(() => {
       const backAction = () => {
-        // Use replace to clear navigation stack and go directly to account
-        router.replace("/account");
+        // Go explicitly back to account screen as requested
+        router.navigate("/account");
         return true;
       };
 
@@ -388,11 +406,24 @@ export default function PersonalDetailsScreen() {
             const data = await response.json();
 
             if (response.ok) {
+              // Update local cache immediately so that returning to previous screens shows fresh data instantly
+              try {
+                const getResponse = await fetch(API_ENDPOINTS.USER_PROFILE, {
+                  headers: { Authorization: `Bearer ${token}` }
+                });
+                if (getResponse.ok) {
+                  const freshData = await getResponse.json();
+                  await AsyncStorage.setItem("userData", JSON.stringify(freshData));
+                }
+              } catch (e) {
+                console.error("Cache update failed:", e);
+              }
+
               setIsProfileComplete(true);
               Alert.alert("Success", "Profile saved successfully!", [
                 {
                   text: "OK",
-                  onPress: () => router.replace("/account"),
+                  onPress: () => router.navigate("/account"),
                 },
               ]);
             } else {
@@ -409,9 +440,21 @@ export default function PersonalDetailsScreen() {
     ]);
   };
 
+  // Update completion percentage whenever form data changes
+  useEffect(() => {
+    const data = {
+      name: fullName,
+      mobile_number: mobileNumber,
+      user_email: email,
+      gender: gender,
+      date_of_birth: dateOfBirth,
+      profile_image: profileImage,
+    };
+    setCompletionPercentage(calculateProfileCompletion(data));
+  }, [fullName, mobileNumber, email, gender, dateOfBirth, profileImage]);
+
   const handleBackPress = () => {
-    // Use replace to avoid navigation loop
-    router.replace("/account");
+    router.navigate("/account");
   };
 
   return (
@@ -440,12 +483,24 @@ export default function PersonalDetailsScreen() {
             >
               <Ionicons name="person-add" size={24} color="#0D47A1" />
               <View style={styles.bannerTextContainer}>
-                <Text style={styles.bannerTitle}>Complete Your Profile</Text>
+                <Text style={styles.bannerTitle}>
+                  {completionPercentage === 100 ? "Profile Complete!" : "Complete Your Profile"}
+                </Text>
                 <Text style={styles.bannerSubtitle}>
-                  Add your details to get started
+                  {completionPercentage === 100 
+                    ? "Your details are up to date" 
+                    : `${completionPercentage}% completed. Add your details to reach 100%`}
                 </Text>
               </View>
+              <View style={styles.percentageBadge}>
+                <Text style={styles.percentageBadgeText}>{completionPercentage}%</Text>
+              </View>
             </LinearGradient>
+            {completionPercentage < 100 && (
+              <View style={styles.progressBarContainer}>
+                <View style={[styles.progressBar, { width: `${completionPercentage}%` }]} />
+              </View>
+            )}
           </View>
 
           {/* Profile Image Section */}
@@ -1166,5 +1221,34 @@ const styles = StyleSheet.create({
     color: "#1976D2",
     fontWeight: "bold",
     fontSize: 14,
+  },
+  percentageBadge: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginLeft: 10,
+    elevation: 2,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  percentageBadgeText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0D47A1",
+  },
+  progressBarContainer: {
+    height: 6,
+    backgroundColor: "rgba(13, 71, 161, 0.1)",
+    borderRadius: 3,
+    marginTop: 15,
+    overflow: "hidden",
+  },
+  progressBar: {
+    height: "100%",
+    backgroundColor: "#0D47A1",
+    borderRadius: 3,
   },
 });

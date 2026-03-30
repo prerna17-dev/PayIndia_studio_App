@@ -18,6 +18,11 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
+
+import axios from "axios";
+import { API_ENDPOINTS } from "../constants/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type UpdateType = "name" | "dob" | "gender" | "address" | "mobile";
 
@@ -78,6 +83,7 @@ export default function AadhaarUpdateScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [showCopied, setShowCopied] = useState(false);
 
     useEffect(() => {
         const backAction = () => {
@@ -117,19 +123,50 @@ export default function AadhaarUpdateScreen() {
         setNewDob(formatted);
     };
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async () => {
         if (mobileNumber.length !== 10) return Alert.alert("Error", "Enter valid 10-digit mobile");
-        setIsOtpSent(true);
-        Alert.alert("Success", "OTP sent to registered mobile");
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.AADHAAR_CORRECTION_OTP_SEND, {
+                mobile_number: mobileNumber,
+                aadhar_number: aadhaarNumber.replace(/\s/g, ""),
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setIsOtpSent(true);
+                Alert.alert("Success", "OTP sent to registered mobile");
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to send OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred while sending OTP");
+        }
     };
 
-    const handleVerifyOtp = () => {
+    const handleVerifyOtp = async () => {
         if (otp.length !== 6) return Alert.alert("Error", "Enter 6-digit OTP");
         setIsVerifying(true);
-        setTimeout(() => {
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await axios.post(API_ENDPOINTS.AADHAAR_CORRECTION_OTP_VERIFY, {
+                mobile_number: mobileNumber,
+                otp_code: otp,
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (response.data.success) {
+                setStep(2);
+            } else {
+                Alert.alert("Error", response.data.message || "Invalid OTP");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An error occurred while verifying OTP");
+        } finally {
             setIsVerifying(false);
-            setStep(2);
-        }, 1200);
+        }
     };
 
     const handleFileUpload = async (docId: string) => {
@@ -169,14 +206,58 @@ export default function AadhaarUpdateScreen() {
         setStep(3);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         setIsSubmitting(true);
-        setTimeout(() => {
-            const refId = "UPD" + Math.random().toString(36).substr(2, 9).toUpperCase();
-            setApplicationId(refId);
+        try {
+            const token = await AsyncStorage.getItem("userToken");
+            const formData = new FormData();
+            formData.append("aadhar_number", aadhaarNumber.replace(/\s/g, ""));
+            formData.append("mobile_number", mobileNumber);
+            formData.append("correction_type", selectedType || "");
+
+            if (selectedType === "name") formData.append("corrected_name", newName);
+            if (selectedType === "dob") formData.append("corrected_dob", newDob);
+
+            // Append documents
+            Object.keys(uploadedDocs).forEach(docId => {
+                const doc = uploadedDocs[docId];
+                let fieldName = "";
+
+                if (docId === "nameProof1") fieldName = "identity_proof";
+                else if (docId === "nameProof2") fieldName = "identity_proof_2";
+                else if (docId === "dobProof") fieldName = "dob_proof";
+                else if (docId === "genderProof") fieldName = "identity_proof";
+                else if (docId === "addressProof1") fieldName = "address_proof";
+                else if (docId === "addressProof2") fieldName = "address_proof_2";
+                else if (docId === "mobileProof") fieldName = "identity_proof";
+
+                if (fieldName) {
+                    formData.append(fieldName, {
+                        uri: Platform.OS === "ios" ? doc.uri.replace("file://", "") : doc.uri,
+                        name: doc.name,
+                        type: doc.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg",
+                    } as any);
+                }
+            });
+
+            const response = await axios.post(API_ENDPOINTS.AADHAAR_CORRECTION_SUBMIT, formData, {
+                headers: {
+                    "Content-Type": "multipart/form-data",
+                    Authorization: `Bearer ${token}`
+                },
+            });
+
+            if (response.data.success) {
+                setApplicationId(response.data.data.reference_id);
+                setIsSubmitted(true);
+            } else {
+                Alert.alert("Error", response.data.message || "Failed to submit request");
+            }
+        } catch (error: any) {
+            Alert.alert("Error", error.response?.data?.message || "An unexpected error occurred");
+        } finally {
             setIsSubmitting(false);
-            setIsSubmitted(true);
-        }, 2000);
+        }
     };
 
     const renderDocumentUploads = () => {
@@ -231,26 +312,26 @@ export default function AadhaarUpdateScreen() {
                     <Text style={s.successTitle}>Update Requested!</Text>
                     <Text style={s.successSubtitle}>Your Aadhaar update request has been submitted successfully.</Text>
 
-                    <View style={s.idCard}>
+                    <TouchableOpacity 
+                        style={s.idCard} 
+                        onPress={async () => {
+                            await Clipboard.setStringAsync(applicationId);
+                            setShowCopied(true);
+                            setTimeout(() => setShowCopied(false), 2000);
+                        }}
+                    >
                         <Text style={s.idLabel}>Reference ID</Text>
-                        <Text style={s.idValue}>{applicationId}</Text>
-                    </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Text style={s.idValue}>{applicationId}</Text>
+                            <Ionicons name="copy-outline" size={20} color="#0D47A1" />
+                        </View>
+                    </TouchableOpacity>
 
-                    <View style={s.successActions}>
-                        <TouchableOpacity style={s.actionBtn}>
-                            <View style={[s.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                            </View>
-                            <Text style={s.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={s.actionBtn}>
-                            <View style={[s.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={s.actionText}>Track{"\n"}Status</Text>
-                        </TouchableOpacity>
-                    </View>
+                    {showCopied && (
+                        <View style={s.toast}>
+                            <Text style={s.toastText}>Copied to clipboard</Text>
+                        </View>
+                    )}
 
                     <TouchableOpacity style={s.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={s.btnGrad}>
@@ -573,9 +654,9 @@ const s = StyleSheet.create({
     verifyBtn: { backgroundColor: '#E3F2FD', paddingHorizontal: 16, borderRadius: 12, justifyContent: 'center', height: 48 },
     verifyBtnText: { fontSize: 12, fontWeight: '700', color: '#0D47A1' },
 
-    mainBtn: { borderRadius: 16, overflow: 'hidden' },
+    mainBtn: { width: '100%', height: 56, borderRadius: 16, overflow: 'hidden' },
     btnDisabled: { opacity: 0.6 },
-    btnGrad: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
+    btnGrad: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
     mainBtnText: { color: '#FFF', fontSize: 16, fontWeight: '800' },
 
     typeList: { gap: 16, paddingRight: 20, marginBottom: 20 },
@@ -619,11 +700,13 @@ const s = StyleSheet.create({
     successIconCircle: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F1F8E9', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
     successTitle: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginBottom: 10 },
     successSubtitle: { fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 30, paddingHorizontal: 20 },
-    idCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, width: '100%', alignItems: 'center', marginBottom: 30, borderWidth: 1, borderColor: '#E2E8F0' },
-    idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 },
-    idValue: { fontSize: 24, fontWeight: '800', color: '#0D47A1' },
+    idCard: { backgroundColor: '#F8FAFC', borderRadius: 16, padding: 20, width: '100%', marginVertical: 30, alignItems: 'center', borderWidth: 1, borderColor: '#F1F5F9' },
+    idLabel: { fontSize: 12, color: '#64748B', textTransform: 'uppercase', letterSpacing: 1 },
+    idValue: { fontSize: 28, fontWeight: '900', color: '#0D47A1', marginTop: 8 },
     successActions: { flexDirection: 'row', gap: 15, marginBottom: 30 },
     actionBtn: { flex: 1, backgroundColor: '#FFF', borderRadius: 16, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' },
     actionIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
     actionText: { fontSize: 12, fontWeight: '700', color: '#1E293B', textAlign: 'center' },
+    toast: { position: 'absolute', bottom: 50, backgroundColor: 'rgba(0,0,0,0.8)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, zIndex: 99 },
+    toastText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
 });

@@ -17,6 +17,8 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, API_BASE_URL } from "../constants/api";
+import { CircularProfileProgress } from "../components/CircularProfileProgress";
+import { calculateProfileCompletion } from "../utils/profileCompletion";
 
 export default function AccountScreen() {
   const router = useRouter();
@@ -24,10 +26,20 @@ export default function AccountScreen() {
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
   const [userData, setUserData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
 
   const fetchProfile = async () => {
     setIsLoading(true);
     try {
+      // 1. Instantly load cached profile to avoid layout shift
+      const cachedData = await AsyncStorage.getItem("userData");
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        setUserData(parsed);
+        setCompletionPercentage(calculateProfileCompletion(parsed));
+      }
+
+      // 2. Fetch fresh profile data
       const token = await AsyncStorage.getItem("userToken");
       const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
         headers: {
@@ -37,7 +49,10 @@ export default function AccountScreen() {
       const data = await response.json();
 
       if (response.ok) {
+        // Update state and cache with fresh data
         setUserData(data);
+        setCompletionPercentage(calculateProfileCompletion(data));
+        await AsyncStorage.setItem("userData", JSON.stringify(data));
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -46,9 +61,17 @@ export default function AccountScreen() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowLogoutModal(false);
     setShowLogoutSuccess(true);
+
+    try {
+      // Clear authentication data
+      await AsyncStorage.removeItem("userToken");
+      await AsyncStorage.removeItem("userData");
+    } catch (error) {
+      console.error("Error clearing session during logout:", error);
+    }
 
     // Redirect after a short delay
     setTimeout(() => {
@@ -63,8 +86,8 @@ export default function AccountScreen() {
       fetchProfile();
 
       const backAction = () => {
-        // Go to home/explore screen
-        router.replace("/(tabs)/explore");
+        // Go back to previous screen to preserve state
+        router.navigate("/(tabs)/explore");
         return true;
       };
 
@@ -87,7 +110,13 @@ export default function AccountScreen() {
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.replace("/(tabs)/explore")}
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/(tabs)/explore");
+              }
+            }}
           >
             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
@@ -106,18 +135,26 @@ export default function AccountScreen() {
                   style={styles.profileIconContainer}
                   onPress={() => router.push("/personal-details")}
                 >
-                  {userData?.profile_image ? (
-                    <Image
-                      source={{
-                        uri: userData.profile_image.startsWith('http')
-                          ? userData.profile_image
-                          : `${API_BASE_URL}${userData.profile_image}`
-                      }}
-                      style={styles.profileImage}
-                    />
-                  ) : (
-                    <Ionicons name="person-circle" size={80} color="#2196F3" />
-                  )}
+                  <CircularProfileProgress
+                    size={100}
+                    strokeWidth={5}
+                    percentage={completionPercentage}
+                    progressColor={completionPercentage === 100 ? "#4CAF50" : "#2196F3"}
+                    backgroundColor="rgba(33, 150, 243, 0.1)"
+                  >
+                    {userData?.profile_image ? (
+                      <Image
+                        source={{
+                          uri: userData.profile_image.startsWith('http')
+                            ? userData.profile_image
+                            : `${API_BASE_URL}${userData.profile_image}`
+                        }}
+                        style={styles.profileImage}
+                      />
+                    ) : (
+                      <Ionicons name="person-circle" size={88} color="#2196F3" />
+                    )}
+                  </CircularProfileProgress>
                   <View style={styles.editPencilContainer}>
                     <Ionicons name="pencil" size={12} color="#FFFFFF" />
                   </View>
@@ -221,6 +258,13 @@ export default function AccountScreen() {
                 </View>
                 <Text style={styles.menuItemText}>Personal Details</Text>
               </View>
+              {completionPercentage < 100 ? (
+                <View style={styles.completionBadge}>
+                  <Text style={styles.completionBadgeText}>{completionPercentage}%</Text>
+                </View>
+              ) : (
+                <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+              )}
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>
 
@@ -736,5 +780,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2196F3',
     marginTop: 2,
+  },
+  completionBadge: {
+    backgroundColor: "#E3F2FD",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  completionBadgeText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#1976D2",
   },
 });

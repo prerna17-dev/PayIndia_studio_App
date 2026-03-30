@@ -1,11 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  BackHandler,
   Dimensions,
   KeyboardAvoidingView,
   NativeSyntheticEvent,
@@ -31,6 +32,8 @@ export default function LoginScreen() {
   const inputRefs = useRef<(TextInput | null)[]>([]);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const [isLoading, setIsLoading] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
+  const [showReferralInput, setShowReferralInput] = useState(false);
 
   // Timer countdown for OTP
   useEffect(() => {
@@ -41,6 +44,29 @@ export default function LoginScreen() {
       return () => clearInterval(interval);
     }
   }, [step]);
+
+  // Handle hardware back button - exit app or go back to phone step
+  useFocusEffect(
+    React.useCallback(() => {
+      const onBackPress = () => {
+        if (step === "otp") {
+          handleChangeNumber();
+          return true;
+        } else {
+          // If on phone entry step, exit the app instead of going back to previous screens
+          BackHandler.exitApp();
+          return true;
+        }
+      };
+
+      const backHandler = BackHandler.addEventListener(
+        "hardwareBackPress",
+        onBackPress
+      );
+
+      return () => backHandler.remove();
+    }, [step])
+  );
 
   const handleSendOTP = async () => {
     if (phoneNumber.length === 10) {
@@ -106,7 +132,11 @@ export default function LoginScreen() {
         const response = await fetch(API_ENDPOINTS.VERIFY_OTP, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mobile: phoneNumber, otp: otpCode }),
+          body: JSON.stringify({ 
+            mobile: phoneNumber, 
+            otp: otpCode,
+            referralCode: referralCode 
+          }),
         });
 
         const data = await response.json();
@@ -232,6 +262,33 @@ export default function LoginScreen() {
                   />
                 </View>
               </View>
+
+              {/* Referral Code Toggle */}
+              <TouchableOpacity
+                onPress={() => setShowReferralInput(!showReferralInput)}
+                style={styles.referralToggle}
+              >
+                <Text style={styles.referralToggleText}>
+                  {showReferralInput ? "- Remove Referral Code" : "+ Have a Referral Code?"}
+                </Text>
+              </TouchableOpacity>
+
+              {/* Referral Code Input */}
+              {showReferralInput && (
+                <View style={styles.inputSection}>
+                  <Text style={styles.label}>Referral Code (Optional)</Text>
+                  <View style={styles.referralInputContainer}>
+                    <TextInput
+                      style={styles.referralInput}
+                      placeholder="Enter code"
+                      placeholderTextColor="#999"
+                      autoCapitalize="characters"
+                      value={referralCode}
+                      onChangeText={setReferralCode}
+                    />
+                  </View>
+                </View>
+              )}
 
               {/* Send OTP Button */}
               <TouchableOpacity
@@ -610,6 +667,28 @@ const styles = StyleSheet.create({
 
   termsLink: {
     color: "#2196F3",
+    fontWeight: "600",
+  },
+  referralToggle: {
+    marginBottom: 15,
+  },
+  referralToggleText: {
+    color: "#2196F3",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  referralInputContainer: {
+    borderWidth: 2,
+    borderColor: "#90CAF9",
+    borderRadius: 12,
+    backgroundColor: "#F1F8FE",
+    overflow: "hidden",
+  },
+  referralInput: {
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: "#1A1A1A",
     fontWeight: "600",
   },
 });

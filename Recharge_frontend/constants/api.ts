@@ -6,7 +6,7 @@
 // Replace this IP address with your computer's current IP address (IPv4)
 // Run 'ipconfig' in terminal to find your IPv4 address
 
-export const API_BASE_URL = "http://192.168.1.16:5000";
+export const API_BASE_URL = "http://192.168.1.15:5000";
 
 
 export const API_ENDPOINTS = {
@@ -162,4 +162,5 @@ export const API_ENDPOINTS = {
     AYUSHMAN_OTP_SEND: `${API_BASE_URL}/api/social/ayushman/otp/send`,
     AYUSHMAN_OTP_VERIFY: `${API_BASE_URL}/api/social/ayushman/otp/verify`,
     AYUSHMAN_CORRECTION_SUBMIT: `${API_BASE_URL}/api/social/ayushman/correction`,
+    REFERRAL_INFO: `${API_BASE_URL}/api/referral/info`,
 };
