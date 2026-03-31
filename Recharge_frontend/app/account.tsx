@@ -360,6 +360,29 @@ export default function AccountScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Rate Us Card - New Placement */}
+          <View style={{ paddingHorizontal: 15, marginBottom: 15 }}>
+            <LinearGradient
+              colors={["#F1F8FE", "#E3F2FD"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ padding: 16, borderRadius: 16, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderColor: "#BBDEFB" }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: "900", color: "#10567eff", marginBottom: 2 }}>Enjoying PayIndia?</Text>
+                <Text style={{ fontSize: 11, color: "#4ab6e0ff", marginBottom: 8 }}>Help us grow by rating our app!</Text>
+                <View style={{ flexDirection: "row", gap: 4 }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Ionicons key={s} name="star" size={18} color="#F59E0B" />
+                  ))}
+                </View>
+              </View>
+              <TouchableOpacity style={{ backgroundColor: "#10567eff", paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12 }}>
+                <Text style={{ fontSize: 12, fontWeight: "800", color: "#FFFFFF" }}>Rate Us</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+
           {/* Small Logout Button exactly below Settings section */}
           <TouchableOpacity
             style={styles.smallLogoutButton}

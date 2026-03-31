@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -7,6 +7,7 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
+    Animated,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,73 +19,61 @@ const { width } = Dimensions.get('window');
 const DEALS = [
     {
         id: 1,
-        title: "Swiggy Munch",
-        offer: "Flat ₹100 OFF",
-        description: "On orders above ₹399",
-        code: "PAYSWIGGY",
+        title: "Electricity Bill",
+        offer: "Flat ₹50 Cashback",
+        description: "On bill payments above ₹800",
+        code: "POWER50",
         expiry: "Ends in 3 days",
-        colors: ["#FFF7ED", "#FFEDD5"] as [string, string],
-        iconName: "hamburger",
-        iconLibrary: "MaterialCommunityIcons",
-        iconColor: "#F97316"
+        colors: ["#FFF7ED", "#FFEDD5"] as [string, string], // Amber
+        iconName: "bulb",
+        iconLibrary: "Ionicons",
+        iconColor: "#D97706"
     },
     {
         id: 2,
-        title: "Amazon Shopping",
-        offer: "5% Cashback",
-        description: "Up to ₹250 on first order",
-        code: "PAYAMZ5",
+        title: "Mobile Recharge",
+        offer: "10% Cashback",
+        description: "Get up to ₹100 on all recharges",
+        code: "MOBILE10",
         expiry: "Ends in 5 days",
-        colors: ["#F0F9FF", "#E0F2FE"] as [string, string],
-        iconName: "cart",
+        colors: ["#F0F9FF", "#E0F2FE"] as [string, string], // Sky
+        iconName: "phone-portrait",
         iconLibrary: "Ionicons",
         iconColor: "#0284C7"
     },
     {
-        id: 3,
-        title: "MakeMyTrip Flights",
-        offer: "Flat ₹1500 OFF",
-        description: "On international flight bookings",
-        code: "FLYINTL",
-        expiry: "Limited period offer",
-        colors: ["#FDF2F8", "#FCE7F3"] as [string, string],
-        iconName: "airplane",
-        iconLibrary: "Ionicons",
-        iconColor: "#DB2777"
+        id: 4,
+        title: "DTH Recharge",
+        offer: "Save Flat ₹75",
+        description: "On select DTH operators",
+        code: "DTHSAVE",
+        expiry: "Ends in 7 days",
+        colors: ["#F0FDF4", "#DCFCE7"] as [string, string], // Green
+        iconName: "satellite-variant",
+        iconLibrary: "MaterialCommunityIcons",
+        iconColor: "#16A34A"
     },
     {
-        id: 4,
-        title: "Zomato Gold",
-        offer: "Buy 1 Get 1 Free",
-        description: "On Gold partner restaurants",
-        code: "PAYGOLD",
-        expiry: "Ends in 7 days",
-        colors: ["#FFF1F2", "#FFE4E6"] as [string, string],
-        iconName: "food-drumstick",
+        id: 5,
+        title: "LPG Gas",
+        offer: "₹40 Cashback",
+        description: "On first gas booking via app",
+        code: "GAS40",
+        expiry: "Ends in 12 days",
+        colors: ["#FFF1F2", "#FFE4E6"] as [string, string], // Rose
+        iconName: "gas-cylinder",
         iconLibrary: "MaterialCommunityIcons",
         iconColor: "#E11D48"
     },
     {
-        id: 5,
-        title: "Jio Recharge",
-        offer: "Flat ₹50 OFF",
-        description: "On recharges above ₹299",
-        code: "JIO50",
-        expiry: "Ends in 12 days",
-        colors: ["#F5F3FF", "#EDE9FE"] as [string, string],
-        iconName: "cellphone-check",
-        iconLibrary: "MaterialCommunityIcons",
-        iconColor: "#7C3AED"
-    },
-    {
         id: 6,
-        title: "Uber Intercity",
-        offer: "20% OFF",
-        description: "Max discount up to ₹300",
-        code: "UBERGO",
+        title: "Fastag",
+        offer: "1% Reward",
+        description: "On top-ups above ₹1000",
+        code: "FASTAG1",
         expiry: "Limited time",
-        colors: ["#F8FAFC", "#F1F5F9"] as [string, string],
-        iconName: "car",
+        colors: ["#F8FAFC", "#F1F5F9"] as [string, string], // Slate
+        iconName: "card",
         iconLibrary: "Ionicons",
         iconColor: "#475569"
     }
@@ -92,6 +81,19 @@ const DEALS = [
 
 export default function DealsOffersScreen() {
     const router = useRouter();
+    const fadeAnims = useRef(DEALS.map(() => new Animated.Value(0))).current;
+
+    useEffect(() => {
+        const animations = fadeAnims.map((anim: Animated.Value, index: number) => {
+            return Animated.timing(anim, {
+                toValue: 1,
+                duration: 500,
+                delay: index * 100,
+                useNativeDriver: true,
+            });
+        });
+        Animated.stagger(100, animations).start();
+    }, []);
 
     return (
         <View style={styles.container}>
@@ -112,40 +114,51 @@ export default function DealsOffersScreen() {
 
                 <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
                     <View style={styles.grid}>
-                        {DEALS.map((deal) => (
-                            <TouchableOpacity key={deal.id} style={styles.dealCard} activeOpacity={0.9}>
-                                <LinearGradient
-                                    colors={deal.colors}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                    style={styles.cardGradient}
-                                >
-                                    <View style={styles.cardTop}>
-                                        <View style={styles.iconCircle}>
-                                            {deal.iconLibrary === "Ionicons" ? (
-                                                <Ionicons name={deal.iconName as any} size={18} color={deal.iconColor} />
-                                            ) : (
-                                                <MaterialCommunityIcons name={deal.iconName as any} size={18} color={deal.iconColor} />
-                                            )}
+                        {DEALS.map((deal, index) => (
+                            <Animated.View 
+                                key={deal.id} 
+                                style={{ 
+                                    opacity: fadeAnims[index],
+                                    transform: [{
+                                        translateY: fadeAnims[index].interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [20, 0]
+                                        })
+                                    }]
+                                }}
+                            >
+                                <TouchableOpacity style={styles.dealCard} activeOpacity={0.9}>
+                                    <LinearGradient
+                                        colors={deal.colors}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 1 }}
+                                        style={styles.cardGradient}
+                                    >
+                                        <View style={styles.cardLeft}>
+                                            <View style={styles.iconCircle}>
+                                                {deal.iconLibrary === "Ionicons" ? (
+                                                    <Ionicons name={deal.iconName as any} size={18} color={deal.iconColor} />
+                                                ) : (
+                                                    <MaterialCommunityIcons name={deal.iconName as any} size={18} color={deal.iconColor} />
+                                                )}
+                                            </View>
+                                            <View style={styles.cardInfo}>
+                                                <Text style={styles.dealTitle}>{deal.title}</Text>
+                                                <Text style={styles.dealOffer}>{deal.offer}</Text>
+                                            </View>
                                         </View>
-                                        <Text style={styles.dealExpiry}>{deal.expiry}</Text>
-                                    </View>
-                                    
-                                    <Text style={styles.dealTitle}>{deal.title}</Text>
-                                    <Text style={styles.dealOffer}>{deal.offer}</Text>
-                                    <Text style={styles.dealDescription}>{deal.description}</Text>
-
-                                    <View style={styles.promoBox}>
-                                        <View style={styles.codeWrapper}>
-                                            <Text style={styles.codeLabel}>CODE: </Text>
-                                            <Text style={[styles.codeValue, { color: deal.iconColor }]}>{deal.code}</Text>
+                                        
+                                        <View style={styles.cardRight}>
+                                            <View style={styles.promoContainer}>
+                                                <Text style={styles.promoText}>{deal.code}</Text>
+                                            </View>
+                                            <TouchableOpacity style={[styles.claimBtn, { backgroundColor: deal.iconColor }]}>
+                                                <Text style={styles.claimText}>Claim</Text>
+                                            </TouchableOpacity>
                                         </View>
-                                        <TouchableOpacity style={[styles.claimBtn, { backgroundColor: deal.iconColor }]}>
-                                            <Text style={styles.claimText}>Claim</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                </LinearGradient>
-                            </TouchableOpacity>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </Animated.View>
                         ))}
                     </View>
                 </ScrollView>
@@ -193,7 +206,7 @@ const styles = StyleSheet.create({
         padding: 16,
     },
     grid: {
-        gap: 12,
+        gap: 10,
     },
     dealCard: {
         borderRadius: 16,
@@ -201,20 +214,25 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#F1F5F9',
         backgroundColor: '#FFFFFF',
+        height: 85,
     },
     cardGradient: {
-        padding: 12,
-    },
-    cardTop: {
+        flex: 1,
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 10,
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+    },
+    cardLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
     },
     iconCircle: {
-        width: 32,
-        height: 32,
-        borderRadius: 10,
+        width: 40,
+        height: 40,
+        borderRadius: 12,
         backgroundColor: '#FFFFFF',
         justifyContent: 'center',
         alignItems: 'center',
@@ -224,60 +242,40 @@ const styles = StyleSheet.create({
         shadowRadius: 2,
         elevation: 1,
     },
-    dealExpiry: {
-        fontSize: 9,
-        fontWeight: '600',
-        color: '#94A3B8',
-        backgroundColor: 'rgba(255,255,255,0.6)',
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        borderRadius: 6,
+    cardInfo: {
+        flex: 1,
     },
     dealTitle: {
-        fontSize: 13,
-        fontWeight: '700',
-        color: '#475569',
-        marginBottom: 2,
+        fontSize: 12,
+        fontWeight: '600',
+        color: '#64748B',
+        marginBottom: 1,
     },
     dealOffer: {
         fontSize: 18,
         fontWeight: '900',
         color: '#1E293B',
-        marginBottom: 2,
     },
-    dealDescription: {
+    cardRight: {
+        alignItems: 'flex-end',
+        gap: 6,
+    },
+    promoContainer: {
+        backgroundColor: 'rgba(255,255,255,0.6)',
+        paddingHorizontal: 8,
+        paddingVertical: 3,
+        borderRadius: 6,
+    },
+    promoText: {
         fontSize: 10,
-        color: '#64748B',
-        lineHeight: 14,
-        marginBottom: 12,
-    },
-    promoBox: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.7)',
-        borderRadius: 10,
-        padding: 3,
-        paddingLeft: 10,
-    },
-    codeWrapper: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    codeLabel: {
-        fontSize: 9,
-        fontWeight: 'bold',
-        color: '#94A3B8',
-    },
-    codeValue: {
-        fontSize: 11,
         fontWeight: '800',
+        color: '#475569',
         letterSpacing: 0.5,
     },
     claimBtn: {
-        paddingHorizontal: 12,
+        paddingHorizontal: 14,
         paddingVertical: 6,
-        borderRadius: 8,
+        borderRadius: 10,
     },
     claimText: {
         color: '#FFFFFF',
