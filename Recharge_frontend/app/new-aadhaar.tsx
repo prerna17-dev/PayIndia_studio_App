@@ -1,5 +1,6 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
+import * as Clipboard from "expo-clipboard";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -62,6 +63,7 @@ export default function NewAadhaarScreen() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [applicationId, setApplicationId] = useState("");
+    const [showCopied, setShowCopied] = useState(false);
     const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
     useEffect(() => {
@@ -151,8 +153,6 @@ export default function NewAadhaarScreen() {
                     ...prev,
                     [docType]: file,
                 }));
-
-                Alert.alert("Success", "Document uploaded successfully");
             }
         } catch (error) {
             Alert.alert("Error", "Failed to upload document");
@@ -254,11 +254,9 @@ export default function NewAadhaarScreen() {
                     formDataObj.append("mobile_number", formData.mobile);
 
                     // Minor fields if applicable
-                    if (isMinor) {
-                        formDataObj.append("parent_name", formData.parentName);
-                        formDataObj.append("parent_aadhaar", formData.parentAadhaar);
-                        formDataObj.append("relationship", formData.relationship);
-                    }
+                    formDataObj.append("parent_name", formData.parentName);
+                    formDataObj.append("parent_aadhaar_number", formData.parentAadhaar);
+                    formDataObj.append("relationship", formData.relationship);
 
                     // Append documents
                     if (documents.birthCertificate) {
@@ -282,7 +280,7 @@ export default function NewAadhaarScreen() {
                             type: documents.addressProof.mimeType || "application/octet-stream",
                         } as any);
                     }
-                    if (isMinor && documents.parentAadhaar) {
+                    if (documents.parentAadhaar) {
                         formDataObj.append("parent_aadhaar", {
                             uri: documents.parentAadhaar.uri,
                             name: documents.parentAadhaar.name,
@@ -298,7 +296,7 @@ export default function NewAadhaarScreen() {
                     });
 
                     if (response.data.success) {
-                        setApplicationId(response.data.data.enrollmentId);
+                        setApplicationId(response.data.data.reference_id);
                         setIsSubmitted(true);
                     } else {
                         Alert.alert("Error", response.data.message || "Something went wrong");
@@ -336,25 +334,26 @@ export default function NewAadhaarScreen() {
                     <Text style={styles.successSubtitle}>Your Aadhaar enrollment application has been received successfully.</Text>
 
                     <View style={styles.idCard}>
-                        <Text style={styles.idLabel}>Enrollment ID</Text>
-                        <Text style={styles.idValue}>{applicationId}</Text>
-                    </View>
-
-                    <View style={styles.successActions}>
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#E3F2FD' }]}>
-                                <Ionicons name="download-outline" size={24} color="#0D47A1" />
-                            </View>
-                            <Text style={styles.actionText}>Download{"\n"}Receipt</Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity style={styles.actionBtn}>
-                            <View style={[styles.actionIcon, { backgroundColor: '#F1F8E9' }]}>
-                                <Ionicons name="time-outline" size={24} color="#2E7D32" />
-                            </View>
-                            <Text style={styles.actionText}>Track{"\n"}Status</Text>
+                        <Text style={styles.idLabel}>Reference ID</Text>
+                        <TouchableOpacity 
+                            style={styles.idValueContainer}
+                            onPress={async () => {
+                                await Clipboard.setStringAsync(applicationId);
+                                setShowCopied(true);
+                                setTimeout(() => setShowCopied(false), 2000);
+                            }}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={styles.idValue}>{applicationId}</Text>
+                            <Ionicons name="copy-outline" size={24} color="#0D47A1" />
                         </TouchableOpacity>
                     </View>
+
+                    {showCopied && (
+                        <View style={styles.toast}>
+                            <Text style={styles.toastText}>Copied to clipboard</Text>
+                        </View>
+                    )}
 
                     <TouchableOpacity style={styles.mainBtn} onPress={() => router.back()}>
                         <LinearGradient colors={['#0D47A1', '#1565C0']} style={styles.btnGrad}>
@@ -591,51 +590,49 @@ export default function NewAadhaarScreen() {
                                 </View>
                             </View>
 
-                            {isMinor && (
-                                <View style={styles.minorSection}>
-                                    <LinearGradient colors={['#FFF5F5', '#FFF']} style={styles.minorCard}>
-                                        <View style={styles.minorHeader}>
-                                            <MaterialCommunityIcons name="baby-face-outline" size={24} color="#E53935" />
-                                            <Text style={styles.minorTitle}>Minor Details (Below 18)</Text>
-                                        </View>
+                            <View style={styles.minorSection}>
+                                <LinearGradient colors={['#FFF5F5', '#FFF']} style={styles.minorCard}>
+                                    <View style={styles.minorHeader}>
+                                        <MaterialCommunityIcons name="account-group-outline" size={24} color="#0D47A1" />
+                                        <Text style={styles.minorTitle}>Parent / Guardian Details</Text>
+                                    </View>
 
-                                        <Text style={styles.inputLabel}>Parent/Guardian Name *</Text>
-                                        <View style={styles.inputContainer}>
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="Guardian's full name"
-                                                value={formData.parentName}
-                                                onChangeText={(text) => setFormData({ ...formData, parentName: text })}
-                                            />
-                                        </View>
+                                    <Text style={styles.inputLabel}>Parent/Guardian Name *</Text>
+                                    <View style={styles.inputContainer}>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="Guardian's full name"
+                                            value={formData.parentName}
+                                            onChangeText={(text) => setFormData({ ...formData, parentName: text })}
+                                        />
+                                    </View>
 
-                                        <Text style={styles.inputLabel}>Parent Aadhaar Number *</Text>
-                                        <View style={styles.inputContainer}>
-                                            <TextInput
-                                                style={styles.input}
-                                                placeholder="12-digit Aadhaar"
-                                                keyboardType="number-pad"
-                                                maxLength={12}
-                                                value={formData.parentAadhaar}
-                                                onChangeText={(text) => setFormData({ ...formData, parentAadhaar: text })}
-                                            />
-                                        </View>
+                                    <Text style={styles.inputLabel}>Parent Aadhaar Number *</Text>
+                                    <View style={styles.inputContainer}>
+                                        <TextInput
+                                            style={styles.input}
+                                            placeholder="12-digit Aadhaar"
+                                            keyboardType="number-pad"
+                                            maxLength={12}
+                                            value={formData.parentAadhaar}
+                                            onChangeText={(text) => setFormData({ ...formData, parentAadhaar: text })}
+                                        />
+                                    </View>
 
-                                        <Text style={styles.inputLabel}>Relationship *</Text>
-                                        <View style={styles.genderContainer}>
-                                            {["Father", "Mother", "Guardian"].map((r) => (
-                                                <TouchableOpacity
-                                                    key={r}
-                                                    style={[styles.genderBox, formData.relationship === r && styles.genderBoxActive]}
-                                                    onPress={() => setFormData({ ...formData, relationship: r })}
-                                                >
-                                                    <Text style={[styles.genderText, formData.relationship === r && styles.genderTextActive]}>{r}</Text>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-                                    </LinearGradient>
-                                </View>
-                            )}
+                                    <Text style={styles.inputLabel}>Relationship *</Text>
+                                    <View style={styles.genderContainer}>
+                                        {["Father", "Mother", "Guardian"].map((r) => (
+                                            <TouchableOpacity
+                                                key={r}
+                                                style={[styles.genderBox, formData.relationship === r && styles.genderBoxActive]}
+                                                onPress={() => setFormData({ ...formData, relationship: r })}
+                                            >
+                                                <Text style={[styles.genderText, formData.relationship === r && styles.genderTextActive]}>{r}</Text>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                </LinearGradient>
+                            </View>
                         </View>
                     )}
 
@@ -711,25 +708,23 @@ export default function NewAadhaarScreen() {
                                 </TouchableOpacity>
 
                                 {/* Parent Aadhaar - Mandatory for Minors */}
-                                {isMinor && (
-                                    <TouchableOpacity
-                                        style={[styles.docUploadCard, documents.parentAadhaar && styles.docUploadCardActive]}
-                                        onPress={() => handleDocumentUpload("parentAadhaar")}
-                                    >
-                                        <View style={[styles.docIconCircle, { backgroundColor: '#FFEBEE' }]}>
-                                            <MaterialCommunityIcons name="account-details" size={24} color={documents.parentAadhaar ? "#FFF" : "#E53935"} />
-                                        </View>
-                                        <View style={styles.docTextContent}>
-                                            <Text style={styles.docTitle}>Parent Aadhaar *</Text>
-                                            <Text style={styles.docHint}>{documents.parentAadhaar ? documents.parentAadhaar.name : "Tap to upload guardian's card"}</Text>
-                                        </View>
-                                        <Ionicons
-                                            name={documents.parentAadhaar ? "checkmark-circle" : "cloud-upload"}
-                                            size={24}
-                                            color={documents.parentAadhaar ? "#2E7D32" : "#94A3B8"}
-                                        />
-                                    </TouchableOpacity>
-                                )}
+                                <TouchableOpacity
+                                    style={[styles.docUploadCard, documents.parentAadhaar && styles.docUploadCardActive]}
+                                    onPress={() => handleDocumentUpload("parentAadhaar")}
+                                >
+                                    <View style={[styles.docIconCircle, { backgroundColor: '#FFEBEE' }]}>
+                                        <MaterialCommunityIcons name="account-details" size={24} color={documents.parentAadhaar ? "#FFF" : "#E53935"} />
+                                    </View>
+                                    <View style={styles.docTextContent}>
+                                        <Text style={styles.docTitle}>Parent Aadhaar *</Text>
+                                        <Text style={styles.docHint}>{documents.parentAadhaar ? documents.parentAadhaar.name : "Tap to upload guardian's card"}</Text>
+                                    </View>
+                                    <Ionicons
+                                        name={documents.parentAadhaar ? "checkmark-circle" : "cloud-upload"}
+                                        size={24}
+                                        color={documents.parentAadhaar ? "#2E7D32" : "#94A3B8"}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         </View>
                     )}
@@ -777,7 +772,7 @@ export default function NewAadhaarScreen() {
                                     </Text>
                                 </View>
 
-                                {isMinor && (
+                                {formData.parentName ? (
                                     <>
                                         <View style={styles.divider} />
                                         <View style={styles.reviewSection}>
@@ -792,7 +787,7 @@ export default function NewAadhaarScreen() {
                                             </View>
                                         </View>
                                     </>
-                                )}
+                                ) : null}
                             </View>
 
                             <View style={styles.declarationBox}>
@@ -1255,31 +1250,33 @@ const styles = StyleSheet.create({
     },
     idValue: {
         fontSize: 28,
-        fontWeight: "800",
+        fontWeight: "900",
         color: "#0D47A1",
-        marginTop: 4,
     },
-    successActions: {
+    idValueContainer: {
         flexDirection: 'row',
-        gap: 20,
-        marginBottom: 40,
-    },
-    actionBtn: {
         alignItems: 'center',
-        gap: 8,
+        gap: 10,
+        marginTop: 8,
     },
-    actionIcon: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
-        alignItems: 'center',
-        justifyContent: 'center',
+    toast: {
+        position: 'absolute',
+        bottom: 150,
+        backgroundColor: 'rgba(0,0,0,0.85)',
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        borderRadius: 30,
+        zIndex: 999,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
     },
-    actionText: {
-        fontSize: 12,
-        color: '#475569',
+    toastText: {
+        color: '#FFF',
+        fontSize: 14,
         fontWeight: '600',
-        textAlign: 'center',
     },
     mainBtn: {
         width: '100%',

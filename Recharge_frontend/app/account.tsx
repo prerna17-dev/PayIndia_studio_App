@@ -66,13 +66,6 @@ export default function AccountScreen() {
     setShowLogoutSuccess(true);
 
     try {
-<<<<<<< HEAD
-      // Clear authentication data
-      await AsyncStorage.removeItem("userToken");
-      await AsyncStorage.removeItem("userData");
-    } catch (error) {
-      console.error("Error clearing session during logout:", error);
-=======
       // Clear user-specific data
       await AsyncStorage.multiRemove([
         "userToken",
@@ -82,9 +75,8 @@ export default function AccountScreen() {
         "@wallet_balance",
         "@last_analytics_fetch"
       ]);
-    } catch (e) {
-      console.error("Error clearing local storage on logout:", e);
->>>>>>> d1142ff3cf3f85edf1e6e75ca7978b53680a6c3d
+    } catch (error) {
+      console.error("Error clearing local storage on logout:", error);
     }
 
     // Redirect after a short delay

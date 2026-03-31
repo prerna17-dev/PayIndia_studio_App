@@ -21,13 +21,12 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, API_BASE_URL } from "../../constants/api";
-<<<<<<< HEAD
+
 import { CircularProfileProgress } from "../../components/CircularProfileProgress";
 import { calculateProfileCompletion } from "../../utils/profileCompletion";
 import { Modal } from "react-native";
-=======
 import Svg, { Circle } from "react-native-svg";
->>>>>>> d1142ff3cf3f85edf1e6e75ca7978b53680a6c3d
+
 
 const { width } = Dimensions.get("window");
 

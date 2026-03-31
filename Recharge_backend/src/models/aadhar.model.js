@@ -6,6 +6,7 @@ const pool = require("../config/db");
 exports.create = async (data) => {
     const {
         user_id,
+        reference_id,
         full_name,
         date_of_birth,
         gender,
@@ -20,14 +21,18 @@ exports.create = async (data) => {
         school_certificate_url,
         address_proof_url,
         parent_aadhaar_url,
+        parent_name,
+        parent_aadhaar_number,
+        relationship,
     } = data;
 
     const [result] = await pool.query(
         `INSERT INTO aadhar_enrollments 
-     (user_id, full_name, date_of_birth, gender, house_no_street, area_village_locality, city_taluka, district, state, pincode, mobile_number, birth_certificate_url, school_certificate_url, address_proof_url, parent_aadhaar_url) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     (user_id, reference_id, full_name, date_of_birth, gender, house_no_street, area_village_locality, city_taluka, district, state, pincode, mobile_number, birth_certificate_url, school_certificate_url, address_proof_url, parent_aadhaar_url, parent_name, parent_aadhaar_number, relationship) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
             user_id,
+            reference_id,
             full_name,
             date_of_birth,
             gender,
@@ -42,6 +47,9 @@ exports.create = async (data) => {
             school_certificate_url,
             address_proof_url,
             parent_aadhaar_url,
+            parent_name,
+            parent_aadhaar_number,
+            relationship,
         ]
     );
     return result.insertId;

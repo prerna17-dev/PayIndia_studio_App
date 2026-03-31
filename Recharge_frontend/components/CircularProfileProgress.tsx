@@ -30,7 +30,7 @@ export const CircularProfileProgress: React.FC<CircularProfileProgressProps> = (
       toValue: percentage,
       tension: 20,
       friction: 7,
-      useNativeDriver: true,
+      useNativeDriver: false,
     }).start();
   }, [percentage]);
 

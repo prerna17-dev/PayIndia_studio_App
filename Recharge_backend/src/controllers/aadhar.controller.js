@@ -13,19 +13,26 @@ exports.createEnrollment = async (req, res, next) => {
         const files = req.files || {};
         const normalizePath = (p) => p ? p.replace(/\\/g, '/').replace(/^.*[\/\\]src[\/\\]uploads[\/\\]/, '') : null;
 
+        // Generate Reference ID (e.g., AADHAAR378E)
+        const reference_id = "AADHAAR" + Math.random().toString(36).substring(2, 6).toUpperCase();
+
         const enrollmentId = await AadharModel.create({
             ...req.body,
             user_id: userId,
+            reference_id,
             birth_certificate_url: normalizePath(files.birth_certificate?.[0]?.path),
             school_certificate_url: normalizePath(files.school_certificate?.[0]?.path),
             address_proof_url: normalizePath(files.address_proof?.[0]?.path),
-            parent_aadhaar_url: normalizePath(files.parent_aadhaar?.[0]?.path)
+            parent_aadhaar_url: normalizePath(files.parent_aadhaar?.[0]?.path),
+            parent_name: req.body.parent_name,
+            parent_aadhaar_number: req.body.parent_aadhaar_number,
+            relationship: req.body.relationship
         });
 
         res.status(201).json({
             success: true,
             message: "Aadhar enrollment submitted successfully",
-            data: { enrollmentId },
+            data: { enrollmentId, reference_id },
         });
     } catch (err) {
         next(err);
