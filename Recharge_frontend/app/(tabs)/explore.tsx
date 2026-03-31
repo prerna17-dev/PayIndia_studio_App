@@ -21,7 +21,6 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, API_BASE_URL } from "../../constants/api";
-
 import { CircularProfileProgress } from "../../components/CircularProfileProgress";
 import { calculateProfileCompletion } from "../../utils/profileCompletion";
 import { Modal } from "react-native";
@@ -163,6 +162,21 @@ export default function HomeScreen({
   // Profile Completion States
   const [completionPercentage, setCompletionPercentage] = useState(0);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+
+  // Stats counter states
+  const [statUsers, setStatUsers] = useState(0);
+  const [statTrans, setStatTrans] = useState(0);
+  const [tipIndex, setTipIndex] = useState(0);
+  const tipFadeAnim = useRef(new Animated.Value(1)).current;
+  const adFloatAnim = useRef(new Animated.Value(0)).current;
+
+  const FINANCIAL_TIPS = [
+    { icon: "trending-up-outline", text: "Paying bills before the due date helps build a strong credit score!", tag: "💳 Credit Score" },
+    { icon: "wallet-outline", text: "Set a monthly budget to track spending and boost your savings effectively.", tag: "💰 Budgeting" },
+    { icon: "shield-checkmark-outline", text: "Never share your UPI PIN with anyone — PayIndia will never ask for it!", tag: "🔒 Security" },
+    { icon: "flash-outline", text: "Recharge early to never miss exclusive cashback offers on PayIndia.", tag: "🎯 Offers" },
+    { icon: "calendar-outline", text: "Set up AutoPay for recurring bills to avoid late fees and penalties.", tag: "📅 AutoPay" },
+  ];
 
   const fetchProfile = async () => {
     try {
@@ -330,6 +344,60 @@ export default function HomeScreen({
     }, [])
   );
 
+  // Stats Counter Animation (runs once on mount)
+  useEffect(() => {
+    let frame = 0;
+    const totalFrames = 60;
+    const usersTarget = 10000;
+    const transTarget = 500000;
+    const interval = setInterval(() => {
+      frame++;
+      const eased = 1 - Math.pow(1 - frame / totalFrames, 3);
+      setStatUsers(Math.floor(eased * usersTarget));
+      setStatTrans(Math.floor(eased * transTarget));
+      if (frame >= totalFrames) clearInterval(interval);
+    }, 25);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Financial Tip Rotation every 5 seconds
+  useEffect(() => {
+    const rotateTip = () => {
+      Animated.timing(tipFadeAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }).start(() => {
+        setTipIndex(prev => (prev + 1) % FINANCIAL_TIPS.length);
+        Animated.timing(tipFadeAnim, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }).start();
+      });
+    };
+    const tipInterval = setInterval(rotateTip, 5000);
+    return () => clearInterval(tipInterval);
+  }, []);
+
+  // Subtle floating animation for Ad cards
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(adFloatAnim, {
+          toValue: -3,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(adFloatAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
   // --- DYNAMIC SERVICE DISCOVERY ENGINE ---
   // This avoids hardcoding every single screen and automatically picks up new files
   const discoveredServices = React.useMemo(() => {
@@ -465,59 +533,45 @@ export default function HomeScreen({
   const ads = [
     {
       id: 1,
-      title: "Mobile Recharge",
-      discount: "Get 10% Cashback",
-      description: "On recharges above â‚¹299",
-      code: "MOBILE10",
-      colors: ["#B3E5FC", "#4FC3F7"] as [string, string],
-      iconName: "phone-portrait",
+      title: "Electricity Bill",
+      discount: "₹50 Cashback",
+      description: "On bills above ₹800",
+      code: "POWER50",
+      colors: ["#D97706", "#B45309"] as [string, string], // Bold Amber
+      iconName: "bulb",
       iconType: "ionicon",
-      iconColor: "#0277BD",
-      textColor: "#01579B",
+      iconColor: "#FFFFFF",
+      textColor: "#FFFFFF",
       badge: "HOT DEAL",
-      badgeColor: "#0277BD",
+      badgeColor: "rgba(0,0,0,0.2)",
     },
     {
       id: 2,
-      title: "DTH Recharge",
-      discount: "Flat 150 OFF",
-      description: "On all DTH subscriptions",
-      code: "DTH50",
-      colors: ["#FFE0B2", "#FF9800"] as [string, string],
-      iconName: "satellite-variant",
-      iconType: "material",
-      iconColor: "#E65100",
-      textColor: "#5D4E37",
-      badge: "EXCLUSIVE",
-      badgeColor: "#E65100",
-    },
-    {
-      id: 3,
-      title: "Electricity Bill",
-      discount: "5% Cashback",
-      description: "Max cashback â‚¹100",
-      code: "POWER5",
-      colors: ["#C8E6C9", "#4CAF50"] as [string, string],
-      iconName: "bulb",
+      title: "Mobile Recharge",
+      discount: "10% Cashback",
+      description: "Up to ₹100 on recharge",
+      code: "MOBILE10",
+      colors: ["#4F46E5", "#4338CA"] as [string, string], // Bold Indigo
+      iconName: "phone-portrait",
       iconType: "ionicon",
-      iconColor: "#2E7D32",
-      textColor: "#1B5E20",
-      badge: "SAVE MORE",
-      badgeColor: "#2E7D32",
+      iconColor: "#FFFFFF",
+      textColor: "#FFFFFF",
+      badge: "POPULAR",
+      badgeColor: "rgba(0,0,0,0.2)",
     },
     {
       id: 4,
-      title: "OTT Plans",
-      discount: "15% OFF",
-      description: "On annual subscriptions",
-      code: "OTT15",
-      colors: ["#E1BEE7", "#9C27B0"] as [string, string],
-      iconName: "television-play",
+      title: "DTH Recharge",
+      discount: "Save Flat ₹75",
+      description: "On select operators",
+      code: "DTHSAVE",
+      colors: ["#059669", "#047857"] as [string, string], // Bold Emerald
+      iconName: "satellite-variant",
       iconType: "material",
-      iconColor: "#6A1B9A",
-      textColor: "#4A148C",
+      iconColor: "#FFFFFF",
+      textColor: "#FFFFFF",
       badge: "LIMITED",
-      badgeColor: "#6A1B9A",
+      badgeColor: "rgba(0,0,0,0.2)",
     },
   ];
 
@@ -1110,19 +1164,19 @@ export default function HomeScreen({
               </View>
             </View>
 
-            {/* Smart Due Reminders Section */}
-            <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <Text style={{ fontSize: 16, fontWeight: "700", color: "#1E293B", letterSpacing: 0.3 }}>Due Reminders</Text>
-                <TouchableOpacity
-                  onPress={() => router.push("/my-bills")}
-                  style={{ backgroundColor: "rgba(56, 189, 248, 0.15)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: "rgba(56, 189, 248, 0.2)" }}
-                >
-                  <Text style={{ fontSize: 11, color: "#0284C7", fontWeight: "600" }}>Manage →</Text>
-                </TouchableOpacity>
-              </View>
+            {/* Smart Due Reminders Section - Only show if there are pending bills */}
+            {reminders.length > 0 && (
+              <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <Text style={{ fontSize: 16, fontWeight: "700", color: "#1E293B", letterSpacing: 0.3 }}>Due Reminders</Text>
+                  <TouchableOpacity
+                    onPress={() => router.push("/my-bills")}
+                    style={{ backgroundColor: "rgba(56, 189, 248, 0.15)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: "rgba(56, 189, 248, 0.2)" }}
+                  >
+                    <Text style={{ fontSize: 11, color: "#0284C7", fontWeight: "600" }}>Manage →</Text>
+                  </TouchableOpacity>
+                </View>
 
-              {reminders.length > 0 ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 20 }}>
                   {reminders.map((item, index) => (
                     <LinearGradient
@@ -1163,112 +1217,99 @@ export default function HomeScreen({
                     </LinearGradient>
                   ))}
                 </ScrollView>
-              ) : (
-                <LinearGradient
-                  colors={["#F8FAFC", "#F1F5F9"]}
-                  style={{ borderRadius: 16, padding: 20, alignItems: "center", justifyContent: "center", borderStyle: "dashed", borderWidth: 1, borderColor: "#CBD5E1" }}
-                >
-                  <Ionicons name="shield-checkmark-outline" size={32} color="#94A3B8" style={{ marginBottom: 8 }} />
-                  <Text style={{ fontSize: 14, fontWeight: "700", color: "#475569" }}>All caught up!</Text>
-                  <Text style={{ fontSize: 12, color: "#94A3B8", marginTop: 2 }}>No pending bills for now.</Text>
-                </LinearGradient>
-              )}
-            </View>
+              </View>
+            )}
 
             {/* Smart Analytics Mini-Summary */}
-            <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
+            <View style={{ marginHorizontal: 20, marginBottom: 20 }}>
               <LinearGradient
                 colors={["#4C1D95", "#d78bdbff", "#e474a1ff"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={{
-                  borderRadius: 24,
-                  padding: 20,
+                  borderRadius: 20,
+                  padding: 16,
                   shadowColor: "#701A75",
-                  shadowOffset: { width: 0, height: 10 },
-                  shadowOpacity: 0.35,
-                  shadowRadius: 15,
-                  elevation: 10,
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 10,
+                  elevation: 8,
                   position: "relative",
                   overflow: "hidden"
                 }}
               >
                 {/* Decorative glowing orbs */}
-                <View style={{ position: "absolute", top: -40, right: -40, width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(236, 72, 153, 0.2)" }} />
-                <View style={{ position: "absolute", bottom: -30, left: -20, width: 100, height: 100, borderRadius: 50, backgroundColor: "rgba(167, 139, 250, 0.2)" }} />
+                <View style={{ position: "absolute", top: -30, right: -30, width: 90, height: 90, borderRadius: 45, backgroundColor: "rgba(236, 72, 153, 0.2)" }} />
+                <View style={{ position: "absolute", bottom: -20, left: -15, width: 70, height: 70, borderRadius: 35, backgroundColor: "rgba(167, 139, 250, 0.2)" }} />
 
-                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 20 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 14 }}>
                   <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                      <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
-                        <Ionicons name="pie-chart" size={16} color="#FBCFE8" />
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                      <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }}>
+                        <Ionicons name="pie-chart" size={15} color="#FBCFE8" />
                       </View>
-                      <Text style={{ fontSize: 15, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.3 }}>Smart Analytics</Text>
+                      <Text style={{ fontSize: 14, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.3 }}>Smart Analytics</Text>
                     </View>
-                    <Text style={{ fontSize: 13, color: "#FBCFE8", fontWeight: "600", marginBottom: 4 }}>This Month's Overview</Text>
-                    <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", lineHeight: 14 }}>Track your expenses and optimize your savings effectively.</Text>
+                    <Text style={{ fontSize: 12, color: "#FBCFE8", fontWeight: "600", marginBottom: 3 }}>This Month's Overview</Text>
+                    <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.65)", lineHeight: 14 }} numberOfLines={1}>Manage your expenses and savings wisely.</Text>
                   </View>
 
-                  <View style={{ alignItems: "flex-end", justifyContent: "space-between", paddingLeft: 10 }}>
+                  <View style={{ alignItems: "flex-end", justifyContent: "space-between", paddingLeft: 5 }}>
                     <TouchableOpacity
                       onPress={() => router.push("/mymoney")}
-                      style={{ backgroundColor: "rgba(255,255,255,0.15)", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 }}
+                      style={{ backgroundColor: "rgba(255,255,255,0.2)", paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" }}
                     >
-                      <Text style={{ fontSize: 11, color: "#FFFFFF", fontWeight: "800", letterSpacing: 0.5 }}>Insights  →</Text>
+                      <Text style={{ fontSize: 11, color: "#FFFFFF", fontWeight: "800", letterSpacing: 0.4 }}>Insights →</Text>
                     </TouchableOpacity>
 
                     {/* SVG-based Circular Progress */}
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10 }}>
                       <View>
-                        <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.6)", fontWeight: "600", textAlign: "right", letterSpacing: 0.5 }}>SAVINGS</Text>
-                        <Text style={{ fontSize: 12, color: "#FBCFE8", fontWeight: "bold", textAlign: "right" }}>Goal</Text>
+                        <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.6)", fontWeight: "600", textAlign: "right" }}>SAVINGS</Text>
+                        <Text style={{ fontSize: 11, color: "#FBCFE8", fontWeight: "bold", textAlign: "right" }}>Goal</Text>
                       </View>
-                      <View style={{ width: 44, height: 44, justifyContent: "center", alignItems: "center", shadowColor: "#34D399", shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 8 }}>
-                        <Svg width={44} height={44} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
+                      <View style={{ width: 42, height: 42, justifyContent: "center", alignItems: "center" }}>
+                        <Svg width={42} height={42} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
                           <Circle
-                            cx={22}
-                            cy={22}
+                            cx={21}
+                            cy={21}
                             r={18}
                             stroke="rgba(255,255,255,0.15)"
-                            strokeWidth={4}
+                            strokeWidth={3.5}
                             fill="rgba(255,255,255,0.05)"
                           />
                           <Circle
-                            cx={22}
-                            cy={22}
+                            cx={21}
+                            cy={21}
                             r={18}
                             stroke="#34D399"
-                            strokeWidth={4}
+                            strokeWidth={3.5}
                             strokeDasharray={113.1}
                             strokeDashoffset={113.1 - ((isNaN(analytics.savingsPercentage) ? 0 : Math.min(Math.max(analytics.savingsPercentage, 0), 100)) / 100) * 113.1}
                             strokeLinecap="round"
                             fill="transparent"
                           />
                         </Svg>
-                        <Text style={{ fontSize: 11, fontWeight: "900", color: "#ffffffff" }}>{analytics.savingsPercentage}%</Text>
+                        <Text style={{ fontSize: 12, fontWeight: "900", color: "#ffffffff" }}>{analytics.savingsPercentage}%</Text>
                       </View>
                     </View>
                   </View>
                 </View>
 
                 {/* Data Row */}
-                <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 16, padding: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}>
                   <View style={{ flex: 1, alignItems: "center" }}>
-                    <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: "600", marginBottom: 6, letterSpacing: 0.5 }}>SPENT</Text>
+                    <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginBottom: 5 }}>SPENT</Text>
                     <Text style={{ fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5 }}>₹{analytics.spent.toLocaleString()}</Text>
                   </View>
-
                   <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.15)", marginVertical: 4 }} />
-
                   <View style={{ flex: 1, alignItems: "center" }}>
-                    <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: "600", marginBottom: 6, letterSpacing: 0.5 }}>CASHBACK</Text>
+                    <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginBottom: 5 }}>CASHBACK</Text>
                     <Text style={{ fontSize: 18, fontWeight: "900", color: "#4ffcbcff", letterSpacing: 0.5 }}>+₹{analytics.cashback.toLocaleString()}</Text>
                   </View>
-
                   <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.15)", marginVertical: 4 }} />
-
                   <View style={{ flex: 1, alignItems: "center" }}>
-                    <Text style={{ fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: "600", marginBottom: 6, letterSpacing: 0.5 }}>PAID BILLS</Text>
+                    <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginBottom: 5 }}>PAID BILLS</Text>
                     <Text style={{ fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5 }}>{analytics.paidBills.toString().padStart(2, '0')}</Text>
                   </View>
                 </View>
@@ -1326,50 +1367,52 @@ export default function HomeScreen({
                   style={styles.adsScrollView}
                 >
                   {ads.map((ad) => (
-                    <TouchableOpacity
+                    <Animated.View
                       key={ad.id}
-                      style={styles.adCard}
-                      activeOpacity={0.92}
+                      style={{
+                        transform: [{ translateY: adFloatAnim }]
+                      }}
                     >
-                      <LinearGradient
-                        colors={ad.colors}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.adGradient}
+                      <TouchableOpacity
+                        style={styles.adCard}
+                        activeOpacity={0.92}
                       >
-                        {/* Decorative circles */}
-                        <View style={[styles.adCircle, styles.adCircleLg]} />
-                        <View style={[styles.adCircle, styles.adCircleSm]} />
+                        <LinearGradient
+                          colors={ad.colors}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.adGradient}
+                        >
+                          {/* Decorative circles */}
+                          <View style={[styles.adCircle, styles.adCircleLg]} />
+                          <View style={[styles.adCircle, styles.adCircleSm]} />
 
-                        {/* Left: info */}
-                        <View style={styles.adLeft}>
-                          <View style={[styles.adBadge, { backgroundColor: ad.badgeColor }]}>
-                            <Text style={styles.adBadgeText}>{ad.badge}</Text>
+                          {/* Left: info */}
+                          <View style={styles.adLeft}>
+                            <View style={[styles.adBadge, { backgroundColor: ad.badgeColor }]}>
+                              <Text style={styles.adBadgeText}>{ad.badge}</Text>
+                            </View>
+                            <Text style={[styles.adTitle, { color: ad.textColor }]}>{ad.title}</Text>
+                            <Text style={[styles.adDescription, { color: ad.textColor }]}>{ad.description}</Text>
+                            <View style={styles.adCodeChip}>
+                              <Text style={[styles.adCodeLabel, { color: ad.textColor }]}>CODE: </Text>
+                              <Text style={[styles.adCodeValue, { color: ad.textColor }]}>{ad.code}</Text>
+                            </View>
                           </View>
-                          <Text style={[styles.adTitle, { color: ad.textColor }]}>{ad.title}</Text>
-                          <Text style={[styles.adDescription, { color: ad.textColor }]}>{ad.description}</Text>
-                          <View style={styles.adCodeChip}>
-                            <Text style={[styles.adCodeLabel, { color: ad.textColor }]}>USE </Text>
-                            <Text style={[styles.adCodeValue, { color: ad.badgeColor }]}>{ad.code}</Text>
-                          </View>
-                        </View>
 
-                        {/* Right: big discount */}
-                        <View style={styles.adRight}>
-                          <View style={[styles.adIconBubble, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
-                            {ad.iconType === "ionicon" ? (
-                              <Ionicons name={ad.iconName as any} size={26} color={ad.iconColor} />
-                            ) : (
-                              <MaterialCommunityIcons name={ad.iconName as any} size={26} color={ad.iconColor} />
-                            )}
+                          {/* Right: Icon & CTA */}
+                          <View style={styles.adRight}>
+                            <View style={[styles.adIconBubble, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+                              <Ionicons name={ad.iconName as any} size={20} color="#FFFFFF" />
+                            </View>
+                            <Text style={[styles.adDiscountBig, { color: "#FFFFFF" }]}>{ad.discount}</Text>
+                            <View style={[styles.adClaimBtn, { borderColor: "#FFFFFF" }]}>
+                              <Text style={[styles.adClaimText, { color: "#FFFFFF" }]}>Claim</Text>
+                            </View>
                           </View>
-                          <Text style={[styles.adDiscountBig, { color: ad.textColor }]}>{ad.discount}</Text>
-                          <View style={[styles.adClaimBtn, { borderColor: ad.textColor }]}>
-                            <Text style={[styles.adClaimText, { color: ad.textColor }]}>Claim  →</Text>
-                          </View>
-                        </View>
-                      </LinearGradient>
-                    </TouchableOpacity>
+                        </LinearGradient>
+                      </TouchableOpacity>
+                    </Animated.View>
                   ))}
                 </ScrollView>
 
@@ -1397,49 +1440,84 @@ export default function HomeScreen({
                 </TouchableOpacity>
               </View>
 
-              <View style={[styles.cardContainer, { paddingHorizontal: 0, paddingVertical: 10 }]}>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={[styles.vouchersScroll, { paddingHorizontal: 15 }]}>
-                  {[
-                    { name: "Amazon", icon: "cart", lib: "Ionicons", color: "#FF9900", bg: "#FFF7ED" },
-                    { name: "Flipkart", icon: "cart", lib: "Ionicons", color: "#2874F0", bg: "#F0F9FF" },
-                    { name: "Swiggy", icon: "hamburger", lib: "MaterialCommunityIcons", color: "#F97316", bg: "#FFF7ED" },
-                    { name: "Zomato", icon: "alpha-z", lib: "MaterialCommunityIcons", color: "#E23744", bg: "#FFF1F2" },
-                    { name: "MMT", icon: "airplane", lib: "Ionicons", color: "#1976D2", bg: "#F0F9FF" },
-                    { name: "Netflix", icon: "netflix", lib: "MaterialCommunityIcons", color: "#E50914", bg: "#FEE2E2" },
-                  ].map((v, i) => (
-                    <TouchableOpacity key={i} style={styles.voucherCard} onPress={() => router.push("/gift-cards-vouchers")}>
-                      <View style={[styles.voucherIconCircle, { backgroundColor: v.bg, borderWidth: 1, borderColor: "rgba(0,0,0,0.05)" }]}>
-                        {v.lib === "Ionicons" ? (
-                          <Ionicons name={v.icon as any} size={28} color={v.color} />
-                        ) : (
-                          <MaterialCommunityIcons name={v.icon as any} size={v.name === "Zomato" ? 48 : v.name === "Netflix" ? 38 : 28} color={v.color} />
-                        )}
-                      </View>
-                      <Text style={styles.voucherName} numberOfLines={1}>{v.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 20, gap: 15, paddingVertical: 10 }}
+              >
+                {[
+                  { name: "Amazon", icon: "cart", lib: "Ionicons", color: "#FF9900", bg: "#FFF7ED" },
+                  { name: "Flipkart", icon: "cart", lib: "Ionicons", color: "#2874F0", bg: "#F0F9FF" },
+                  { name: "Swiggy", icon: "hamburger", lib: "MaterialCommunityIcons", color: "#F97316", bg: "#FFF7ED" },
+                  { name: "Zomato", icon: "alpha-z", lib: "MaterialCommunityIcons", color: "#E23744", bg: "#FFF1F2" },
+                  { name: "MMT", icon: "airplane", lib: "Ionicons", color: "#1976D2", bg: "#F0F9FF" },
+                  { name: "Netflix", icon: "netflix", lib: "MaterialCommunityIcons", color: "#E50914", bg: "#FEE2E2" },
+                ].map((v, i) => (
+                  <TouchableOpacity key={i} style={styles.voucherCard} onPress={() => router.push("/gift-cards-vouchers")}>
+                    <View style={[styles.voucherIconCircle, { backgroundColor: v.bg, borderWidth: 1, borderColor: "rgba(0,0,0,0.05)" }]}>
+                      {v.lib === "Ionicons" ? (
+                        <Ionicons name={v.icon as any} size={28} color={v.color} />
+                      ) : (
+                        <MaterialCommunityIcons name={v.icon as any} size={v.name === "Zomato" ? 48 : v.name === "Netflix" ? 38 : 28} color={v.color} />
+                      )}
+                    </View>
+                    <Text style={styles.voucherName} numberOfLines={1}>{v.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* ── Financial Tip of the Day ── */}
+            <View style={tipStyles.section}>
+              <View style={tipStyles.header}>
+                <Ionicons name="bulb-outline" size={18} color="#E11D48" />
+                <Text style={tipStyles.headerText}>Financial Tip of the Day</Text>
+              </View>
+              <Animated.View style={[tipStyles.card, { opacity: tipFadeAnim }]}>
+                <LinearGradient
+                  colors={["#FFF1F2", "#FFE4E6", "#FECDD3", "#FFFFFF"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={tipStyles.gradient}
+                >
+                  <View style={tipStyles.tagRow}>
+                    <Text style={tipStyles.tag}>{FINANCIAL_TIPS[tipIndex].tag}</Text>
+                    <View style={tipStyles.dotRow}>
+                      {FINANCIAL_TIPS.map((_, idx) => (
+                        <View key={idx} style={[tipStyles.dot, tipIndex === idx && tipStyles.dotActive]} />
+                      ))}
+                    </View>
+                  </View>
+                  <View style={tipStyles.body}>
+                    <Ionicons name={FINANCIAL_TIPS[tipIndex].icon as any} size={36} color="#E11D48" style={{ marginRight: 14 }} />
+                    <Text style={tipStyles.tipText}>{FINANCIAL_TIPS[tipIndex].text}</Text>
+                  </View>
+                </LinearGradient>
+              </Animated.View>
+            </View>
+
+
+
+
+            {/* ── PayIndia Stats / Milestones ── */}
+            <View style={statsStyles.container}>
+              <View style={statsStyles.row}>
+                <View style={statsStyles.statItem}>
+                  <Text style={statsStyles.statValue}>{statUsers.toLocaleString("en-IN")}+</Text>
+                  <Text style={statsStyles.statLabel}>Happy Users</Text>
+                </View>
+                <View style={statsStyles.divider} />
+                <View style={statsStyles.statItem}>
+                  <Text style={statsStyles.statValue}>₹{(statTrans / 100000).toFixed(1)}L+</Text>
+                  <Text style={statsStyles.statLabel}>Transactions</Text>
+                </View>
+                <View style={statsStyles.divider} />
+                <View style={statsStyles.statItem}>
+                  <Text style={statsStyles.statValue}>99.9%</Text>
+                  <Text style={statsStyles.statLabel}>Uptime</Text>
+                </View>
               </View>
             </View>
-
-            {/* Rate Us & Feedback Card */}
-            <View style={{ marginHorizontal: 20, marginBottom: 24 }}>
-              <LinearGradient colors={["#E0F2FE", "#F0F9FF"]} style={{ flexDirection: "row", alignItems: "center", padding: 18, borderRadius: 20, justifyContent: "space-between" }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 15, fontWeight: "900", color: "#1E3A8A" }}>Enjoying PayIndia?</Text>
-                  <Text style={{ fontSize: 12, color: "#3B82F6", marginTop: 2, marginBottom: 8 }}>Help us grow by rating us!</Text>
-                  <View style={{ flexDirection: "row" }}>
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Ionicons key={s} name="star" size={20} color="#F59E0B" style={{ marginRight: 4 }} />
-                    ))}
-                  </View>
-                </View>
-                <TouchableOpacity style={{ backgroundColor: "#1E3A8A", paddingVertical: 10, paddingHorizontal: 18, borderRadius: 12 }}>
-                  <Text style={{ fontSize: 12, fontWeight: "800", color: "#FFFFFF" }}>Rate App</Text>
-                </TouchableOpacity>
-              </LinearGradient>
-            </View>
-
 
             {/* 24/7 Support & Security "Trust Strip" */}
             <View style={{ marginHorizontal: 20, marginBottom: 24, flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 16 }}>
@@ -1460,14 +1538,12 @@ export default function HomeScreen({
             </View>
 
             {/* "Made in India" Footer */}
-            <View style={{ alignItems: "center", marginTop: 40, marginBottom: 30 }}>
+            <View style={{ alignItems: "center", marginTop: 20, marginBottom: 16, paddingBottom: 10 }}>
               <Text style={{ fontSize: 13, fontWeight: "800", color: "#64748B" }}>
                 Made with <Ionicons name="heart" size={14} color="#EF4444" /> in India
               </Text>
               <Text style={{ fontSize: 10, color: "#94A3B8", marginTop: 4, fontWeight: "600" }}>PayIndia • version 1.0.0</Text>
             </View>
-
-            <View style={{ height: 40 }} />
           </View>
         </ScrollView>
 
@@ -2042,24 +2118,24 @@ const styles = StyleSheet.create({
   dealsSeeAll: { fontSize: 13, color: "#2196F3", fontWeight: "600" },
 
   // Ad card redesign
-  adCard: { width: width - 40, height: 140, borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.18, shadowRadius: 10, elevation: 8 },
-  adGradient: { flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 18, paddingVertical: 16, overflow: "hidden" },
+  adCard: { width: width - 40, height: 100, borderRadius: 20, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 6 },
+  adGradient: { flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 15, paddingVertical: 10, overflow: "hidden" },
   adCircle: { position: "absolute", borderRadius: 9999, backgroundColor: "rgba(255,255,255,0.12)" },
-  adCircleLg: { width: 130, height: 130, bottom: -40, right: -20 },
-  adCircleSm: { width: 70, height: 70, top: -25, right: 80 },
-  adLeft: { flex: 1, justifyContent: "center", paddingRight: 10 },
-  adRight: { alignItems: "center", justifyContent: "center", gap: 8 },
-  adBadge: { alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, marginBottom: 8 },
-  adBadgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "bold", letterSpacing: 0.5 },
-  adIconBubble: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
-  adTitle: { fontSize: 13, fontWeight: "800", letterSpacing: 0.2, marginBottom: 2 },
-  adDiscountBig: { fontSize: 18, fontWeight: "900", textAlign: "center", letterSpacing: 0.5 },
-  adDescription: { fontSize: 10, opacity: 0.85, marginBottom: 8 },
-  adCodeChip: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.35)", paddingVertical: 3, paddingHorizontal: 8, borderRadius: 8, alignSelf: "flex-start" },
-  adCodeLabel: { fontSize: 10, fontWeight: "600" },
-  adCodeValue: { fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
-  adClaimBtn: { borderWidth: 1.5, borderRadius: 12, paddingVertical: 4, paddingHorizontal: 12 },
-  adClaimText: { fontSize: 11, fontWeight: "700" },
+  adCircleLg: { width: 90, height: 90, bottom: -25, right: -12 },
+  adCircleSm: { width: 55, height: 55, top: -18, right: 65 },
+  adLeft: { flex: 1, justifyContent: "center", paddingRight: 8 },
+  adRight: { alignItems: "center", justifyContent: "center", gap: 5 },
+  adBadge: { alignSelf: "flex-start", paddingHorizontal: 7, paddingVertical: 2, borderRadius: 7, marginBottom: 5 },
+  adBadgeText: { color: "#FFFFFF", fontSize: 8.5, fontWeight: "bold", letterSpacing: 0.5 },
+  adIconBubble: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
+  adTitle: { fontSize: 11.5, fontWeight: "800", letterSpacing: 0.2, marginBottom: 1 },
+  adDiscountBig: { fontSize: 15.5, fontWeight: "900", textAlign: "center", letterSpacing: 0.5 },
+  adDescription: { fontSize: 8.5, opacity: 0.85, marginBottom: 5 },
+  adCodeChip: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.35)", paddingVertical: 2.5, paddingHorizontal: 7, borderRadius: 7, alignSelf: "flex-start" },
+  adCodeLabel: { fontSize: 9, fontWeight: "600" },
+  adCodeValue: { fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  adClaimBtn: { borderWidth: 1.5, borderRadius: 11, paddingVertical: 3.5, paddingHorizontal: 12 },
+  adClaimText: { fontSize: 10.5, fontWeight: "700" },
 
 
   // Trust Stats Strip
@@ -2070,22 +2146,22 @@ const styles = StyleSheet.create({
   statDivider: { width: 1, height: 32, backgroundColor: "#BBDEFB" },
 
   // Refer & Earn Banner
-  referSection: { marginHorizontal: 20, marginBottom: 24, borderRadius: 20, overflow: "hidden", shadowColor: "#6A1B9A", shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 10 },
-  referGradient: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 20, overflow: "hidden" },
-  referCircle1: { position: "absolute", width: 150, height: 150, borderRadius: 75, backgroundColor: "rgba(255,255,255,0.1)", top: -50, right: -30 },
-  referCircle2: { position: "absolute", width: 90, height: 90, borderRadius: 45, backgroundColor: "rgba(255,255,255,0.08)", bottom: -30, right: 60 },
+  referSection: { marginHorizontal: 20, marginBottom: 24, borderRadius: 20, overflow: "hidden", shadowColor: "#6A1B9A", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 6 },
+  referGradient: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 8, overflow: "hidden" },
+  referCircle1: { position: "absolute", width: 120, height: 120, borderRadius: 60, backgroundColor: "rgba(255,255,255,0.1)", top: -40, right: -20 },
+  referCircle2: { position: "absolute", width: 70, height: 70, borderRadius: 35, backgroundColor: "rgba(255,255,255,0.08)", bottom: -20, right: 50 },
   referLeft: { flex: 1, paddingRight: 12 },
-  referBadge: { alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.25)", paddingVertical: 3, paddingHorizontal: 10, borderRadius: 12, marginBottom: 8 },
-  referBadgeText: { fontSize: 10, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.5 },
-  referHeadline: { fontSize: 26, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5, marginBottom: 2 },
-  referSub: { fontSize: 11, color: "rgba(255,255,255,0.85)", fontWeight: "400", marginBottom: 12, lineHeight: 15 },
-  referBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#FFFFFF", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, alignSelf: "flex-start" },
-  referBtnText: { fontSize: 13, fontWeight: "700", color: "#6A1B9A" },
+  referBadge: { alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.25)", paddingVertical: 2, paddingHorizontal: 8, borderRadius: 10, marginBottom: 4 },
+  referBadgeText: { fontSize: 8, fontWeight: "800", color: "#FFFFFF", letterSpacing: 0.5 },
+  referHeadline: { fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5, marginBottom: 0 },
+  referSub: { fontSize: 9, color: "rgba(255,255,255,0.85)", fontWeight: "400", marginBottom: 8, lineHeight: 12 },
+  referBtn: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#FFFFFF", paddingVertical: 6, paddingHorizontal: 14, borderRadius: 16, alignSelf: "flex-start" },
+  referBtnText: { fontSize: 12, fontWeight: "700", color: "#6A1B9A" },
   referRight: { alignItems: "center", gap: 8 },
-  referIconWrap: { width: 64, height: 64, borderRadius: 32, backgroundColor: "rgba(255,255,255,0.2)", justifyContent: "center", alignItems: "center", marginBottom: 4 },
-  referCode: { fontSize: 10, color: "rgba(255,255,255,0.7)", fontWeight: "500" },
-  referCodeBox: { backgroundColor: "rgba(255,255,255,0.25)", paddingVertical: 4, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.4)" },
-  referCodeText: { fontSize: 13, fontWeight: "900", color: "#FFFFFF", letterSpacing: 1.5 },
+  referIconWrap: { width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.2)", justifyContent: "center", alignItems: "center", marginBottom: 2 },
+  referCode: { fontSize: 9, color: "rgba(255,255,255,0.7)", fontWeight: "500" },
+  referCodeBox: { backgroundColor: "rgba(255,255,255,0.25)", paddingVertical: 3, paddingHorizontal: 10, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.4)" },
+  referCodeText: { fontSize: 11, fontWeight: "900", color: "#FFFFFF", letterSpacing: 1.2 },
   titleWithBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -2228,5 +2304,168 @@ const styles = StyleSheet.create({
     color: "#2E7D32",
     fontSize: 12,
     fontWeight: "700",
+  },
+});
+
+const statsStyles = StyleSheet.create({
+  container: {
+    marginHorizontal: 20,
+    marginBottom: 32,
+    paddingVertical: 4,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#0F4C75",
+    letterSpacing: -0.5,
+    marginBottom: 2,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: "#94A3B8",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  divider: {
+    width: 1,
+    height: 30,
+    backgroundColor: "#E2E8F0",
+    marginHorizontal: 4,
+  },
+});
+
+// ── Why Choose PayIndia Styles ──
+const whyStyles = StyleSheet.create({
+  section: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#1A1A1A",
+    marginBottom: 14,
+    letterSpacing: 0.3,
+  },
+  grid: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  card: {
+    flex: 1,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 12,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  cardTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#1A1A1A",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  cardDesc: {
+    fontSize: 10,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 14,
+  },
+});
+
+// ── Financial Tip Styles ──
+const tipStyles = StyleSheet.create({
+  section: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 10,
+  },
+  headerText: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: "#1A1A1A",
+    letterSpacing: 0.3,
+  },
+  card: {
+    borderRadius: 18,
+    overflow: "hidden",
+    shadowColor: "#BE123C",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  gradient: {
+    padding: 18,
+  },
+  tagRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  tag: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#BE123C",
+    backgroundColor: "#FFE4E6",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  dotRow: {
+    flexDirection: "row",
+    gap: 5,
+    alignItems: "center",
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(190,18,60,0.15)",
+  },
+  dotActive: {
+    backgroundColor: "#FB7185",
+    width: 18,
+  },
+  body: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  tipText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#9F1239",
+    fontWeight: "600",
+    lineHeight: 20,
   },
 });
