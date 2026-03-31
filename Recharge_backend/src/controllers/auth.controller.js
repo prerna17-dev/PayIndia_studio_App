@@ -10,6 +10,7 @@ exports.sendOTP = async (req, res) => {
     const { mobile } = req.body;
     if (!mobile) return res.status(400).json({ message: "Mobile required" });
 
+    console.log(`[AUTH] Generating OTP for ${mobile}...`);
     const otp = generateOTP();
 
     await pool.query(
@@ -18,6 +19,8 @@ exports.sendOTP = async (req, res) => {
       VALUES (?, ?, NOW(), DATE_ADD(NOW(), INTERVAL 5 MINUTE))`,
       [mobile, otp]
     );
+
+    console.log("OTP (dev):", otp);
 
     // DLT Template: Your password has been successfully reset. Please log in with your new password: {#var#} - WRKNAI, Namastey
     const message = `Your password has been successfully reset. Please log in with your new password: ${otp} - WRKNAI, Namastey`;
@@ -33,8 +36,6 @@ exports.sendOTP = async (req, res) => {
       });
     }
 
-    console.log("OTP (dev):", otp);
-
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
     console.error("❌ SEND OTP ERROR:", err);
@@ -47,7 +48,7 @@ exports.verifyOTP = async (req, res) => {
     if (!req.body) {
       return res.status(400).json({ message: "Request body is missing. Ensure Content-Type is application/json" });
     }
-    const { mobile, otp } = req.body;
+    const { mobile, otp, referralCode } = req.body;
 
     // 1️⃣ get latest OTP (do NOT block by expiry here)
     const [rows] = await pool.query(
@@ -79,22 +80,57 @@ exports.verifyOTP = async (req, res) => {
 
     // 4️⃣ fetch user
     const [users] = await pool.query(
-      `SELECT user_id, role FROM users WHERE mobile_number = ?`,
+      `SELECT user_id, role, referral_code FROM users WHERE mobile_number = ?`,
       [mobile]
     );
 
     let userId, role;
+    let isNewUser = false;
 
     if (!users.length) {
+      isNewUser = true;
+      // Generate a unique referral code for the new user
+      const newReferralCode = "PAY" + Math.random().toString(36).substring(2, 8).toUpperCase();
+      
       const [result] = await pool.query(
-        `INSERT INTO users (mobile_number, role) VALUES (?, 'USER')`,
-        [mobile]
+        `INSERT INTO users (mobile_number, role, referral_code) VALUES (?, 'USER', ?)`,
+        [mobile, newReferralCode]
       );
       userId = result.insertId;
       role = "USER";
+
+      // If user signed up with a referral code, record it
+      if (referralCode) {
+        try {
+          const [referrer] = await pool.query(
+            `SELECT user_id FROM users WHERE referral_code = ?`,
+            [referralCode]
+          );
+
+          if (referrer.length > 0) {
+            await pool.query(
+              `INSERT INTO referrals (referrer_id, referred_user_id, status) VALUES (?, ?, 'PENDING')`,
+              [referrer[0].user_id, userId]
+            );
+            console.log(`[REFERRAL] User ${userId} referred by ${referrer[0].user_id}`);
+          }
+        } catch (refErr) {
+          console.error("Error processing referral:", refErr);
+          // Don't fail login because referral processing failed
+        }
+      }
     } else {
       userId = users[0].user_id;
       role = users[0].role || "USER";
+
+      // If existing user doesn't have a referral code, generate one now
+      if (!users[0].referral_code) {
+        const newReferralCode = "PAY" + Math.random().toString(36).substring(2, 8).toUpperCase();
+        await pool.query(
+          `UPDATE users SET referral_code = ? WHERE user_id = ?`,
+          [newReferralCode, userId]
+        );
+      }
     }
 
     // 5️⃣ generate JWT WITH ROLE
@@ -104,9 +140,16 @@ exports.verifyOTP = async (req, res) => {
       { expiresIn: "7d" }
     );
 
+    // Fetch user details again to send back (including the new referral_code)
+    const [[updatedUser]] = await pool.query(
+      `SELECT user_id, name, mobile_number, role, referral_code FROM users WHERE user_id = ?`,
+      [userId]
+    );
+
     return res.json({
-      message: "Login successful",
+      message: isNewUser ? "Signup successful" : "Login successful",
       token,
+      user: updatedUser
     });
   } catch (err) {
     console.error("❌ VERIFY OTP ERROR:", err);

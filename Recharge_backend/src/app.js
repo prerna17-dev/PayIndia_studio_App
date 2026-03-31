@@ -125,6 +125,8 @@ app.use("/api/social/senior-citizen", seniorCitizenRoutes);
 app.use("/api/social/employment", employmentRoutes);
 app.use("/api/social/ayushman", ayushmanRoutes);
 app.use("/api/social/ration-card", rationCardRoutes);
+const referralRoutes = require("./routes/referral.routes");
+app.use("/api/referral", referralRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 

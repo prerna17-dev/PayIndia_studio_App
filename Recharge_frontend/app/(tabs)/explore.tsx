@@ -21,7 +21,11 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, API_BASE_URL } from "../../constants/api";
+import { CircularProfileProgress } from "../../components/CircularProfileProgress";
+import { calculateProfileCompletion } from "../../utils/profileCompletion";
+import { Modal } from "react-native";
 import Svg, { Circle } from "react-native-svg";
+
 
 const { width } = Dimensions.get("window");
 
@@ -155,10 +159,26 @@ export default function HomeScreen({
     savingsPercentage: 0,
   });
 
+  // Profile Completion States
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+
   const fetchProfile = async () => {
     try {
+      // 1. Instantly load cached profile to avoid "Welcome, User" flash
+      const cachedData = await AsyncStorage.getItem("userData");
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        setUserData(parsed);
+        setCompletionPercentage(calculateProfileCompletion(parsed));
+      }
+
+      // 2. Fetch fresh profile data in the background
       const token = await AsyncStorage.getItem("userToken");
-      if (!token) return;
+      if (!token) {
+        router.replace("/auth/login");
+        return;
+      }
 
       const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
         headers: {
@@ -168,7 +188,11 @@ export default function HomeScreen({
       const data = await response.json();
 
       if (response.ok) {
+        // Update state and cache with fresh data
         setUserData(data);
+        const percentage = calculateProfileCompletion(data);
+        setCompletionPercentage(percentage);
+        await AsyncStorage.setItem("userData", JSON.stringify(data));
       }
     } catch (error) {
       console.error("Error fetching profile in Home:", error);
@@ -273,6 +297,20 @@ export default function HomeScreen({
     const hideSub = Keyboard.addListener("keyboardDidHide", () => setIsKeyboardVisible(false));
     return () => { showSub.remove(); hideSub.remove(); };
   }, []);
+
+  // Show profile completion popup if incomplete
+  useEffect(() => {
+    const checkCompletion = async () => {
+      if (userData && completionPercentage < 100) {
+        const hasShown = await AsyncStorage.getItem("@profile_popup_shown");
+        if (!hasShown) {
+          setShowCompletionModal(true);
+          await AsyncStorage.setItem("@profile_popup_shown", "true");
+        }
+      }
+    };
+    checkCompletion();
+  }, [userData, completionPercentage]);
 
   // Handle hardware back button to exit app from Home screen
   useFocusEffect(
@@ -513,6 +551,86 @@ export default function HomeScreen({
     <View style={styles.container}>
       <StatusBar style="dark" />
 
+      {/* Profile Completion Modal */}
+      <Modal
+        visible={showCompletionModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCompletionModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalDismiss}
+            activeOpacity={1}
+            onPress={() => setShowCompletionModal(false)}
+          />
+          <View style={styles.completionCard}>
+            <LinearGradient
+              colors={["#FFFFFF", "#F1F8FE"]}
+              style={styles.modalGradient}
+            >
+              <View style={styles.modalHeader}>
+                <View style={styles.progressCircleContainer}>
+                  <CircularProfileProgress
+                    size={90}
+                    strokeWidth={6}
+                    percentage={completionPercentage}
+                    progressColor="#0D47A1"
+                  >
+                    <View style={styles.percentageContainer}>
+                      <Text style={styles.percentageText}>{completionPercentage}%</Text>
+                    </View>
+                  </CircularProfileProgress>
+                </View>
+              </View>
+
+              <Text style={styles.modalTitle}>Complete Your Profile</Text>
+              <Text style={styles.modalSubtitle}>
+                Unlock all features and get personalized offers by completing your profile.
+              </Text>
+
+              <View style={styles.benefitsContainer}>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                  <Text style={styles.benefitText}>Better Security</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                  <Text style={styles.benefitText}>Instant Support</Text>
+                </View>
+                <View style={styles.benefitItem}>
+                  <Ionicons name="checkmark-circle" size={18} color="#4CAF50" />
+                  <Text style={styles.benefitText}>Exclusive Rewards</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.completeButton}
+                onPress={() => {
+                  setShowCompletionModal(false);
+                  router.push("/personal-details");
+                }}
+              >
+                <LinearGradient
+                  colors={["#0D47A1", "#1976D2"]}
+                  style={styles.buttonGradient}
+                >
+                  <Text style={styles.completeButtonText}>Complete Now</Text>
+                  <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.maybeLaterButton}
+                onPress={() => setShowCompletionModal(false)}
+              >
+                <Text style={styles.maybeLaterText}>Maybe Later</Text>
+              </TouchableOpacity>
+            </LinearGradient>
+          </View>
+        </View>
+      </Modal>
+
       <SafeAreaView style={styles.safeArea}>
         {/* Fixed Header Row - Stays at top while scrolling */}
         <LinearGradient
@@ -555,19 +673,26 @@ export default function HomeScreen({
                 onPress={() => router.push("/account")}
               >
                 <View style={[styles.iconWrapper, styles.profileWrapper]}>
-                  {userData?.profile_image ? (
-                    <Image
-                      source={{
-                        uri: userData.profile_image.startsWith("http")
-                          ? userData.profile_image
-                          : `${API_BASE_URL}${userData.profile_image}`
-                      }}
-                      style={styles.profileThumbnail}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Ionicons name="person" size={22} color="#1976D2" />
-                  )}
+                  <CircularProfileProgress
+                    size={32}
+                    strokeWidth={2.5}
+                    percentage={completionPercentage}
+                    progressColor={completionPercentage === 100 ? "#4CAF50" : "#FF9800"}
+                  >
+                    {userData?.profile_image ? (
+                      <Image
+                        source={{
+                          uri: userData.profile_image.startsWith("http")
+                            ? userData.profile_image
+                            : `${API_BASE_URL}${userData.profile_image}`
+                        }}
+                        style={styles.profileThumbnail}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Ionicons name="person" size={20} color="#1976D2" />
+                    )}
+                  </CircularProfileProgress>
                 </View>
               </TouchableOpacity>
             </View>
@@ -1171,7 +1296,7 @@ export default function HomeScreen({
                   </View>
                   <Text style={[styles.referCode, { color: "#4B5563" }]}>Your Code</Text>
                   <View style={[styles.referCodeBox, { backgroundColor: "rgba(255, 255, 255, 0.6)", borderColor: "#DBEAFE", borderWidth: 1 }]}>
-                    <Text style={[styles.referCodeText, { color: "#3B82F6" }]}>PAY75</Text>
+                    <Text style={[styles.referCodeText, { color: "#3B82F6" }]}>PayIndia</Text>
                   </View>
                 </View>
               </LinearGradient>
@@ -1976,5 +2101,131 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 9,
     fontWeight: "bold",
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalDismiss: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  completionCard: {
+    width: width * 0.85,
+    borderRadius: 28,
+    overflow: "hidden",
+    elevation: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+  },
+  modalGradient: {
+    padding: 24,
+    alignItems: "center",
+  },
+  modalHeader: {
+    marginBottom: 20,
+  },
+  progressCircleContainer: {
+    backgroundColor: "#FFFFFF",
+    padding: 8,
+    borderRadius: 60,
+    elevation: 4,
+    shadowColor: "#0D47A1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  percentageContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#EFF6FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  percentageText: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: "#0D47A1",
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#1E293B",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+    paddingHorizontal: 10,
+  },
+  benefitsContainer: {
+    width: "100%",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    gap: 12,
+  },
+  benefitItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  benefitText: {
+    fontSize: 14,
+    color: "#475569",
+    fontWeight: "600",
+  },
+  completeButton: {
+    width: "100%",
+    borderRadius: 16,
+    overflow: "hidden",
+    elevation: 8,
+    shadowColor: "#0D47A1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    marginBottom: 12,
+  },
+  buttonGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    gap: 8,
+  },
+  completeButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  maybeLaterButton: {
+    paddingVertical: 8,
+  },
+  maybeLaterText: {
+    fontSize: 14,
+    color: "#94A3B8",
+    fontWeight: "600",
+  },
+  completionBadge: {
+    backgroundColor: "#E8F5E9",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  completionBadgeText: {
+    color: "#2E7D32",
+    fontSize: 12,
+    fontWeight: "700",
   },
 });

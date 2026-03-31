@@ -94,8 +94,10 @@ export default function WalletScreen() {
     if (isPaymentFlow) {
       router.back();
     } else {
-      router.replace('/(tabs)/explore');
+      // Use navigate instead of replace to preserve Home/Explore state
+      router.navigate('/(tabs)/explore');
     }
+
     return true;
   }, [router, isPaymentFlow]);
 
@@ -539,23 +541,23 @@ export default function WalletScreen() {
                     const isWalletAdd = type === "WALLET CREDIT" || type === "WALLET_CREDIT";
                     const isWalletWithdraw = type === "WALLET DEBIT" || type === "WALLET_DEBIT";
 
-                    let label = isRecharge ? "Mobile Recharge" : 
-                                isBill ? "Bill Payment" : 
-                                isWalletAdd ? "Money Added" : 
-                                isWalletWithdraw ? "Money Spent/Paid" : 
-                                transaction.transaction_type;
-                    
-                    let icon = isRecharge ? "phone-portrait" : 
-                               isBill ? "receipt" : 
-                               isWalletAdd ? "add-circle" : 
-                               isWalletWithdraw ? "arrow-up-circle" : 
-                               "card-outline";
-                    
-                    let iconColor = isRecharge ? "#2196F3" : 
-                                    isBill ? "#FF9800" : 
-                                    isWalletAdd ? "#4CAF50" : 
-                                    isWalletWithdraw ? "#FF6B6B" : 
-                                    "#9C27B0";
+                    let label = isRecharge ? "Mobile Recharge" :
+                      isBill ? "Bill Payment" :
+                        isWalletAdd ? "Money Added" :
+                          isWalletWithdraw ? "Money Spent/Paid" :
+                            transaction.transaction_type;
+
+                    let icon = isRecharge ? "phone-portrait" :
+                      isBill ? "receipt" :
+                        isWalletAdd ? "add-circle" :
+                          isWalletWithdraw ? "arrow-up-circle" :
+                            "card-outline";
+
+                    let iconColor = isRecharge ? "#2196F3" :
+                      isBill ? "#FF9800" :
+                        isWalletAdd ? "#4CAF50" :
+                          isWalletWithdraw ? "#FF6B6B" :
+                            "#9C27B0";
 
                     return (
                       <View
@@ -588,7 +590,7 @@ export default function WalletScreen() {
             </View>
           )}
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.walletInfo}
             onPress={() => Alert.alert(
               "About PayIndia Wallet",
@@ -635,7 +637,8 @@ export default function WalletScreen() {
                 style={styles.backHomeButtonSuccess}
                 onPress={() => {
                   setShowPaymentSuccess(false);
-                  router.replace("/(tabs)/explore");
+                  // Use navigate instead of replace to preserve Home/Explore state
+                  router.navigate("/(tabs)/explore");
                 }}
               >
                 <Text style={styles.backHomeTextSuccess}>Back to Home</Text>

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
+    ActivityIndicator,
     View,
     Text,
     StyleSheet,
@@ -18,6 +19,8 @@ import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_ENDPOINTS } from '../constants/api';
 
 if (
     Platform.OS === 'android' &&
@@ -28,6 +31,8 @@ if (
 
 export default function ReferEarnScreen() {
     const router = useRouter();
+    const [referralData, setReferralData] = useState<any>(null);
+    const [isLoading, setIsLoading] = useState(true);
     const [copied, setCopied] = useState(false);
     const [termsExpanded, setTermsExpanded] = useState(false);
 
@@ -36,7 +41,30 @@ export default function ReferEarnScreen() {
     const scaleAnim = useRef(new Animated.Value(0.95)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
+    const fetchReferralInfo = async () => {
+        try {
+            setIsLoading(true);
+            const token = await AsyncStorage.getItem("userToken");
+            const response = await fetch(API_ENDPOINTS.REFERRAL_INFO, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            const data = await response.json();
+            if (response.ok && data.success) {
+                setReferralData(data);
+            }
+        } catch (error) {
+            console.error("Error fetching referral info:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
+        fetchReferralInfo();
+
         // Hero float animation
         Animated.loop(
             Animated.sequence([
@@ -71,7 +99,7 @@ export default function ReferEarnScreen() {
         ]).start();
     }, []);
 
-    const referralCode = "SAMI1234";
+    const referralCode = referralData?.referralCode || "PayIndia";
 
     const copyToClipboard = () => {
         Clipboard.setString(referralCode);
@@ -191,22 +219,24 @@ export default function ReferEarnScreen() {
                     <Text style={styles.sectionTitle}>Your Earnings</Text>
                     <View style={styles.statsRow}>
                         <View style={[styles.statCard, styles.statCardTotal]}>
-                            <Text style={[styles.statValue, styles.statValueTotal]}>12</Text>
+                            <Text style={[styles.statValue, styles.statValueTotal]}>
+                                {referralData?.stats?.total_referrals || 0}
+                            </Text>
                             <Text style={styles.statLabel}>Total{'\n'}Referrals</Text>
                         </View>
                         <View style={[styles.statCard, styles.statCardSuccess]}>
-                            <Text style={[styles.statValue, styles.statValueSuccess]}>8</Text>
+                            <Text style={[styles.statValue, styles.statValueSuccess]}>
+                                {referralData?.stats?.successful_referrals || 0}
+                            </Text>
                             <Text style={styles.statLabel}>Successful{'\n'}Referrals</Text>
                         </View>
                         <View style={[styles.statCard, styles.statCardEarnings]}>
-                            <Text style={styles.statValueEarnings}>₹800</Text>
+                            <Text style={styles.statValueEarnings}>
+                                ₹{referralData?.stats?.total_earnings || 0}
+                            </Text>
                             <Text style={styles.statLabelEarnings}>Total{'\n'}Earnings</Text>
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.historyButton}>
-                        <Text style={styles.historyButtonText}>View Referral History</Text>
-                        <Ionicons name="chevron-forward" size={16} color="#3B82F6" />
-                    </TouchableOpacity>
                 </Animated.View>
 
                 {/* How It Works Section */}
@@ -270,40 +300,43 @@ export default function ReferEarnScreen() {
                     </View>
 
                     <View style={styles.historyCard}>
-                        <View style={styles.historyItem}>
-                            <View style={styles.historyUser}>
-                                <View style={styles.avatarPlaceholder}><Text style={styles.avatarText}>R</Text></View>
-                                <View>
-                                    <Text style={styles.historyName}>Rahul Kumar</Text>
-                                    <Text style={styles.historyStatusSuccess}>Successful</Text>
-                                </View>
+                        {isLoading ? (
+                            <ActivityIndicator size="small" color="#3B82F6" style={{ marginVertical: 20 }} />
+                        ) : referralData?.recentReferrals?.length > 0 ? (
+                            referralData.recentReferrals.map((item: any, index: number) => (
+                                <React.Fragment key={item.referral_id}>
+                                    <View style={styles.historyItem}>
+                                        <View style={styles.historyUser}>
+                                            <View style={[styles.avatarPlaceholder, { backgroundColor: index % 2 === 0 ? '#E8F5E9' : '#FFEDD5' }]}>
+                                                <Text style={[styles.avatarText, { color: index % 2 === 0 ? '#2E7D32' : '#F97316' }]}>
+                                                    {(item.referred_user_name || "U")[0].toUpperCase()}
+                                                </Text>
+                                            </View>
+                                            <View>
+                                                <Text style={styles.historyName}>{item.referred_user_name || item.referred_user_mobile}</Text>
+                                                <Text style={item.status === 'SUCCESS' ? styles.historyStatusSuccess : styles.historyStatusPending}>
+                                                    {item.status.charAt(0) + item.status.slice(1).toLowerCase()}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <Text style={item.status === 'SUCCESS' ? styles.historyAmountText : styles.historyAmountPending}>
+                                            {item.status === 'SUCCESS' ? `+₹${item.reward_amount}` : '-'}
+                                        </Text>
+                                    </View>
+                                    {index < referralData.recentReferrals.length - 1 && <View style={styles.historyDivider} />}
+                                </React.Fragment>
+                            ))
+                        ) : (
+                            <View style={styles.emptyContainer}>
+                                <Ionicons name="people-outline" size={48} color="#CBD5E1" />
+                                <Text style={styles.emptyText}>No referrals yet</Text>
+                                <Text style={styles.emptySubtext}>Invite your friends to start earning!</Text>
                             </View>
-                            <Text style={styles.historyAmountText}>+₹100</Text>
-                        </View>
-                        <View style={styles.historyDivider} />
-                        <View style={styles.historyItem}>
-                            <View style={styles.historyUser}>
-                                <View style={[styles.avatarPlaceholder, { backgroundColor: '#FFEDD5' }]}><Text style={[styles.avatarText, { color: '#F97316' }]}>P</Text></View>
-                                <View>
-                                    <Text style={styles.historyName}>Priya Sharma</Text>
-                                    <Text style={styles.historyStatusPending}>Pending</Text>
-                                </View>
-                            </View>
-                            <Text style={styles.historyAmountPending}>-</Text>
-                        </View>
-                        <View style={styles.historyDivider} />
-                        <View style={styles.historyItem}>
-                            <View style={styles.historyUser}>
-                                <View style={[styles.avatarPlaceholder, { backgroundColor: '#E0E7FF' }]}><Text style={[styles.avatarText, { color: '#4F46E5' }]}>A</Text></View>
-                                <View>
-                                    <Text style={styles.historyName}>Amit Singh</Text>
-                                    <Text style={styles.historyStatusSuccess}>Successful</Text>
-                                </View>
-                            </View>
-                            <Text style={styles.historyAmountText}>+₹100</Text>
-                        </View>
+                        )}
                     </View>
                 </Animated.View>
+
+                {/* Terms & Conditions */}
 
                 {/* Terms & Conditions */}
                 <Animated.View style={[styles.section, { opacity: fadeAnim }]}>
@@ -768,9 +801,24 @@ const styles = StyleSheet.create({
     },
     historyAmountPending: {
         fontSize: 16,
-        fontWeight: '700',
-        color: '#999',
-        marginRight: 10,
+        fontWeight: 'bold',
+        color: '#94A3B8',
+    },
+    emptyContainer: {
+        alignItems: 'center',
+        paddingVertical: 40,
+    },
+    emptyText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#1E293B',
+        marginTop: 12,
+    },
+    emptySubtext: {
+        fontSize: 14,
+        color: '#64748B',
+        marginTop: 4,
+        textAlign: 'center',
     },
     termsHeader: {
         flexDirection: 'row',

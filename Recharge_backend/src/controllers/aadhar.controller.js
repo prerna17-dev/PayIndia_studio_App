@@ -181,6 +181,7 @@ exports.submitCorrection = async (req, res, next) => {
             return res.status(400).json({ success: false, message: "Aadhaar number and mobile number are required" });
         }
 
+        const reference_id = "UPAADH" + Math.random().toString(36).substr(2, 6).toUpperCase();
         const correctionId = await AadharModel.createCorrection({
             user_id: userId,
             aadhar_number,
@@ -188,6 +189,7 @@ exports.submitCorrection = async (req, res, next) => {
             corrected_name,
             corrected_dob: corrected_dob ? formatDateToMySQL(corrected_dob) : null,
             correction_type,
+            reference_id,
         });
 
         // Handle File Uploads
@@ -220,7 +222,7 @@ exports.submitCorrection = async (req, res, next) => {
         res.status(201).json({
             success: true,
             message: "Aadhaar correction request submitted successfully",
-            data: { correctionId },
+            data: { correctionId, reference_id },
         });
     } catch (err) {
         next(err);
