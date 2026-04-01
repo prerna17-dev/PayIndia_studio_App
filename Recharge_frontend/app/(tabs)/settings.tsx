@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import {
     Alert,
     BackHandler,
+    Modal,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -21,6 +22,7 @@ export default function SettingsScreen() {
     const [notificationsEnabled, setNotificationsEnabled] = useState(true);
     const [selectedLanguage, setSelectedLanguage] = useState("English");
     const [selectedTheme, setSelectedTheme] = useState("Light");
+    const [isPrivacyVisible, setIsPrivacyVisible] = useState(false);
 
     // Handle hardware back button - go to account screen
     useFocusEffect(
@@ -85,9 +87,7 @@ export default function SettingsScreen() {
 
     // Handle Privacy Policy
     const handlePrivacyPolicy = () => {
-        Alert.alert("Privacy Policy", "Opening privacy policy...");
-        // In real app, navigate to privacy policy screen or web view
-        // Linking.openURL('https://onlrecharge.com/privacy-policy');
+        setIsPrivacyVisible(true);
     };
 
     // Handle About
@@ -291,6 +291,106 @@ export default function SettingsScreen() {
                     </View>
                 </ScrollView>
             </SafeAreaView>
+
+            {/* Privacy Policy Modal */}
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={isPrivacyVisible}
+                onRequestClose={() => setIsPrivacyVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.privacyCard}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Privacy Policy</Text>
+                            <TouchableOpacity
+                                onPress={() => setIsPrivacyVisible(false)}
+                                style={styles.closeButton}
+                            >
+                                <Ionicons name="close" size={24} color="#666" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.privacyScroll} showsVerticalScrollIndicator={false}>
+                            <Text style={styles.policySectionTitle}>1. Introduction</Text>
+                            <Text style={styles.policyText}>
+                                PayIndia ("we," "our," or "us") is dedicated to protecting the privacy of our users. This Privacy Policy outlines our commitment to transparency regarding the collection, use, and disclosure of your personal and financial information when you use our mobile application and related services.
+                            </Text>
+
+                            <Text style={styles.policySectionTitle}>2. Information We Collect</Text>
+                            <Text style={styles.policyText}>
+                                We collect information necessary to provide you with secure payment services. This includes:
+                            </Text>
+                            <View style={styles.bulletPoint}>
+                                <Text style={styles.bullet}>•</Text>
+                                <Text style={styles.bulletText}>Personal Identification: Name, mobile number, email address, and Aadhaar/PAN details for KYC compliance.</Text>
+                            </View>
+                            <View style={styles.bulletPoint}>
+                                <Text style={styles.bullet}>•</Text>
+                                <Text style={styles.bulletText}>Financial Information: Bank account details, UPI IDs, and transaction records required for processing payments.</Text>
+                            </View>
+                            <View style={styles.bulletPoint}>
+                                <Text style={styles.bullet}>•</Text>
+                                <Text style={styles.bulletText}>Device Data: IP address, device type, OS version, and unique device identifiers to prevent fraud and unauthorized access.</Text>
+                            </View>
+
+                            <Text style={styles.policySectionTitle}>3. How We Use Your Data</Text>
+                            <Text style={styles.policyText}>
+                                Your information is utilized to:
+                            </Text>
+                            <View style={styles.bulletPoint}>
+                                <Text style={styles.bullet}>•</Text>
+                                <Text style={styles.bulletText}>Execute and verify financial transactions securely.</Text>
+                            </View>
+                            <View style={styles.bulletPoint}>
+                                <Text style={styles.bullet}>•</Text>
+                                <Text style={styles.bulletText}>Comply with Anti-Money Laundering (AML) and Know Your Customer (KYC) regulations.</Text>
+                            </View>
+                            <View style={styles.bulletPoint}>
+                                <Text style={styles.bullet}>•</Text>
+                                <Text style={styles.bulletText}>Improve our analytics to provide personalized financial insights and offers.</Text>
+                            </View>
+
+                            <Text style={styles.policySectionTitle}>4. Data Security & Protection</Text>
+                            <Text style={styles.policyText}>
+                                We employ rigorous physical, technical, and administrative security measures. All sensitive financial data is encrypted using 256-bit SSL technology. We do not store your raw PINs or passwords; all authentication is handled via secure, industry-standard protocols.
+                            </Text>
+
+                            <Text style={styles.policySectionTitle}>5. Information Sharing</Text>
+                            <Text style={styles.policyText}>
+                                We do not sell your personal data. We share information only with trusted partners, including:
+                            </Text>
+                            <View style={styles.bulletPoint}>
+                                <Text style={styles.bullet}>•</Text>
+                                <Text style={styles.bulletText}>Banking partners and payment gateways to facilitate transfers.</Text>
+                            </View>
+                            <View style={styles.bulletPoint}>
+                                <Text style={styles.bullet}>•</Text>
+                                <Text style={styles.bulletText}>Government authorities when required by law or to investigate fraudulent activities.</Text>
+                            </View>
+
+                            <Text style={styles.policySectionTitle}>6. Your Rights & Control</Text>
+                            <Text style={styles.policyText}>
+                                You have the right to access, update, or request deletion of your data. For assistance regarding your data rights, please navigate to the Account Settings or contact our Data Protection Officer.
+                            </Text>
+
+                            <Text style={styles.policySectionTitle}>7. Policy Updates</Text>
+                            <Text style={styles.policyText}>
+                                We may update this policy periodically to reflect changes in our practices or legal obligations. We will notify you of any significant updates through the app.
+                            </Text>
+                        </ScrollView>
+
+                        <View style={styles.modalFooter}>
+                            <TouchableOpacity 
+                                style={styles.agreeButton}
+                                onPress={() => setIsPrivacyVisible(false)}
+                            >
+                                <Text style={styles.agreeButtonText}>I Agree</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -308,8 +408,8 @@ const styles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
         paddingHorizontal: 20,
-        paddingTop: 50,
-        paddingBottom: 20,
+        paddingTop: 35,
+        paddingBottom: 10,
         backgroundColor: "#FFFFFF",
         borderBottomWidth: 1,
         borderBottomColor: "#F0F0F0",
@@ -327,7 +427,7 @@ const styles = StyleSheet.create({
     },
 
     scrollContent: {
-        paddingBottom: 30,
+        paddingBottom: 10,
     },
 
     // Settings Section
@@ -401,8 +501,8 @@ const styles = StyleSheet.create({
     // App Info
     appInfo: {
         alignItems: "center",
-        paddingTop: 40,
-        paddingBottom: 20,
+        paddingTop: 10,
+        paddingBottom: 5,
     },
     appInfoText: {
         fontSize: 18,
@@ -418,5 +518,90 @@ const styles = StyleSheet.create({
     appInfoCopyright: {
         fontSize: 12,
         color: "#999",
+    },
+
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    privacyCard: {
+        backgroundColor: "#FFFFFF",
+        width: "100%",
+        maxHeight: "80%",
+        borderRadius: 24,
+        paddingHorizontal: 24,
+        paddingTop: 18,
+        paddingBottom: 6,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+        elevation: 10,
+    },
+    modalHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 12,
+    },
+    modalTitle: {
+        fontSize: 22,
+        fontWeight: "bold",
+        color: "#1A1A1A",
+    },
+    closeButton: {
+        padding: 4,
+    },
+    privacyScroll: {
+        marginBottom: 10,
+    },
+    policySectionTitle: {
+        fontSize: 16,
+        fontWeight: "700",
+        color: "#1A1A1A",
+        marginTop: 15,
+        marginBottom: 8,
+    },
+    policyText: {
+        fontSize: 14,
+        color: "#4A4A4A",
+        lineHeight: 22,
+    },
+    agreeButtonText: {
+        color: "#2196F3",
+        fontSize: 16,
+        fontWeight: "700",
+    },
+    modalFooter: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        marginTop: 10,
+    },
+    agreeButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 5,
+    },
+    // New styles for bullet points
+    bulletPoint: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        paddingLeft: 10,
+        marginVertical: 4,
+    },
+    bullet: {
+        fontSize: 18,
+        color: "#2196F3",
+        marginRight: 8,
+        lineHeight: 22,
+    },
+    bulletText: {
+        flex: 1,
+        fontSize: 14,
+        color: "#4A4A4A",
+        lineHeight: 22,
     },
 });
