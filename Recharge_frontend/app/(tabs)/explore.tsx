@@ -22,9 +22,9 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, API_BASE_URL } from "../../constants/api";
 import { CircularProfileProgress } from "../../components/CircularProfileProgress";
-import { calculateProfileCompletion } from "../../utils/profileCompletion";
+import { calculateProfileCompletion, getCachedProfile, syncProfileCache } from "../../utils/profileCompletion";
 import { Modal } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, LinearGradient as SvgLinearGradient, Stop, Defs, Text as SvgText } from "react-native-svg";
 
 
 const { width } = Dimensions.get("window");
@@ -150,7 +150,7 @@ export default function HomeScreen({
   const [hasNewNotifications, setHasNewNotifications] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<any>(getCachedProfile().data);
   const [reminders, setReminders] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState({
     spent: 0,
@@ -160,8 +160,9 @@ export default function HomeScreen({
   });
 
   // Profile Completion States
-  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [completionPercentage, setCompletionPercentage] = useState<number | null>(getCachedProfile().percentage);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
 
   // Stats counter states
   const [statUsers, setStatUsers] = useState(0);
@@ -184,8 +185,14 @@ export default function HomeScreen({
       const cachedData = await AsyncStorage.getItem("userData");
       if (cachedData) {
         const parsed = JSON.parse(cachedData);
-        setUserData(parsed);
-        setCompletionPercentage(calculateProfileCompletion(parsed));
+        const result = syncProfileCache(parsed);
+        if (result) {
+          setUserData(result.data);
+          setCompletionPercentage(result.percentage);
+        }
+      } else {
+        // Only show loading if we have no cache
+        setIsProfileLoading(true);
       }
 
       // 2. Fetch fresh profile data in the background
@@ -204,13 +211,17 @@ export default function HomeScreen({
 
       if (response.ok) {
         // Update state and cache with fresh data
-        setUserData(data);
-        const percentage = calculateProfileCompletion(data);
-        setCompletionPercentage(percentage);
+        const result = syncProfileCache(data);
+        if (result) {
+          setUserData(result.data);
+          setCompletionPercentage(result.percentage);
+        }
         await AsyncStorage.setItem("userData", JSON.stringify(data));
       }
     } catch (error) {
       console.error("Error fetching profile in Home:", error);
+    } finally {
+      setIsProfileLoading(false);
     }
   };
 
@@ -316,16 +327,22 @@ export default function HomeScreen({
   // Show profile completion popup if incomplete
   useEffect(() => {
     const checkCompletion = async () => {
-      if (userData && completionPercentage < 100) {
+      // ONLY show if it's strictly less than 100% AND not currently verifying fresh data
+      if (!isProfileLoading && userData && completionPercentage !== null && completionPercentage < 100) {
         const hasShown = await AsyncStorage.getItem("@profile_popup_shown");
         if (!hasShown) {
           setShowCompletionModal(true);
           await AsyncStorage.setItem("@profile_popup_shown", "true");
         }
       }
+
+      // Safety: If it's 100% but modal is open, close it immediately
+      if (completionPercentage === 100 && showCompletionModal) {
+        setShowCompletionModal(false);
+      }
     };
     checkCompletion();
-  }, [userData, completionPercentage]);
+  }, [userData, completionPercentage, showCompletionModal, isProfileLoading]);
 
   // Handle hardware back button to exit app from Home screen
   useFocusEffect(
@@ -629,11 +646,11 @@ export default function HomeScreen({
                   <CircularProfileProgress
                     size={90}
                     strokeWidth={6}
-                    percentage={completionPercentage}
+                    percentage={completionPercentage || 0}
                     progressColor="#0D47A1"
                   >
                     <View style={styles.percentageContainer}>
-                      <Text style={styles.percentageText}>{completionPercentage}%</Text>
+                      <Text style={styles.percentageText}>{completionPercentage || 0}%</Text>
                     </View>
                   </CircularProfileProgress>
                 </View>
@@ -698,11 +715,32 @@ export default function HomeScreen({
             {/* Left Side - Logo and App Name */}
             <View style={styles.leftSection}>
               <Image
-                source={require("../../assets/images/logo.png")}
+                source={require("../../assets/images/logo1.png")}
                 style={styles.headerLogo}
                 resizeMode="contain"
               />
-              <Text style={styles.appNameHeader}>PayIndia</Text>
+              <View style={{ marginLeft: 2 }}>
+                <Svg height="44" width="140" viewBox="0 0 140 44">
+                  <Defs>
+                    <SvgLinearGradient id="headerGrad" x1="0" y1="0" x2="1" y2="0">
+                      <Stop offset="0" stopColor="#0D47A1" stopOpacity="1" />
+                      <Stop offset="0.6" stopColor="#1976D2" stopOpacity="1" />
+                      <Stop offset="1" stopColor="#2196F3" stopOpacity="1" />
+                    </SvgLinearGradient>
+                  </Defs>
+                  <SvgText
+                    fill="url(#headerGrad)"
+                    fontSize="28"
+                    fontWeight="900"
+                    x="0"
+                    y="32"
+                    textAnchor="start"
+                    letterSpacing="0.5"
+                  >
+                    PayIndia
+                  </SvgText>
+                </Svg>
+              </View>
             </View>
 
             {/* Right Icons - Notification & Profile */}
@@ -731,7 +769,7 @@ export default function HomeScreen({
                   <CircularProfileProgress
                     size={32}
                     strokeWidth={2.5}
-                    percentage={completionPercentage}
+                    percentage={completionPercentage || 0}
                     progressColor={completionPercentage === 100 ? "#4CAF50" : "#FF9800"}
                   >
                     {userData?.profile_image ? (
@@ -754,7 +792,10 @@ export default function HomeScreen({
           </View>
         </LinearGradient>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header Section - Blue Gradient with Mountains & Trees */}
           <LinearGradient
             colors={["#E1F5FE", "#B3E5FC", "#81D4FA", "#4FC3F7"]}
@@ -1648,10 +1689,10 @@ const styles = StyleSheet.create({
   },
 
   headerLogo: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    marginRight: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    marginRight: 5,
   },
 
   headerIcons: {

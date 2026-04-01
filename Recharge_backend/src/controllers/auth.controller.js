@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const notificationService = require("../services/notification.service");
 
 const generateOTP = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
+  Math.floor(1000 + Math.random() * 9000).toString();
 
 exports.sendOTP = async (req, res) => {
   try {
@@ -25,16 +25,16 @@ exports.sendOTP = async (req, res) => {
     // DLT Template: Your password has been successfully reset. Please log in with your new password: {#var#} - WRKNAI, Namastey
     const message = `Your password has been successfully reset. Please log in with your new password: ${otp} - WRKNAI, Namastey`;
 
-    // Send SMS via Dreamz Technology API
-    const smsResult = await notificationService.sendSMS(mobile, message);
-
-    if (typeof smsResult === 'string' && smsResult.startsWith('error')) {
-      console.error("❌ SMS API ERROR:", smsResult);
-      return res.status(500).json({
-        message: "SMS provider error",
-        error: smsResult
-      });
-    }
+    // Send SMS via Dreamz Technology API - Trigger in background to respond faster to user (< 2 sec)
+    notificationService.sendSMS(mobile, message).then(smsResult => {
+      if (typeof smsResult === 'string' && smsResult.startsWith('error')) {
+          console.error("❌ BACKGROUND SMS API ERROR:", smsResult);
+      } else {
+          console.log(`[SMS] OTP for ${mobile} sent successfully in background.`);
+      }
+    }).catch(err => {
+      console.error("❌ BACKGROUND SMS EXCEPTION:", err.message);
+    });
 
     res.json({ message: "OTP sent successfully" });
   } catch (err) {

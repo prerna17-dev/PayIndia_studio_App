@@ -17,10 +17,12 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           animation: 'none',
+          headerShown: false, // Hide headers globally by default for all custom header screens
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="account" options={{ headerShown: false }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

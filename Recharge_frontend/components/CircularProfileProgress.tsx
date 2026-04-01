@@ -23,7 +23,7 @@ export const CircularProfileProgress: React.FC<CircularProfileProgressProps> = (
 }) => {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const animatedValue = useRef(new Animated.Value(0)).current;
+  const animatedValue = useRef(new Animated.Value(percentage)).current;
 
   useEffect(() => {
     Animated.spring(animatedValue, {

@@ -5,12 +5,15 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Image,
+  SafeAreaView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Svg, { Defs, LinearGradient as SvgLinearGradient, Stop, Text as SvgText } from "react-native-svg";
 
 const { width, height } = Dimensions.get("window");
 
@@ -252,22 +255,40 @@ export default function SplashScreen() {
           },
         ]}
       >
-        {/* Pulsing Logo Ring */}
+        {/* Main Pulsing Logo - Blue Circle Removed */}
         <Animated.View
-          style={[styles.logoRing, { transform: [{ scale: pulseAnim }] }]}
+          style={{ transform: [{ scale: pulseAnim }] }}
         >
-          <LinearGradient
-            colors={["#0D47A1", "#1976D2"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.logoCircle}
-          >
-            <Ionicons name="flash" size={40} color="#FFFFFF" />
-          </LinearGradient>
+          <Image 
+            source={require("../../assets/images/logo1.png")}
+            style={{ width: 130, height: 130 }}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         {/* App Name */}
-        <Text style={styles.appName}>PayIndia</Text>
+        <View style={styles.appNameContainer}>
+          <Svg height="60" width="300" viewBox="0 0 300 60">
+            <Defs>
+              <SvgLinearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#0D47A1" stopOpacity="1" />
+                <Stop offset="0.6" stopColor="#1976D2" stopOpacity="1" />
+                <Stop offset="1" stopColor="#2196F3" stopOpacity="1" />
+              </SvgLinearGradient>
+            </Defs>
+            <SvgText
+              fill="url(#brandGrad)"
+              fontSize="48"
+              fontWeight="900"
+              x="150"
+              y="48"
+              textAnchor="middle"
+              letterSpacing="2.5"
+            >
+              PayIndia
+            </SvgText>
+          </Svg>
+        </View>
 
         {/* Tagline */}
         <View style={styles.taglineRow}>
@@ -377,6 +398,12 @@ const styles = StyleSheet.create({
     elevation: 16,
   },
 
+  appNameContainer: {
+    height: 60,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
   appName: {
     fontSize: 42,
     fontWeight: "800",
@@ -458,7 +485,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 10.5,
-    color: "rgba(13, 71, 161, 0.45)",
+    color: "rgba(13,71,161,0.45)",
     fontWeight: "400",
     letterSpacing: 0.2,
   },

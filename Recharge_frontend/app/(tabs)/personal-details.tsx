@@ -472,7 +472,10 @@ export default function PersonalDetailsScreen() {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Complete Profile Banner */}
           <View style={styles.bannerContainer}>
             <LinearGradient
