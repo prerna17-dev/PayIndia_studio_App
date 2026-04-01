@@ -3,7 +3,7 @@ const jwt = require("jsonwebtoken");
 const notificationService = require("../services/notification.service");
 
 const generateOTP = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
+  Math.floor(1000 + Math.random() * 9000).toString();
 
 exports.sendOTP = async (req, res) => {
   try {

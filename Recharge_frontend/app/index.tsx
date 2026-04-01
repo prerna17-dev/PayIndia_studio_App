@@ -1,38 +1,46 @@
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { syncProfileCache } from '../utils/profileCompletion';
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [targetRoute, setTargetRoute] = useState<any>(null);
 
   useEffect(() => {
-    checkAuth();
+    checkInitialState();
   }, []);
 
-  const checkAuth = async () => {
+  const checkInitialState = async () => {
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      setIsAuthenticated(!!token);
+      // Pre-load user data into memory cache for zero-latency screen loading
+      const cachedData = await AsyncStorage.getItem("userData");
+      if (cachedData) syncProfileCache(JSON.parse(cachedData));
+      
+      const hasLaunched = await AsyncStorage.getItem('hasLaunched');
+
+      if (hasLaunched === null) {
+        // First time launch
+        setTargetRoute("/get-started");
+      } else {
+        const token = await AsyncStorage.getItem('userToken');
+        setTargetRoute(token ? "/(tabs)/explore" : "/auth/login");
+      }
     } catch (e) {
-      setIsAuthenticated(false);
+      setTargetRoute("/auth/login");
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !targetRoute) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
-        <ActivityIndicator size="large" color="#2196F3" />
+        <ActivityIndicator size="large" color="#247189" />
       </View>
     );
   }
 
-  if (isAuthenticated) {
-    return <Redirect href="/(tabs)/explore" />;
-  }
-
-  return <Redirect href="/auth/login" />;
+  return <Redirect href={targetRoute} />;
 }

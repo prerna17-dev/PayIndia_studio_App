@@ -18,46 +18,59 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS, API_BASE_URL } from "../constants/api";
 import { CircularProfileProgress } from "../components/CircularProfileProgress";
-import { calculateProfileCompletion } from "../utils/profileCompletion";
+import { getCachedProfile, syncProfileCache } from "../utils/profileCompletion";
 
 export default function AccountScreen() {
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [completionPercentage, setCompletionPercentage] = useState(0);
+  
+  // Consolidated profile state for smoother transitions and fewer re-renders
+  const [profile, setProfile] = useState<{
+    data: any;
+    percentage: number;
+    isLoading: boolean;
+  }>({
+    data: getCachedProfile().data,
+    percentage: getCachedProfile().percentage,
+    isLoading: false,
+  });
 
   const fetchProfile = async () => {
-    setIsLoading(true);
     try {
-      // 1. Instantly load cached profile to avoid layout shift
+      // 1. Sync from local storage first to hydrate cache
       const cachedData = await AsyncStorage.getItem("userData");
       if (cachedData) {
         const parsed = JSON.parse(cachedData);
-        setUserData(parsed);
-        setCompletionPercentage(calculateProfileCompletion(parsed));
+        const result = syncProfileCache(parsed);
+        if (result) {
+          setProfile(prev => ({ ...prev, data: result.data, percentage: result.percentage }));
+        }
+      } else if (!profile.data) {
+        // Only show spinner on first-ever load if no cache exists
+        setProfile(prev => ({ ...prev, isLoading: true }));
       }
 
-      // 2. Fetch fresh profile data
+      // 2. Refresh from API in background
       const token = await AsyncStorage.getItem("userToken");
-      const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
+      if (!token) return;
 
+      const response = await fetch(API_ENDPOINTS.USER_PROFILE, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const freshData = await response.json();
+ 
       if (response.ok) {
-        // Update state and cache with fresh data
-        setUserData(data);
-        setCompletionPercentage(calculateProfileCompletion(data));
-        await AsyncStorage.setItem("userData", JSON.stringify(data));
+        const result = syncProfileCache(freshData);
+        if (result) {
+          setProfile({ data: result.data, percentage: result.percentage, isLoading: false });
+        }
+        await AsyncStorage.setItem("userData", JSON.stringify(freshData));
       }
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
-      setIsLoading(false);
+      setProfile(prev => ({ ...prev, isLoading: false }));
     }
   };
 
@@ -108,7 +121,6 @@ export default function AccountScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="dark" />
 
       <SafeAreaView style={styles.safeArea}>
@@ -130,10 +142,13 @@ export default function AccountScreen() {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true} // Optimize memory for off-screen items
+        >
           {/* Profile Section - Reduced Width */}
           <View style={styles.profileSection}>
-            {isLoading && !userData ? (
+            {profile.isLoading && !profile.data ? (
               <ActivityIndicator size="large" color="#2196F3" style={{ marginVertical: 20 }} />
             ) : (
               <>
@@ -144,16 +159,16 @@ export default function AccountScreen() {
                   <CircularProfileProgress
                     size={100}
                     strokeWidth={5}
-                    percentage={completionPercentage}
-                    progressColor={completionPercentage === 100 ? "#4CAF50" : "#2196F3"}
+                    percentage={profile.percentage}
+                    progressColor={profile.percentage === 100 ? "#4CAF50" : "#2196F3"}
                     backgroundColor="rgba(33, 150, 243, 0.1)"
                   >
-                    {userData?.profile_image ? (
+                    {profile.data?.profile_image ? (
                       <Image
                         source={{
-                          uri: userData.profile_image.startsWith('http')
-                            ? userData.profile_image
-                            : `${API_BASE_URL}${userData.profile_image}`
+                          uri: profile.data.profile_image.startsWith('http')
+                            ? profile.data.profile_image
+                            : `${API_BASE_URL}${profile.data.profile_image}`
                         }}
                         style={styles.profileImage}
                       />
@@ -165,12 +180,12 @@ export default function AccountScreen() {
                     <Ionicons name="pencil" size={12} color="#FFFFFF" />
                   </View>
                 </TouchableOpacity>
-                <Text style={styles.profileName}>{userData?.name || "User"}</Text>
+                <Text style={styles.profileName}>{profile.data?.name || "User"}</Text>
                 <Text style={styles.profilePhone}>
-                  +91 {userData?.mobile_number || "XXXXXXXXXX"}
+                  +91 {profile.data?.mobile_number || "XXXXXXXXXX"}
                 </Text>
-                {userData?.user_email && (
-                  <Text style={styles.profileEmail}>{userData.user_email}</Text>
+                {profile.data?.user_email && (
+                  <Text style={styles.profileEmail}>{profile.data.user_email}</Text>
                 )}
               </>
             )}
@@ -186,6 +201,7 @@ export default function AccountScreen() {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.referBanner}
+              renderToHardwareTextureAndroid={true} // Acceleration for smoother scrolling
             >
               <View style={styles.referContent}>
                 <Text style={styles.referEmoji}>🎉</Text>
@@ -213,6 +229,7 @@ export default function AccountScreen() {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.addBankGradient}
+                renderToHardwareTextureAndroid={true} // Acceleration for heavy cards
               >
                 {/* Bank Icon */}
                 <TouchableOpacity
@@ -264,9 +281,9 @@ export default function AccountScreen() {
                 </View>
                 <Text style={styles.menuItemText}>Personal Details</Text>
               </View>
-              {completionPercentage < 100 ? (
+              {profile.percentage < 100 ? (
                 <View style={styles.completionBadge}>
-                  <Text style={styles.completionBadgeText}>{completionPercentage}%</Text>
+                  <Text style={styles.completionBadgeText}>{profile.percentage}%</Text>
                 </View>
               ) : (
                 <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
