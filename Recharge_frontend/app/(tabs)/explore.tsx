@@ -139,6 +139,85 @@ const chipStyles = StyleSheet.create({
   },
 });
 
+// Animated Service Card for Grid items
+function AnimatedServiceCard({
+  icon,
+  label,
+  onPress,
+  size = 30,
+  color = "#0D47A1",
+  library = "Ionicons",
+  style = {},
+}: {
+  icon: string;
+  label: string | React.ReactNode;
+  onPress: () => void;
+  size?: number;
+  color?: string;
+  library?: "Ionicons" | "MaterialCommunityIcons";
+  style?: any;
+}) {
+  const scaleAnim = useRef(new Animated.Value(1)).current; // Default to 1 (visible)
+  const pressAnim = useRef(new Animated.Value(1)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Subtle Idle Float (Continuous "up down" animation)
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -2,
+          duration: 1500 + Math.random() * 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 1500 + Math.random() * 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const handlePressIn = () => {
+    Animated.timing(pressAnim, { toValue: 0.92, duration: 100, useNativeDriver: true }).start();
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(pressAnim, { toValue: 1, friction: 4, useNativeDriver: true }).start();
+  };
+
+  const IconComp = library === "MaterialCommunityIcons" ? MaterialCommunityIcons : Ionicons;
+
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          opacity: scaleAnim,
+          transform: [
+            { scale: Animated.multiply(scaleAnim, pressAnim) },
+            { translateY: floatAnim }
+          ],
+        },
+      ]}
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
+        style={styles.serviceCardHorizontal}
+      >
+        <View style={styles.iconCircle}>
+          <IconComp name={icon as any} size={size} color={color} />
+        </View>
+        <Text style={styles.serviceText}>{label}</Text>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
 export default function HomeScreen({
   userName = "User",
 }: {
@@ -335,7 +414,7 @@ export default function HomeScreen({
           await AsyncStorage.setItem("@profile_popup_shown", "true");
         }
       }
-      
+
       // Safety: If it's 100% but modal is open, close it immediately
       if (completionPercentage === 100 && showCompletionModal) {
         setShowCompletionModal(false);
@@ -936,7 +1015,7 @@ export default function HomeScreen({
                 borderColor="#F48FB1"
                 iconColor="#C62828"
                 textColor="#C62828"
-                onPress={() => router.push("/train-booking")}
+                onPress={() => Alert.alert("Redirecting", "Redirecting to our app...")}
               />
               <AnimatedChip
                 delay={400}
@@ -970,58 +1049,31 @@ export default function HomeScreen({
                 </View>
 
                 <View style={styles.servicesRow}>
-                  {/* Mobile Recharge */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
+                  <AnimatedServiceCard
+                    icon="phone-portrait-outline"
+                    label={<Text style={styles.serviceText}>Mobile{"\n"}recharge</Text>}
                     onPress={() => router.push("/mobile-recharge")}
-                  >
-                    <View style={styles.iconCircle}>
-                      <Ionicons
-                        name="phone-portrait-outline"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>Mobile{"\n"}recharge</Text>
-                  </TouchableOpacity>
+                  />
 
-                  {/* Electricity */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
-                    onPress={() => router.push("/electricity-bill")}>
-                    <View style={styles.iconCircle}>
-                      <Ionicons name="bulb-outline" size={24} color="#0D47A1" />
-                    </View>
-                    <Text style={styles.serviceText}>Electricity{"\n"}bill</Text>
-                  </TouchableOpacity>
+                  <AnimatedServiceCard
+                    icon="bulb-outline"
+                    label={<Text style={styles.serviceText}>Electricity{"\n"}bill</Text>}
+                    onPress={() => router.push("/electricity-bill")}
+                  />
 
-                  {/* DTH Recharge */}
-                  <TouchableOpacity
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="satellite-variant"
+                    label={<Text style={styles.serviceText}>DTH{"\n"}recharge</Text>}
                     onPress={() => router.push("/dth-recharge")}
-                    style={styles.serviceCardHorizontal}>
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="satellite-variant"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>DTH{"\n"}recharge</Text>
-                  </TouchableOpacity>
+                  />
 
-                  {/* LPG Cylinder */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
-                    onPress={() => router.push("/lpg-cylinder")}>
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="gas-cylinder"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>LPG{"\n"}cylinder</Text>
-                  </TouchableOpacity>
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="gas-cylinder"
+                    label={<Text style={styles.serviceText}>LPG{"\n"}cylinder</Text>}
+                    onPress={() => router.push("/lpg-cylinder")}
+                  />
                 </View>
               </View>
             </View>
@@ -1045,69 +1097,33 @@ export default function HomeScreen({
                 </View>
 
                 <View style={styles.servicesRow}>
-                  {/* Aadhar Update */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="card-account-details"
+                    label={<Text style={styles.serviceText}>Aadhaar{"\n"}Update</Text>}
                     onPress={() => router.push("/aadhaar-services?from=explore")}
-                  >
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="card-account-details"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>Aadhar{"\n"}Update</Text>
-                  </TouchableOpacity>
+                  />
 
-                  {/* Pan Card */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="card-text"
+                    label={<Text style={styles.serviceText}>Pan{"\n"}Card</Text>}
                     onPress={() => router.push("/pan-card-services?from=explore")}
-                  >
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="card-text"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>Pan{"\n"}Card</Text>
-                  </TouchableOpacity>
+                  />
 
-                  {/* Udyam */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="factory"
+                    label={<Text style={styles.serviceText}>Udyam{"\n"}Registration</Text>}
                     onPress={() => router.push("/udyam-services?from=explore")}
-                  >
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="factory"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>
-                      Udyam{"\n"}Registration
-                    </Text>
-                  </TouchableOpacity>
+                  />
 
-                  {/* Income Certificate */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="file-certificate"
+                    label={<Text style={styles.serviceText}>Income{"\n"}Certificate</Text>}
                     onPress={() => router.push("/income-certificate-services?from=explore")}
-                  >
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="file-certificate"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>
-                      Income{"\n"}Certificate
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 </View>
               </View>
             </View>
@@ -1120,63 +1136,33 @@ export default function HomeScreen({
                 </View>
 
                 <View style={styles.travelServicesRow}>
-                  {/* Flight */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
-                    onPress={() => router.push("/flight-booking")}>
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="airplane"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>Flight</Text>
-                  </TouchableOpacity>
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="airplane"
+                    label={<Text style={styles.serviceText}>Flight</Text>}
+                    onPress={() => Alert.alert("Redirecting", "Redirecting to our app...")}
+                  />
 
-                  {/* Train */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
-                    onPress={() => router.push("/train-booking")}
-                  >
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="train"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>Train</Text>
-                  </TouchableOpacity>
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="train"
+                    label={<Text style={styles.serviceText}>Train</Text>}
+                    onPress={() => Alert.alert("Redirecting", "Redirecting to our app...")}
+                  />
 
-                  {/* Bus */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
-                    onPress={() => router.push("/bus-booking")}
-                  >
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="bus"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>Bus</Text>
-                  </TouchableOpacity>
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="bus"
+                    label={<Text style={styles.serviceText}>Bus</Text>}
+                    onPress={() => Alert.alert("Redirecting", "Redirecting to our app...")}
+                  />
 
-                  {/* Hotel */}
-                  <TouchableOpacity
-                    style={styles.serviceCardHorizontal}
-                    onPress={() => Alert.alert("Redirecting", "Redirecting to our app...")}>
-                    <View style={styles.iconCircle}>
-                      <MaterialCommunityIcons
-                        name="office-building"
-                        size={24}
-                        color="#0D47A1"
-                      />
-                    </View>
-                    <Text style={styles.serviceText}>Hotel</Text>
-                  </TouchableOpacity>
+                  <AnimatedServiceCard
+                    library="MaterialCommunityIcons"
+                    icon="office-building"
+                    label={<Text style={styles.serviceText}>Hotel</Text>}
+                    onPress={() => Alert.alert("Redirecting", "Redirecting to our app...")}
+                  />
                 </View>
               </View>
             </View>
@@ -1420,7 +1406,11 @@ export default function HomeScreen({
                           {/* Right: Icon & CTA */}
                           <View style={styles.adRight}>
                             <View style={[styles.adIconBubble, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
-                              <Ionicons name={ad.iconName as any} size={20} color="#FFFFFF" />
+                              {ad.iconType === "material" ? (
+                                <MaterialCommunityIcons name={ad.iconName as any} size={20} color="#FFFFFF" />
+                              ) : (
+                                <Ionicons name={ad.iconName as any} size={20} color="#FFFFFF" />
+                              )}
                             </View>
                             <Text style={[styles.adDiscountBig, { color: "#FFFFFF" }]}>{ad.discount}</Text>
                             <View style={[styles.adClaimBtn, { borderColor: "#FFFFFF" }]}>
@@ -1888,17 +1878,17 @@ const styles = StyleSheet.create({
 
   serviceCardHorizontal: {
     alignItems: "center",
-    width: 70,
+    width: 75,
   },
 
   iconCircle: {
-    width: 54,
-    height: 54,
-    borderRadius: 26,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: "#F1F8FE",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 4,
+    marginBottom: 6,
     shadowColor: "#2196F3",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.15,

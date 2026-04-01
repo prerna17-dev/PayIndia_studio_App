@@ -128,6 +128,8 @@ export default function LoginScreen() {
           // Clear popup flag to ensure new login shows the completion nudge in Explore
           await AsyncStorage.removeItem("@profile_popup_shown");
 
+
+
           router.replace("/(tabs)/explore");
         } else {
           alert(data.message || "Invalid OTP.");
