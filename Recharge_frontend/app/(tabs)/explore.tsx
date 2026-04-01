@@ -24,7 +24,7 @@ import { API_ENDPOINTS, API_BASE_URL } from "../../constants/api";
 import { CircularProfileProgress } from "../../components/CircularProfileProgress";
 import { calculateProfileCompletion, getCachedProfile, syncProfileCache } from "../../utils/profileCompletion";
 import { Modal } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import Svg, { Circle, LinearGradient as SvgLinearGradient, Stop, Defs, Text as SvgText } from "react-native-svg";
 
 
 const { width } = Dimensions.get("window");
@@ -798,7 +798,28 @@ export default function HomeScreen({
                 style={styles.headerLogo}
                 resizeMode="contain"
               />
-              <Text style={styles.appNameHeader}>PayIndia</Text>
+              <View style={{ marginLeft: 2 }}>
+                <Svg height="44" width="140" viewBox="0 0 140 44">
+                  <Defs>
+                    <SvgLinearGradient id="headerGrad" x1="0" y1="0" x2="1" y2="0">
+                      <Stop offset="0" stopColor="#0D47A1" stopOpacity="1" />
+                      <Stop offset="0.6" stopColor="#1976D2" stopOpacity="1" />
+                      <Stop offset="1" stopColor="#2196F3" stopOpacity="1" />
+                    </SvgLinearGradient>
+                  </Defs>
+                  <SvgText
+                    fill="url(#headerGrad)"
+                    fontSize="28"
+                    fontWeight="900"
+                    x="0"
+                    y="32"
+                    textAnchor="start"
+                    letterSpacing="0.5"
+                  >
+                    PayIndia
+                  </SvgText>
+                </Svg>
+              </View>
             </View>
 
             {/* Right Icons - Notification & Profile */}
@@ -850,7 +871,10 @@ export default function HomeScreen({
           </View>
         </LinearGradient>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* Header Section - Blue Gradient with Mountains & Trees */}
           <LinearGradient
             colors={["#E1F5FE", "#B3E5FC", "#81D4FA", "#4FC3F7"]}
@@ -1655,10 +1679,10 @@ const styles = StyleSheet.create({
   },
 
   headerLogo: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    marginRight: 10,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    marginRight: 5,
   },
 
   headerIcons: {

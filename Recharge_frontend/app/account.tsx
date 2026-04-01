@@ -24,7 +24,7 @@ export default function AccountScreen() {
   const router = useRouter();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showLogoutSuccess, setShowLogoutSuccess] = useState(false);
-  
+
   // Consolidated profile state for smoother transitions and fewer re-renders
   const [profile, setProfile] = useState<{
     data: any;
@@ -59,7 +59,7 @@ export default function AccountScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       const freshData = await response.json();
- 
+
       if (response.ok) {
         const result = syncProfileCache(freshData);
         if (result) {
@@ -142,7 +142,7 @@ export default function AccountScreen() {
           <View style={styles.placeholder} />
         </View>
 
-        <ScrollView 
+        <ScrollView
           showsVerticalScrollIndicator={false}
           removeClippedSubviews={true} // Optimize memory for off-screen items
         >

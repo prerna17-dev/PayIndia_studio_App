@@ -17,7 +17,7 @@ export default function Index() {
       // Pre-load user data into memory cache for zero-latency screen loading
       const cachedData = await AsyncStorage.getItem("userData");
       if (cachedData) syncProfileCache(JSON.parse(cachedData));
-      
+
       const hasLaunched = await AsyncStorage.getItem('hasLaunched');
 
       if (hasLaunched === null) {

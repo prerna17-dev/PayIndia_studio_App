@@ -19,6 +19,7 @@ import {
   View,
   ScrollView,
 } from "react-native";
+import Svg, { LinearGradient, Stop, Text as SvgText, Defs } from "react-native-svg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_ENDPOINTS } from "../../constants/api";
 
@@ -31,6 +32,8 @@ export default function LoginScreen() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [timer, setTimer] = useState(30);
+  const [showReferralInput, setShowReferralInput] = useState(false);
+  const [referralCode, setReferralCode] = useState("");
   const inputRefs = useRef<(TextInput | null)[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -118,7 +121,7 @@ export default function LoginScreen() {
         const response = await fetch(API_ENDPOINTS.VERIFY_OTP, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mobile: phoneNumber, otp: otpCode, name: name }),
+          body: JSON.stringify({ mobile: phoneNumber, otp: otpCode, name: name, referralCode: referralCode }),
         });
         const data = await response.json();
         if (response.ok) {
@@ -145,8 +148,41 @@ export default function LoginScreen() {
   };
 
   const renderPhoneStep = () => (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.headerSpacer} />
+      <View style={styles.logoRow}>
+        <Image
+          source={require("../../assets/images/logo1.png")}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
+        <View style={styles.appNameContainer}>
+          <Svg height="40" width="150" viewBox="0 0 150 40">
+            <Defs>
+              <LinearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
+                <Stop offset="0" stopColor="#0D47A1" stopOpacity="1" />
+                <Stop offset="0.6" stopColor="#1976D2" stopOpacity="1" />
+                <Stop offset="1" stopColor="#2196F3" stopOpacity="1" />
+              </LinearGradient>
+            </Defs>
+            <SvgText
+              fill="url(#grad)"
+              fontSize="24"
+              fontWeight="900"
+              x="75"
+              y="28"
+              textAnchor="middle"
+              letterSpacing="1"
+            >
+              PayIndia
+            </SvgText>
+          </Svg>
+        </View>
+      </View>
       <Text style={styles.title}>Login to your account!</Text>
       <Text style={styles.subtitle}>Hello, welcome ! 👋</Text>
 
@@ -171,6 +207,33 @@ export default function LoginScreen() {
         </View>
       </View>
 
+      {!showReferralInput ? (
+        <TouchableOpacity
+          style={styles.referralToggle}
+          onPress={() => setShowReferralInput(true)}
+        >
+          <Ionicons name="add-circle-outline" size={18} color="#247189" />
+          <Text style={styles.referralToggleText}>Have a referral code?</Text>
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.referralInputGroup}>
+          <Text style={styles.inputLabel}>Referral Code (Optional)</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={styles.referralInput}
+              placeholder="Enter code"
+              placeholderTextColor="#94A3B8"
+              value={referralCode}
+              onChangeText={setReferralCode}
+              autoCapitalize="characters"
+            />
+            <TouchableOpacity onPress={() => setShowReferralInput(false)}>
+              <Ionicons name="close-circle" size={20} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <TouchableOpacity
         style={[styles.primaryButton, phoneNumber.length !== 10 && styles.buttonDisabled]}
         onPress={handleSendOTP}
@@ -182,7 +245,11 @@ export default function LoginScreen() {
   );
 
   const renderOtpStep = () => (
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+    >
       <TouchableOpacity style={styles.backFab} onPress={() => setStep("phone")}>
         <Ionicons name="chevron-back" size={24} color="#1E293B" />
       </TouchableOpacity>
@@ -237,7 +304,11 @@ export default function LoginScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style="dark" />
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        style={{ flex: 1 }}
+      >
         {step === "phone" ? renderPhoneStep() : renderOtpStep()}
       </KeyboardAvoidingView>
     </View>
@@ -249,8 +320,12 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 30, paddingBottom: 40 },
   headerSpacer: { height: height * 0.1 },
   title: { fontSize: 24, fontWeight: "800", color: "#1E293B", marginBottom: 4 },
+  logoRow: { alignItems: 'center', marginBottom: 20, marginTop: -20, gap: 5 },
+  logoImage: { width: width * 0.45, height: 60 },
+  appNameContainer: { height: 40, alignItems: 'center', justifyContent: 'center' },
+  appName: { fontSize: 24, fontWeight: "900", color: "#1E293B", letterSpacing: 1 },
   titleCenter: { fontSize: 24, fontWeight: "800", color: "#1E293B", textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 15, color: "#64748B", fontWeight: "500", marginBottom: 40 },
+  subtitle: { fontSize: 15, color: "#64748B", fontWeight: "500", marginBottom: 25 },
   subtitleCenter: { fontSize: 14, color: "#64748B", textAlign: 'center', lineHeight: 20, paddingHorizontal: 20, marginBottom: 10 },
   inputGroup: { marginBottom: 20 },
   inputLabel: { fontSize: 14, color: "#94A3B8", fontWeight: "600", marginBottom: 8 },
@@ -260,7 +335,7 @@ const styles = StyleSheet.create({
   flag: { width: 24, height: 16, borderRadius: 2 },
   phonePrefix: { fontSize: 16, fontWeight: "700", color: "#1E293B", marginLeft: 8 },
   divider: { width: 1.5, height: 20, backgroundColor: "#E2E8F0", marginHorizontal: 10 },
-  primaryButton: { height: 56, backgroundColor: "#247189", borderRadius: 12, justifyContent: "center", alignItems: "center", marginTop: 10, shadowColor: "#247189", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
+  primaryButton: { height: 56, backgroundColor: "#247189", borderRadius: 12, justifyContent: "center", alignItems: "center", marginTop: 20, shadowColor: "#247189", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   buttonDisabled: { backgroundColor: "#94A3B8" },
   buttonText: { color: "#FFF", fontSize: 16, fontWeight: "800" },
   dividerRow: { flexDirection: "row", alignItems: "center", marginVertical: 30 },
@@ -272,13 +347,17 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 20 },
   footerText: { color: "#64748B", fontSize: 14, fontWeight: "600" },
   footerLink: { color: "#247189", fontSize: 14, fontWeight: "800" },
-  backFab: { marginTop: 50, marginBottom: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: "#F8FAFC", justifyContent: "center", alignItems: "center" },
-  illustration: { width: width * 0.7, height: height * 0.25, alignSelf: 'center', marginBottom: 20 },
+  backFab: { marginTop: 30, marginBottom: 5, width: 40, height: 40, borderRadius: 20, backgroundColor: "#F8FAFC", justifyContent: "center", alignItems: "center" },
+  illustration: { width: width * 0.65, height: height * 0.14, alignSelf: 'center', marginBottom: 15 },
   phoneDisplayRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 30 },
   phoneDisplayText: { fontSize: 15, fontWeight: "700", color: "#1E293B" },
-  otpBoxesRow: { flexDirection: "row", justifyContent: "center", gap: 15, marginBottom: 25 },
-  otpInput: { width: 58, height: 64, borderWidth: 1.5, borderColor: "#E2E8F0", borderRadius: 12, backgroundColor: "#F8FAFC", textAlign: "center", fontSize: 24, fontWeight: "900", color: "#1E293B" },
+  otpBoxesRow: { flexDirection: "row", justifyContent: "center", gap: 15, marginBottom: 15 },
+  otpInput: { width: 44, height: 44, borderWidth: 1.5, borderColor: "#E2E8F0", borderRadius: 10, backgroundColor: "#F8FAFC", textAlign: "center", fontSize: 20, fontWeight: "800", color: "#1E293B", padding: 0 },
   otpInputActive: { borderColor: "#247189", backgroundColor: "#FFFFFF" },
-  resendLink: { alignItems: "center", marginBottom: 30 },
+  resendLink: { alignItems: "center", marginBottom: 10 },
   resendText: { fontSize: 14, fontWeight: "700", color: "#247189" },
+  referralToggle: { flexDirection: 'row', alignItems: 'center', marginTop: -9, gap: 6 },
+  referralToggleText: { fontSize: 14, color: "#247189", fontWeight: "600" },
+  referralInputGroup: { marginTop: -10 },
+  referralInput: { flex: 1, fontSize: 16, color: "#1E293B", paddingVertical: 12, paddingHorizontal: 5, fontWeight: "600" },
 });

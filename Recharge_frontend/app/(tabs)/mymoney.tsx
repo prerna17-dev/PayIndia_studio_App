@@ -253,6 +253,7 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
         >
 
           {/* Month Selector */}

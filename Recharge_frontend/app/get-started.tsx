@@ -33,7 +33,7 @@ export default function GetStartedScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      
+
       {/* Top Blue Section with Monuments */}
       <View style={styles.topSection}>
         <LinearGradient
@@ -41,28 +41,28 @@ export default function GetStartedScreen() {
           style={styles.gradient}
         >
           {/* Faint Architectural Backdrop */}
-          <Image 
+          <Image
             source={require("../assets/images/monuments.png")}
             style={styles.monumentsBg}
             resizeMode="cover"
           />
-          
+
           <SafeAreaView style={styles.headerContent}>
             {/* Logo and Name */}
             <View style={styles.logoWrapper}>
-              <Image 
+              <Image
                 source={require("../assets/images/logo.png")}
                 style={styles.logoIcon}
                 resizeMode="contain"
               />
-              <Text style={styles.appName}>Pay<Text style={{color: '#FF7043'}}>India</Text></Text>
+              <Text style={styles.appName}>Pay<Text style={{ color: '#FF7043' }}>India</Text></Text>
               <Text style={styles.tagline}>India's Smart Payment App</Text>
             </View>
           </SafeAreaView>
 
           {/* Wavy Separator */}
           <View style={styles.waveContainer}>
-             <View style={styles.waveBowl} />
+            <View style={styles.waveBowl} />
           </View>
         </LinearGradient>
       </View>
@@ -71,7 +71,7 @@ export default function GetStartedScreen() {
       <View style={styles.bottomSection}>
         <View style={styles.contentPadding}>
           <Text style={styles.mainTitle}>Manage Payments,{"\n"}Pay with Confidence</Text>
-          
+
           {/* Feature Grid */}
           <View style={styles.featureGrid}>
             <View style={styles.featureItem}>
@@ -80,14 +80,14 @@ export default function GetStartedScreen() {
               </View>
               <Text style={styles.featureLabel}>Instant{"\n"}Payments</Text>
             </View>
-            
+
             <View style={styles.featureItem}>
               <View style={[styles.iconCircle, { backgroundColor: '#E8F5E9' }]}>
                 <Ionicons name="shield-checkmark" size={24} color="#43A047" />
               </View>
               <Text style={styles.featureLabel}>Secure{"\n"}& Safe</Text>
             </View>
-            
+
             <View style={styles.featureItem}>
               <View style={[styles.iconCircle, { backgroundColor: '#F3E5F5' }]}>
                 <MaterialCommunityIcons name="store" size={24} color="#8E24AA" />
@@ -97,7 +97,7 @@ export default function GetStartedScreen() {
           </View>
 
           {/* Action Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.primaryButton}
             onPress={handleGetStarted}
             activeOpacity={0.8}
@@ -211,12 +211,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconCircle: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      justifyContent: 'center',
-      alignItems: 'center',
-      marginBottom: 12,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   featureLabel: {
     fontSize: 13,
