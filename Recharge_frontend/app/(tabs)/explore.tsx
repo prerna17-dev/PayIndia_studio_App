@@ -1060,7 +1060,7 @@ export default function HomeScreen({
                 borderColor="#81D4FA"
                 iconColor="#0277BD"
                 textColor="#0277BD"
-                onPress={() => router.push("/water-services")}
+                onPress={() => router.push("/water-bill-payment")}
               />
               <AnimatedChip
                 delay={320}

@@ -1,6 +1,8 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import * as LocalAuthentication from 'expo-local-authentication';
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import {
   Animated,
   Dimensions,
@@ -9,6 +11,7 @@ import {
   SafeAreaView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -19,6 +22,7 @@ const { width, height } = Dimensions.get("window");
 
 export default function SplashScreen() {
   const router = useRouter();
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Entrance animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -153,17 +157,42 @@ export default function SplashScreen() {
     animateDot(dot2, 220);
     animateDot(dot3, 440);
 
-    // Navigate — 3 seconds
+    // Navigate — 2 seconds
     const checkAuth = async () => {
       try {
         const token = await AsyncStorage.getItem("userToken");
-        setTimeout(() => {
+        const biometric = await AsyncStorage.getItem("@biometric_enabled");
+        
+        setTimeout(async () => {
           if (token) {
-            router.replace("/(tabs)/explore");
+            if (biometric === "true") {
+              const hasHardware = await LocalAuthentication.hasHardwareAsync();
+              const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+              
+              if (hasHardware && isEnrolled) {
+                // Call native prompt directly
+                const result = await LocalAuthentication.authenticateAsync({
+                  promptMessage: 'Unlock PayIndia',
+                  fallbackLabel: 'Use PIN / Pattern',
+                  disableDeviceFallback: false,
+                });
+
+                if (result.success) {
+                  router.replace("/(tabs)/explore");
+                } else {
+                  // If they cancel or fail, keep asking (app is locked)
+                  checkAuth(); 
+                }
+              } else {
+                router.replace("/(tabs)/explore");
+              }
+            } else {
+              router.replace("/(tabs)/explore");
+            }
           } else {
             router.replace("/auth/login");
           }
-        }, 1500);
+        }, 2000); 
       } catch (error) {
         console.error("Auth check error:", error);
         router.replace("/auth/login");
@@ -171,6 +200,11 @@ export default function SplashScreen() {
     };
     checkAuth();
   }, []);
+
+  const handleBiometric = async () => {
+    // No longer needed for UI but keeping for potential manual trigger if needed
+    // In this clean version, we use the auto-trigger in checkAuth
+  };
 
   return (
     <LinearGradient

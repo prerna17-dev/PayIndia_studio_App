@@ -2,7 +2,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
     ActivityIndicator,
     BackHandler,
@@ -39,6 +39,52 @@ const availablePlans = [
     { id: '4', price: '₹1799', duration: '1 Year', popular: true, benefit: 'Annual Super Saver' },
 ];
 
+// Optimized Grid Item with React.memo
+const OperatorGridItem = React.memo(({ 
+    item, 
+    isSelected, 
+    onSelect, 
+    getIcon, 
+    shortName 
+}: { 
+    item: any, 
+    isSelected: boolean, 
+    onSelect: (item: any) => void,
+    getIcon: (name: string) => string,
+    shortName: string
+}) => (
+    <TouchableOpacity
+        style={[styles.gridItem, isSelected && styles.selectedGridItem]}
+        onPress={() => onSelect(item)}
+    >
+        <View style={[styles.iconCircle, isSelected && styles.selectedIconCircle]}>
+            <MaterialCommunityIcons
+                name={getIcon(item.name) as any}
+                size={24}
+                color={isSelected ? "#FFFFFF" : "#0D47A1"}
+            />
+        </View>
+        <Text style={styles.gridLabel}>{shortName}</Text>
+    </TouchableOpacity>
+));
+
+// Optimized Plan Item with React.memo
+const PlanCard = React.memo(({ plan, onSelect }: { plan: any, onSelect: (plan: any) => void }) => (
+    <TouchableOpacity
+        style={styles.planCard}
+        onPress={() => onSelect(plan)}
+    >
+        {plan.popular && (
+            <View style={styles.popularBadge}>
+                <Text style={styles.popularText}>POPULAR</Text>
+            </View>
+        )}
+        <Text style={styles.planPrice}>{plan.price}</Text>
+        <Text style={styles.planDuration}>{plan.duration}</Text>
+        <Text style={styles.planBenefit}>{plan.benefit}</Text>
+    </TouchableOpacity>
+));
+
 export default function DTHRechargeScreen() {
     const router = useRouter();
 
@@ -60,12 +106,38 @@ export default function DTHRechargeScreen() {
     const [accountDetails, setAccountDetails] = useState<any>(null);
     const [customAmount, setCustomAmount] = useState('');
 
+    const DEFAULT_DTH = [
+        { id: "1", name: "Tata Play" },
+        { id: "2", name: "Dish TV" },
+        { id: "3", name: "Airtel TV" },
+        { id: "4", name: "Sun Direct" },
+        { id: "5", name: "D2H" },
+        { id: "6", name: "Videocon D2H" }
+    ];
+
     useEffect(() => {
-        fetchOperators();
+        loadInitialData();
     }, []);
 
+    const loadInitialData = async () => {
+        try {
+            const cached = await AsyncStorage.getItem("cached_dth_operators");
+            if (cached) {
+                setAllOperators(JSON.parse(cached));
+                setIsRefreshing(false);
+            } else {
+                setAllOperators(DEFAULT_DTH);
+                setIsRefreshing(true);
+            }
+            // Background fetch
+            await fetchOperators();
+        } catch (e) {
+            console.error("DTH Cache error:", e);
+            fetchOperators();
+        }
+    };
+
     const fetchOperators = async () => {
-        setIsRefreshing(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
             const response = await fetch(`${API_ENDPOINTS.BILL_OPERATORS}?category=DTH`, {
@@ -84,6 +156,7 @@ export default function DTHRechargeScreen() {
                 const unique = Array.from(new Set(formatted.map((a: any) => a.name)))
                     .map(name => formatted.find((a: any) => a.name === name));
                 setAllOperators(unique);
+                AsyncStorage.setItem("cached_dth_operators", JSON.stringify(unique));
             }
         } catch (error) {
             console.error("Fetch DTH operators error:", error);
@@ -127,20 +200,20 @@ export default function DTHRechargeScreen() {
         }, [handleBack])
     );
 
-    const handleOperatorSelect = (operator: any) => {
+    const handleOperatorSelect = useCallback((operator: any) => {
         setSelectedOperator(operator);
         setShowOperatorModal(false);
         setAccountDetails(null);
-    };
+    }, []);
 
-    const validateForm = () => {
+    const validateForm = useCallback(() => {
         if (!selectedOperator) return false;
         if (subscriberId.trim().length < 8) return false;
         if (mobileNumber.length !== 10) return false;
         return true;
-    };
+    }, [selectedOperator, subscriberId, mobileNumber]);
 
-    const handleFetchDetails = async () => {
+    const handleFetchDetails = useCallback(async () => {
         if (!validateForm()) {
             Alert.alert('Invalid Information', 'Please select an operator and enter a valid Subscriber ID.');
             return;
@@ -186,9 +259,9 @@ export default function DTHRechargeScreen() {
         } finally {
             setIsFetching(false);
         }
-    };
+    }, [validateForm, selectedOperator, subscriberId]);
 
-    const handlePlanSelect = (plan: any) => {
+    const handlePlanSelect = useCallback((plan: any) => {
         const cleanPrice = plan.price.replace(/[^0-9.]/g, '');
         // Route to common recharge payment logic
         router.push({
@@ -202,9 +275,9 @@ export default function DTHRechargeScreen() {
                 planBenefit: plan.benefit
             }
         });
-    };
+    }, [subscriberId, selectedOperator, router]);
 
-    const handleCustomPay = () => {
+    const handleCustomPay = useCallback(() => {
         const amount = customAmount.replace(/[^0-9.]/g, '');
         if (!amount || parseInt(amount) < 10) {
             Alert.alert("Invalid Amount", "Please enter a valid amount greater than ₹10");
@@ -222,7 +295,16 @@ export default function DTHRechargeScreen() {
                 planBenefit: "Manual Amount Entry"
             }
         });
-    };
+    }, [customAmount, subscriberId, selectedOperator, router]);
+
+    const processedOperators = useMemo(() => {
+        return allOperators.map(item => {
+            const shortName = Object.entries(DTH_SHORT_NAMES).find(([full]) => 
+                item.name.toUpperCase().includes(full)
+            )?.[1] || item.name;
+            return { ...item, shortName };
+        });
+    }, [allOperators]);
 
 
     return (
@@ -256,28 +338,16 @@ export default function DTHRechargeScreen() {
                                             {isRefreshing && <ActivityIndicator size="small" color="#0D47A1" />}
                                         </View>
                                         <View style={styles.grid}>
-                                            {allOperators.map((item) => {
-                                                const shortName = Object.entries(DTH_SHORT_NAMES).find(([full]) => 
-                                                    item.name.toUpperCase().includes(full)
-                                                )?.[1] || item.name;
-
-                                                return (
-                                                    <TouchableOpacity
-                                                        key={item.id}
-                                                        style={[styles.gridItem, selectedOperator?.id === item.id && styles.selectedGridItem]}
-                                                        onPress={() => handleOperatorSelect(item)}
-                                                    >
-                                                        <View style={[styles.iconCircle, selectedOperator?.id === item.id && styles.selectedIconCircle]}>
-                                                            <MaterialCommunityIcons
-                                                                name={getOperatorIcon(item.name) as any}
-                                                                size={24}
-                                                                color={selectedOperator?.id === item.id ? "#FFFFFF" : "#0D47A1"}
-                                                            />
-                                                        </View>
-                                                        <Text style={styles.gridLabel}>{shortName}</Text>
-                                                    </TouchableOpacity>
-                                                );
-                                            })}
+                                            {processedOperators.map((item) => (
+                                                <OperatorGridItem 
+                                                    key={item.id} 
+                                                    item={item} 
+                                                    isSelected={selectedOperator?.id === item.id} 
+                                                    onSelect={handleOperatorSelect} 
+                                                    getIcon={getOperatorIcon} 
+                                                    shortName={item.shortName} 
+                                                />
+                                            ))}
                                         </View>
                                     </View>
 
@@ -372,20 +442,7 @@ export default function DTHRechargeScreen() {
                                     <Text style={styles.sectionTitle}>Available Plans</Text>
                                     <View style={styles.plansGrid}>
                                         {availablePlans.map((plan) => (
-                                            <TouchableOpacity
-                                                key={plan.id}
-                                                style={styles.planCard}
-                                                onPress={() => handlePlanSelect(plan)}
-                                            >
-                                                {plan.popular && (
-                                                    <View style={styles.popularBadge}>
-                                                        <Text style={styles.popularText}>POPULAR</Text>
-                                                    </View>
-                                                )}
-                                                <Text style={styles.planPrice}>{plan.price}</Text>
-                                                <Text style={styles.planDuration}>{plan.duration}</Text>
-                                                <Text style={styles.planBenefit}>{plan.benefit}</Text>
-                                            </TouchableOpacity>
+                                            <PlanCard key={plan.id} plan={plan} onSelect={handlePlanSelect} />
                                         ))}
                                     </View>
 

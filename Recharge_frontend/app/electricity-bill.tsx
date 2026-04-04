@@ -4,6 +4,7 @@ import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState, useCallback } from "react";
 import {
+    FlatList,
     ActivityIndicator,
     Animated,
     BackHandler,
@@ -34,6 +35,34 @@ interface ElectricityBillDetails {
     boardName: string;
 }
 
+// Optimized Grid Item with React.memo
+const BoardGridItem = React.memo(({ item, selectedBoard, onSelect }: { item: any, selectedBoard: any, onSelect: (item: any) => void }) => {
+    const isSelected = selectedBoard?.id === item.id;
+    return (
+        <TouchableOpacity
+            style={[styles.gridItem, isSelected && styles.selectedGridItem]}
+            onPress={() => onSelect(item)}
+        >
+            <View style={[styles.iconCircle, isSelected && styles.selectedIconCircle]}>
+                <MaterialCommunityIcons
+                    name={item.icon as any}
+                    size={24}
+                    color={isSelected ? "#FFFFFF" : "#0D47A1"}
+                />
+            </View>
+            <Text style={styles.gridLabel} numberOfLines={2}>{item.name}</Text>
+        </TouchableOpacity>
+    );
+});
+
+// Optimized Search Item with React.memo
+const BoardModalItem = React.memo(({ item, isSelected, onSelect }: { item: any, isSelected: boolean, onSelect: (item: any) => void }) => (
+    <TouchableOpacity style={styles.optionItem} onPress={() => onSelect(item)}>
+        <Text style={styles.optionText}>{item.name}</Text>
+        {isSelected && <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />}
+    </TouchableOpacity>
+));
+
 export default function ElectricityBillScreen() {
     const router = useRouter();
 
@@ -50,12 +79,47 @@ export default function ElectricityBillScreen() {
     const [allBoards, setAllBoards] = useState<any[]>([]);
     const [isRefreshing, setIsRefreshing] = useState(true);
 
+    // Constant for default popular providers (hardcoded fallback)
+    const DEFAULT_POPULAR = [
+        { id: "1", name: "MSEDCL", icon: "flash" },
+        { id: "2", name: "UPPCL", icon: "flash" },
+        { id: "3", name: "BESCOM", icon: "flash" },
+        { id: "4", name: "TANGEDCO", icon: "flash" },
+        { id: "5", name: "BSES Yamuna", icon: "flash" },
+        { id: "6", name: "Tata Power", icon: "flash" },
+        { id: "7", name: "Adani Elec", icon: "flash" },
+        { id: "8", name: "CESC", icon: "flash" }
+    ];
+
     React.useEffect(() => {
-        fetchOperators();
+        loadInitialData();
     }, []);
 
+    const loadInitialData = async () => {
+        try {
+            // Load cache first
+            const cachedAll = await AsyncStorage.getItem("cached_electricity_all");
+            const cachedPopular = await AsyncStorage.getItem("cached_electricity_popular");
+
+            if (cachedAll && cachedPopular) {
+                setAllBoards(JSON.parse(cachedAll));
+                setPopularBoards(JSON.parse(cachedPopular));
+                setIsRefreshing(false);
+            } else {
+                // If no cache, use placeholders so screen isn't blank
+                setPopularBoards(DEFAULT_POPULAR);
+                setIsRefreshing(true);
+            }
+
+            // Always fetch fresh data anyway
+            await fetchOperators();
+        } catch (e) {
+            console.error("Cache load error:", e);
+            fetchOperators();
+        }
+    };
+
     const fetchOperators = async () => {
-        setIsRefreshing(true);
         try {
             const token = await AsyncStorage.getItem("userToken");
             const response = await fetch(`${API_ENDPOINTS.BILL_OPERATORS}?category=Electricity`, {
@@ -100,6 +164,10 @@ export default function ElectricityBillScreen() {
                 });
 
                 setPopularBoards(popular.slice(0, 8));
+                
+                // Save to cache
+                AsyncStorage.setItem("cached_electricity_all", JSON.stringify(formattedBoards));
+                AsyncStorage.setItem("cached_electricity_popular", JSON.stringify(popular.slice(0, 8)));
             }
         } catch (error) {
             console.error("Fetch operators error:", error);
@@ -145,12 +213,12 @@ export default function ElectricityBillScreen() {
         }, [handleBack])
     );
 
-    const handleBoardSelect = (board: any) => {
+    const handleBoardSelect = useCallback((board: any) => {
         setSelectedBoard(board);
         setShowBoardModal(false);
-    };
+    }, []);
 
-    const handleCardNumberChange = (text: string) => {
+    const handleCardNumberChange = useCallback((text: string) => {
         const cleaned = text.replace(/[^0-9]/g, '');
         let formatted = "";
         for (let i = 0; i < cleaned.length && i < 16; i++) {
@@ -158,23 +226,23 @@ export default function ElectricityBillScreen() {
             formatted += cleaned[i];
         }
         setCardNumber(formatted);
-    };
+    }, []);
 
-    const handleExpiryChange = (text: string) => {
+    const handleExpiryChange = useCallback((text: string) => {
         const cleaned = text.replace(/[^0-9]/g, '');
         let formatted = cleaned;
         if (cleaned.length > 2) formatted = `${cleaned.substring(0, 2)}/${cleaned.substring(2, 4)}`;
         setExpiryDate(formatted);
-    };
+    }, []);
 
-    const validateForm = () => {
+    const validateForm = useCallback(() => {
         if (!selectedBoard) return false;
         if (consumerNumber.trim().length < 4) return false;
         if (mobileNumber.trim().length !== 10) return false;
         return true;
-    };
+    }, [selectedBoard, consumerNumber, mobileNumber]);
 
-    const handleFetchBill = async () => {
+    const handleFetchBill = useCallback(async () => {
         if (!validateForm()) return;
 
         setIsLoading(true);
@@ -195,7 +263,6 @@ export default function ElectricityBillScreen() {
 
             if (result.status === true || result.status === "true") {
                 const billData = result.data || result;
-                // Check if we actually have bill data (amount or name)
                 if (billData.amount || billData.name) {
                     const mappedDetails: ElectricityBillDetails = {
                         consumerName: billData.name || "Customer",
@@ -228,9 +295,9 @@ export default function ElectricityBillScreen() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [validateForm, selectedBoard, consumerNumber, slideAnim, fadeAnim]);
 
-    const isReadyToPay = () => {
+    const isReadyToPay = useCallback(() => {
         if (!isConfirmed || !selectedPaymentMode || !paymentAmount || parseFloat(paymentAmount) <= 0) return false;
 
         if (selectedPaymentMode.includes("Card")) {
@@ -241,11 +308,11 @@ export default function ElectricityBillScreen() {
         }
 
         return true;
-    };
+    }, [isConfirmed, selectedPaymentMode, paymentAmount, cardNumber, expiryDate, cvv, cardHolder]);
 
     const isReady = isReadyToPay();
 
-    const handleProceedToPay = () => {
+    const handleProceedToPay = useCallback(() => {
         if (!isReady || !paymentAmount) return;
 
         if (selectedPaymentMode === 'Wallet') {
@@ -266,12 +333,22 @@ export default function ElectricityBillScreen() {
         setTimeout(() => {
             setIsLoading(false);
             setShowPaymentSuccess(true);
-        }, 3000);
-    };
+        }, 1500); // Reduced delay for better feel
+    }, [isReady, paymentAmount, selectedPaymentMode, billDetails, selectedBoard, router]);
 
-    const filteredBoards = allBoards.filter(board =>
-        board.name.toLowerCase().includes(boardSearchQuery.toLowerCase())
+    const filteredBoards = React.useMemo(() => 
+        allBoards.filter(board =>
+            board.name.toLowerCase().includes(boardSearchQuery.toLowerCase())
+        ), [allBoards, boardSearchQuery]
     );
+
+    const renderBoardItem = useCallback(({ item }: any) => (
+        <BoardModalItem 
+            item={item} 
+            isSelected={selectedBoard?.id === item.id} 
+            onSelect={handleBoardSelect} 
+        />
+    ), [selectedBoard, handleBoardSelect]);
 
     return (
         <View style={styles.container}>
@@ -301,20 +378,12 @@ export default function ElectricityBillScreen() {
                                     <Text style={styles.sectionTitle}>Popular Providers</Text>
                                     <View style={styles.grid}>
                                         {popularBoards.map((item) => (
-                                            <TouchableOpacity
-                                                key={item.id}
-                                                style={[styles.gridItem, selectedBoard?.id === item.id && styles.selectedGridItem]}
-                                                onPress={() => handleBoardSelect(item)}
-                                            >
-                                                <View style={[styles.iconCircle, selectedBoard?.id === item.id && styles.selectedIconCircle]}>
-                                                    <MaterialCommunityIcons
-                                                        name={item.icon as any}
-                                                        size={24}
-                                                        color={selectedBoard?.id === item.id ? "#FFFFFF" : "#0D47A1"}
-                                                    />
-                                                </View>
-                                                <Text style={styles.gridLabel}>{item.name}</Text>
-                                            </TouchableOpacity>
+                                            <BoardGridItem 
+                                                key={item.id} 
+                                                item={item} 
+                                                selectedBoard={selectedBoard} 
+                                                onSelect={handleBoardSelect} 
+                                            />
                                         ))}
                                     </View>
 
@@ -546,7 +615,7 @@ export default function ElectricityBillScreen() {
                     </ScrollView>
                 </KeyboardAvoidingView>
 
-                {/* Provider Selection Modal */}
+                {/* Provider Selection Modal - Optimized with FlatList */}
                 <Modal visible={showBoardModal} transparent animationType="slide" onRequestClose={() => setShowBoardModal(false)}>
                     <View style={styles.modalOverlay}>
                         <View style={styles.modalContent}>
@@ -556,16 +625,26 @@ export default function ElectricityBillScreen() {
                             </View>
                             <View style={styles.modalSearch}>
                                 <Ionicons name="search" size={20} color="#666" />
-                                <TextInput style={styles.modalSearchInput} placeholder="Search Electricity Board..." value={boardSearchQuery} onChangeText={setBoardSearchQuery} />
+                                <TextInput 
+                                    style={styles.modalSearchInput} 
+                                    placeholder="Search Electricity Board..." 
+                                    value={boardSearchQuery} 
+                                    onChangeText={setBoardSearchQuery}
+                                    autoFocus={false}
+                                />
                             </View>
-                            <ScrollView style={styles.optionsList}>
-                                {filteredBoards.map((board, index) => (
-                                    <TouchableOpacity key={index} style={styles.optionItem} onPress={() => handleBoardSelect(board)}>
-                                        <Text style={styles.optionText}>{board.name}</Text>
-                                        {selectedBoard?.id === board.id && <Ionicons name="checkmark-circle" size={20} color="#0D47A1" />}
-                                    </TouchableOpacity>
-                                ))}
-                            </ScrollView>
+                            <FlatList
+                                data={filteredBoards}
+                                renderItem={renderBoardItem}
+                                keyExtractor={(item) => item.id.toString()}
+                                style={styles.optionsList}
+                                keyboardShouldPersistTaps="handled"
+                                initialNumToRender={15}
+                                maxToRenderPerBatch={10}
+                                windowSize={5}
+                                removeClippedSubviews={Platform.OS === 'android'}
+                                contentContainerStyle={{ paddingBottom: 40 }}
+                            />
                         </View>
                     </View>
                 </Modal>
