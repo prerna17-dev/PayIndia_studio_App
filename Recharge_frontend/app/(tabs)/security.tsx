@@ -1,4 +1,5 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import * as LocalAuthentication from 'expo-local-authentication';
 import { Stack, useFocusEffect, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useState } from "react";
@@ -21,15 +22,19 @@ export default function SecurityScreen() {
     // Handle hardware back button - go to account screen
     useFocusEffect(
         React.useCallback(() => {
-            const checkPinStatus = async () => {
+            const checkSecurityStatus = async () => {
                 try {
-                    const pin = await AsyncStorage.getItem("@user_app_pin");
+                    const [pin, biometric] = await Promise.all([
+                        AsyncStorage.getItem("@user_app_pin"),
+                        AsyncStorage.getItem("@biometric_enabled")
+                    ]);
                     setHasAppPin(!!pin);
+                    setIsBiometricEnabled(biometric === "true");
                 } catch (e) {
-                    console.error("Error fetching PIN status", e);
+                    console.error("Error fetching security status", e);
                 }
             };
-            checkPinStatus();
+            checkSecurityStatus();
 
             const backAction = () => {
                 router.push("/account");
@@ -45,8 +50,26 @@ export default function SecurityScreen() {
         }, [router])
     );
 
-    const handleBiometricToggle = () => {
-        setIsBiometricEnabled(!isBiometricEnabled);
+    const handleBiometricToggle = async () => {
+        try {
+            const newValue = !isBiometricEnabled;
+            
+            if (newValue) {
+                // Check if device supports biometric
+                const hasHardware = await LocalAuthentication.hasHardwareAsync();
+                const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+                
+                if (!hasHardware || !isEnrolled) {
+                    alert("Biometric authentication is not available or not set up on this device.");
+                    return;
+                }
+            }
+
+            setIsBiometricEnabled(newValue);
+            await AsyncStorage.setItem("@biometric_enabled", newValue.toString());
+        } catch (e) {
+            console.error("Error toggling biometric", e);
+        }
     };
 
     return (
