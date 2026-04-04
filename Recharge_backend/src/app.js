@@ -129,6 +129,9 @@ const referralRoutes = require("./routes/referral.routes");
 app.use("/api/referral", referralRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+const financeRoutes = require("./routes/finance.routes");
+app.use("/api/finance", financeRoutes);
+
 
 
 /* -------------------- 404 HANDLER -------------------- */

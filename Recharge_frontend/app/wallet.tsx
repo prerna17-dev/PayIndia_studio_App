@@ -116,6 +116,11 @@ export default function WalletScreen() {
   const handleConfirmPayment = async () => {
     setIsLoading(true);
     try {
+      // Construct a descriptive string for better categorization in My Money screen
+      const txnDescription = billType
+        ? `${billType}${lenderName ? ': ' + lenderName : ''}${loanAccountNumber ? ' - A/C ' + loanAccountNumber : ''}`
+        : 'Money withdrawn from wallet';
+
       // Deduct from wallet via API
       const token = await AsyncStorage.getItem('userToken');
       const response = await fetch(`${API_BASE_URL}/api/wallet/withdraw`, {
@@ -124,7 +129,10 @@ export default function WalletScreen() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ amount: parseFloat(String(amount)) }),
+        body: JSON.stringify({
+          amount: parseFloat(String(amount)),
+          description: txnDescription
+        }),
       });
       const data = await response.json();
 

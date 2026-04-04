@@ -17,6 +17,7 @@ import {
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { API_BASE_URL } from "../../constants/api";
 
 const { width } = Dimensions.get("window");
 
@@ -105,9 +106,9 @@ const DEFAULT_DATA: MonthData = {
     },
     {
       id: "3",
-      title: "Travel Bookings",
+      title: "Finance",
       amount: 0,
-      icon: "airplane-outline",
+      icon: "cash-outline",
       iconType: "ionicons",
       backgroundColor: "#E8F5E9",
       iconColor: "#4CAF50",
@@ -150,11 +151,24 @@ const DEFAULT_DATA: MonthData = {
 
 export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
   const router = useRouter();
-  const currentMonthIdx = new Date().getMonth();
+  const now = new Date();
+  const currentMonthIdx = now.getMonth();
+  const currentYear = now.getFullYear();
   const [selectedMonth, setSelectedMonth] = useState(MONTHS[currentMonthIdx]);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [monthlyIncome, setMonthlyIncome] = useState("");
   const [isSalarySet, setIsSalarySet] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // DB Sync State
+  const [dbFinanceData, setDbFinanceData] = useState<any>(null);
+
+  // Derived Values
+  const [calculatedExpenses, setCalculatedExpenses] = useState<Expense[]>(DEFAULT_DATA.expenses);
+  const [calculatedEarnings, setCalculatedEarnings] = useState<Earning[]>(DEFAULT_DATA.earnings);
+  const [calculatedTotalSpent, setCalculatedTotalSpent] = useState(0);
+  const [lastMonthSpent, setLastMonthSpent] = useState(0);
 
   // Get data for selected month or use default
   const monthData = userData?.[selectedMonth] || DEFAULT_DATA;
@@ -169,11 +183,180 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
   const prevMonthIdx = selectedMonthIdx === 0 ? 11 : selectedMonthIdx - 1;
   const prevMonth = MONTHS[prevMonthIdx].substring(0, 3);
 
+  const fetchFinanceData = async (monthName: string, year: number) => {
+    try {
+      setIsLoading(true);
+      const token = await AsyncStorage.getItem("userToken");
+      const response = await fetch(`${API_BASE_URL}/api/finance/${year}/${monthName}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const resData = await response.json();
+
+      if (response.ok && resData.success) {
+        setDbFinanceData(resData.data);
+        if (resData.data.monthly_salary > 0) {
+          setMonthlyIncome(resData.data.monthly_salary.toString());
+          setIsSalarySet(true);
+        } else {
+          // Fallback to local storage if DB is 0 (first time)
+          const savedSalary = await AsyncStorage.getItem("@monthly_salary");
+          if (savedSalary) {
+            setMonthlyIncome(savedSalary);
+            setIsSalarySet(true);
+          } else {
+            setMonthlyIncome("");
+            setIsSalarySet(false);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching finance data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const syncFinanceData = async (payload: any) => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      await fetch(`${API_BASE_URL}/api/finance/update`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          ...payload,
+          month_name: selectedMonth,
+          year: selectedYear,
+        }),
+      });
+    } catch (error) {
+      console.error("Error syncing finance data:", error);
+    }
+  };
+
+  const calculateSpendingFromTransactions = async (monthName: string, year: number) => {
+    try {
+      const token = await AsyncStorage.getItem("userToken");
+      const response = await fetch(`${API_BASE_URL}/api/wallet/transactions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const transactions = await response.json();
+
+      if (response.ok && Array.isArray(transactions)) {
+        const monthIdx = MONTHS.indexOf(monthName);
+
+        const thisMonthTransactions = transactions.filter((t: any) => {
+          const tDate = new Date(t.created_at);
+          return tDate.getMonth() === monthIdx && tDate.getFullYear() === year;
+        });
+
+        const prevMonthTransactions = transactions.filter((t: any) => {
+          const tDate = new Date(t.created_at);
+          const pMonthIdx = monthIdx === 0 ? 11 : monthIdx - 1;
+          const pYear = monthIdx === 0 ? year - 1 : year;
+          return tDate.getMonth() === pMonthIdx && tDate.getFullYear() === pYear;
+        });
+
+        let billSpent = 0, ottSpent = 0, financeSpent = 0, municipalSpent = 0;
+        let referEarn = 0, serviceEarn = 0;
+        let total = 0, prevTotal = 0;
+
+        thisMonthTransactions.forEach((t: any) => {
+          const type = (t.transaction_type || "").toUpperCase();
+          const desc = (t.description || "").toLowerCase();
+          const amt = parseFloat(t.amount) || 0;
+
+          const isDebit = type.includes("DEBIT") || type.includes("RECHARGE") || type.includes("BILL");
+          const isCredit = type.includes("CREDIT") || type.includes("CASHBACK") || type.includes("REWARD");
+
+          if (isDebit) {
+            total += amt;
+            // Case-insensitive checks for categorization
+            if (/ott|netflix|prime|subscription|disney|zee5/i.test(desc)) {
+              ottSpent += amt;
+            } else if (/tax|municipal|property/i.test(desc)) {
+              municipalSpent += amt;
+            } else if (/finance|loan|bank|insurance|emi|invest/i.test(desc)) {
+              financeSpent += amt;
+            } else {
+              // Default to generic bill payment
+              billSpent += amt;
+            }
+          }
+
+          if (isCredit) {
+            if (desc.includes("refer")) {
+              referEarn += amt;
+            } else if (desc.includes("reward") || desc.includes("cashback") || type.includes("CASHBACK")) {
+              serviceEarn += amt;
+            }
+          }
+        });
+
+        prevMonthTransactions.forEach((t: any) => {
+          const type = (t.transaction_type || "").toUpperCase();
+          if (type.includes("DEBIT") || type.includes("RECHARGE") || type.includes("BILL")) {
+            prevTotal += parseFloat(t.amount) || 0;
+          }
+        });
+
+        setCalculatedTotalSpent(total);
+        setLastMonthSpent(prevTotal);
+
+        const updatedExpenses = DEFAULT_DATA.expenses.map(exp => {
+          let val = 0;
+          if (exp.id === "1") val = billSpent;
+          if (exp.id === "2") val = ottSpent;
+          if (exp.id === "3") val = financeSpent;
+          if (exp.id === "4") val = municipalSpent;
+          return {
+            ...exp,
+            amount: val,
+            percentage: total > 0 ? (val / total) * 100 : 0
+          };
+        });
+
+        const updatedEarnings = DEFAULT_DATA.earnings.map(earn => {
+          let val = 0;
+          if (earn.id === "e1") val = referEarn;
+          if (earn.id === "e2") val = serviceEarn;
+          return { ...earn, amount: val };
+        });
+
+        setCalculatedExpenses(updatedExpenses);
+        setCalculatedEarnings(updatedEarnings);
+
+        // Sync with DB
+        syncFinanceData({
+          monthly_salary: parseFloat(monthlyIncome) || 0,
+          total_spent: total,
+          last_month_spent: prevTotal,
+          bill_payments_spent: billSpent,
+          ott_subscriptions_spent: ottSpent,
+          finance_spent: financeSpent,
+          municipal_taxes_spent: municipalSpent,
+          referral_earnings: referEarn,
+          service_earnings: serviceEarn
+        });
+      }
+    } catch (e) {
+      console.error("Error calculating spending:", e);
+    }
+  };
+
   const handleSetSalary = async () => {
-    if (parseFloat(monthlyIncome) > 0) {
+    const income = parseFloat(monthlyIncome);
+    if (income >= 0) {
       try {
-        await AsyncStorage.setItem("@monthly_salary", monthlyIncome);
         setIsSalarySet(true);
+        // Save locally for quick access
+        await AsyncStorage.setItem("@monthly_salary", monthlyIncome);
+        // Sync with DB
+        await syncFinanceData({ monthly_salary: income });
+        // Refresh calculations
+        calculateSpendingFromTransactions(selectedMonth, selectedYear);
       } catch (e) {
         console.error("Error saving salary:", e);
       }
@@ -181,19 +364,9 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
   };
 
   useEffect(() => {
-    const loadSalary = async () => {
-      try {
-        const savedSalary = await AsyncStorage.getItem("@monthly_salary");
-        if (savedSalary) {
-          setMonthlyIncome(savedSalary);
-          setIsSalarySet(true);
-        }
-      } catch (e) {
-        console.error("Error loading salary:", e);
-      }
-    };
-    loadSalary();
-  }, []);
+    fetchFinanceData(selectedMonth, selectedYear);
+    calculateSpendingFromTransactions(selectedMonth, selectedYear);
+  }, [selectedMonth, selectedYear]);
 
 
   useEffect(() => {
@@ -217,8 +390,26 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
 
   const handleMonthSelect = (month: string) => {
     setSelectedMonth(month);
+    // If user picks a month ahead of current in same year (rare, but handleable)
+    // Here we just stay in current year for simplicity unless we add a year picker
     setShowMonthPicker(false);
   };
+
+  // UI Derived state from DB or Calculations
+  const displayTotalSpent = calculatedTotalSpent;
+  const displayIncome = parseFloat(monthlyIncome) || 0;
+  const displayNetBalance = displayIncome - displayTotalSpent;
+  const displayExpenses = calculatedExpenses;
+  const displayEarnings = calculatedEarnings;
+
+  const percentageDiff = lastMonthSpent > 0
+    ? ((displayTotalSpent - lastMonthSpent) / lastMonthSpent) * 100
+    : 0;
+
+  const highestExp = [...displayExpenses].sort((a, b) => b.amount - a.amount)[0];
+  const insightText = displayTotalSpent > 0
+    ? `Highest spent on ${highestExp.title} (₹${highestExp.amount})`
+    : "Track your spending to get personalized insights";
 
   return (
     <View style={styles.container}>
@@ -306,7 +497,7 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>👍 Total Spent</Text>
                   <Text style={styles.statValue}>
-                    ₹{totalSpent.toLocaleString()}
+                    ₹{displayTotalSpent.toLocaleString()}
                   </Text>
                 </View>
 
@@ -317,23 +508,23 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
                   <Text
                     style={[
                       styles.statValue,
-                      netBalance >= 0
+                      displayNetBalance >= 0
                         ? styles.positiveBalance
                         : styles.negativeBalance,
                     ]}
                   >
-                    {netBalance >= 0 ? "+" : ""}₹
-                    {netBalance.toLocaleString()}
+                    {displayNetBalance >= 0 ? "+" : ""}₹
+                    {displayNetBalance.toLocaleString()}
                   </Text>
                 </View>
               </View>
 
-              {monthData.percentageChange !== 0 && (
+              {percentageDiff !== 0 && (
                 <View style={styles.insightBadge}>
                   <Text style={styles.insightIcon}>💰</Text>
                   <Text style={styles.insightText}>
-                    You spent {Math.abs(monthData.percentageChange)}%{" "}
-                    {monthData.percentageChange < 0 ? "less" : "more"} than last
+                    You spent {Math.abs(Math.round(percentageDiff))}%{" "}
+                    {percentageDiff < 0 ? "less" : "more"} than last
                     month
                   </Text>
                 </View>
@@ -345,17 +536,17 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Where your money went</Text>
 
-            {totalSpent > 0 || isSalarySet ? (
+            {displayTotalSpent > 0 || isSalarySet ? (
               <>
                 <View style={styles.highlightBox}>
                   <Ionicons name="bulb" size={20} color="#2196F3" />
                   <Text style={styles.highlightText}>
-                    {monthData.highestExpense !== "No expenses" ? monthData.highestExpense : "Expenses are tracked by category"}
+                    {displayTotalSpent > 0 ? insightText : "Expenses are tracked by category"}
                   </Text>
                 </View>
 
                 <View style={styles.expensesGrid}>
-                  {monthData.expenses.map((expense) => (
+                  {displayExpenses.map((expense) => (
                     <View
                       key={expense.id}
                       style={[
@@ -416,15 +607,14 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Compare this month</Text>
 
-            {incomeVal > 0 ? (
+            {displayIncome > 0 ? (
               <View style={styles.compareRow}>
                 <View style={styles.compareCard}>
                   <Text style={styles.compareLabel}>
                     Last Month <Text style={styles.compareMonth}>({prevMonth})</Text>
                   </Text>
                   <Text style={styles.compareAmount}>
-                    ₹
-                    {(monthData.totalSpent * 0.9).toFixed(0)}
+                    ₹{lastMonthSpent.toLocaleString()}
                   </Text>
                 </View>
 
@@ -437,9 +627,9 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
                   </Text>
                   <View style={styles.compareValueRow}>
                     <Text style={styles.compareAmount}>
-                      ₹{totalSpent.toLocaleString()}
+                      ₹{displayTotalSpent.toLocaleString()}
                     </Text>
-                    {totalSpent < (monthData.totalSpent * 0.9) && (
+                    {percentageDiff < 0 && (
                       <View style={styles.goodControlBadge}>
                         <Text style={styles.goodControlText}>
                           ▲ Good control!
@@ -469,9 +659,9 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
               </TouchableOpacity>
             </View>
 
-            {monthData.earnings.some(e => e.amount > 0) ? (
+            {displayEarnings.some(e => e.amount > 0) ? (
               <View style={styles.earningsGrid}>
-                {monthData.earnings.map((earning) => (
+                {displayEarnings.map((earning) => (
                   <TouchableOpacity key={earning.id} style={styles.earningCard}>
                     <View
                       style={[
@@ -506,29 +696,6 @@ export default function MyMoneyScreen({ userData }: MyMoneyScreenProps) {
             )}
           </View>
 
-          {/* Smart Insights Section */}
-          <View style={styles.section}>
-            <LinearGradient
-              colors={["#F1F8FE", "#BBDEFB"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.insightCard}
-            >
-              <View style={styles.insightHeader}>
-                <View style={styles.insightTitleRow}>
-                  <View style={styles.insightIconBulb}>
-                    <Ionicons name="bulb" size={24} color="#2196F3" />
-                  </View>
-                  <Text style={styles.insightCardTitle}>Smart Insights</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#0D47A1" />
-              </View>
-              <Text style={styles.insightCardText}>
-                {monthData.insight ||
-                  "Track your spending to get personalized insights"}
-              </Text>
-            </LinearGradient>
-          </View>
         </ScrollView>
 
         {/* Bottom Navigation - Matching home screen */}
@@ -1038,51 +1205,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#1A1A1A",
-  },
-
-  insightCard: {
-    borderRadius: 12,
-    padding: 15,
-    backgroundColor: "#F1F8FE",
-    shadowColor: "#2196F3",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-
-  insightHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-
-  insightTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  insightIconBulb: {
-    width: 35,
-    height: 35,
-    borderRadius: 17.5,
-    backgroundColor: "rgba(255, 255, 255, 0.6)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  insightCardTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#5D4E37",
-  },
-
-  insightCardText: {
-    fontSize: 13,
-    color: "#5D4E37",
-    lineHeight: 18,
   },
 
   noExpensesBox: {

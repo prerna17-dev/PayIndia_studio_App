@@ -129,11 +129,7 @@ export default function AccountScreen() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace("/(tabs)/explore");
-              }
+              router.navigate("/(tabs)/explore");
             }}
           >
             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />

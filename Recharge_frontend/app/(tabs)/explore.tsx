@@ -29,6 +29,21 @@ import Svg, { Circle, LinearGradient as SvgLinearGradient, Stop, Defs, Text as S
 
 const { width } = Dimensions.get("window");
 
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 // Animated Quick Action Chip
 function AnimatedChip({
   icon,
@@ -324,7 +339,23 @@ export default function HomeScreen({
     try {
       const token = await AsyncStorage.getItem("userToken");
       const savedSalary = await AsyncStorage.getItem("@monthly_salary");
-      const salary = parseFloat(savedSalary || "0");
+      let salary = parseFloat(savedSalary || "0");
+
+      // Fetch from backend finance API for more accurate/synced data
+      try {
+        const now = new Date();
+        const monthName = MONTHS[now.getMonth()];
+        const year = now.getFullYear();
+        const financeRes = await fetch(`${API_BASE_URL}/api/finance/${year}/${monthName}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const financeData = await financeRes.json();
+        if (financeRes.ok && financeData.success && financeData.data.monthly_salary > 0) {
+          salary = financeData.data.monthly_salary;
+        }
+      } catch (err) {
+        console.warn("Could not fetch remote salary, using local data", err);
+      }
 
       let totalSpent = 0;
       let totalCashback = 0;

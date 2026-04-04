@@ -59,7 +59,7 @@ exports.payBill = async (req, res) => {
 
     // 1️⃣ Check Operator
     const [opRows] = await conn.query(
-      "SELECT operator_id FROM operators WHERE operator_id=? OR operator_code=? LIMIT 1",
+      "SELECT name, category FROM operators WHERE operator_id=? OR operator_code=? LIMIT 1",
       [operator, operator]
     );
 
@@ -68,7 +68,7 @@ exports.payBill = async (req, res) => {
       return res.status(400).json({ message: "Invalid operator" });
     }
 
-    const operatorId = opRows[0].operator_id;
+    const { name: operatorName, category: operatorCategory } = opRows[0];
 
     // 2️⃣ Check Wallet Balance
     const [[user]] = await conn.query(
@@ -88,11 +88,12 @@ exports.payBill = async (req, res) => {
     );
 
     // 4️⃣ Insert Transaction
+    const description = `${operatorCategory} Payment: ${operatorName} - A/C ${canumber}`;
     const [txn] = await conn.query(
       `INSERT INTO transactions 
       (user_id, transaction_type, amount, description, status, transaction_reference)
       VALUES (?, 'Bill', ?, ?, 'Pending', ?)`,
-      [userId, amount, `Bill Payment for A/C ${canumber}`, referenceid]
+      [userId, amount, description, referenceid]
     );
 
     // 5️⃣ Insert Payment Method

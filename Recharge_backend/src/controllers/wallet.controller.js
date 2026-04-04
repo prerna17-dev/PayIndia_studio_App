@@ -81,10 +81,13 @@ exports.withdrawMoney = async (req, res) => {
     );
 
     // Record transaction
+    const { description } = req.body;
+    const finalDescription = description || "Money withdrawn from wallet";
     const transactionRef = `WWD${Date.now()}${Math.floor(Math.random() * 1000)}`;
+
     await connection.query(
-      "INSERT INTO transactions (user_id, transaction_type, amount, description, status, transaction_reference) VALUES (?, 'Wallet_Debit', ?, 'Money withdrawn from wallet', 'Success', ?)",
-      [userId, amount, transactionRef]
+      "INSERT INTO transactions (user_id, transaction_type, amount, description, status, transaction_reference) VALUES (?, 'Wallet_Debit', ?, ?, 'Success', ?)",
+      [userId, amount, finalDescription, transactionRef]
     );
 
     await connection.commit();
