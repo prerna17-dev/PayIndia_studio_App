@@ -1355,20 +1355,20 @@ export default function HomeScreen({
                 </View>
 
                 {/* Data Row */}
-                <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: "rgba(0,0,0,0.2)", borderRadius: 14, paddingVertical: 14, paddingHorizontal: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }}>
                   <View style={{ flex: 1, alignItems: "center" }}>
                     <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginBottom: 5 }}>SPENT</Text>
-                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5 }}>₹{analytics.spent.toLocaleString()}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.2 }}>₹{analytics.spent.toLocaleString()}</Text>
                   </View>
                   <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.15)", marginVertical: 4 }} />
                   <View style={{ flex: 1, alignItems: "center" }}>
                     <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginBottom: 5 }}>CASHBACK</Text>
-                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#4ffcbcff", letterSpacing: 0.5 }}>+₹{analytics.cashback.toLocaleString()}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: "900", color: "#4ffcbcff", letterSpacing: 0.2 }}>+₹{analytics.cashback.toLocaleString()}</Text>
                   </View>
                   <View style={{ width: 1, backgroundColor: "rgba(255,255,255,0.15)", marginVertical: 4 }} />
                   <View style={{ flex: 1, alignItems: "center" }}>
                     <Text style={{ fontSize: 9, color: "rgba(255,255,255,0.75)", fontWeight: "600", marginBottom: 5 }}>PAID BILLS</Text>
-                    <Text style={{ fontSize: 18, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.5 }}>{analytics.paidBills.toString().padStart(2, '0')}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.2 }}>{analytics.paidBills.toString().padStart(2, '0')}</Text>
                   </View>
                 </View>
               </LinearGradient>
