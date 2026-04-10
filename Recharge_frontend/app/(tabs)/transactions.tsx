@@ -290,35 +290,84 @@ export default function HistoryScreen() {
     );
   };
 
-  const renderTransactionsList = () => (
-    <View style={styles.transactionsContainer}>
-      {/* Filter Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterContainer}
-        contentContainerStyle={styles.filterContent}
-      >
-        {["All", "Success", "Pending", "Failed"].map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterTab, filter === f && styles.filterTabActive]}
-            onPress={() => setFilter(f)}
-          >
-            <Text style={[styles.filterTabText, filter === f && styles.filterTabTextActive]}>{f}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+  const renderTransactionsList = () => {
+    // Filter transactions first
+    const filteredTransactions = transactions.filter(
+      (t) => filter === "All" || t.status.toLowerCase() === filter.toLowerCase()
+    );
 
-      {/* Transactions List */}
-      <View style={styles.transactionsList}>
-        <Text style={styles.transactionsSectionTitle}>Recent Transactions</Text>
-        {transactions
-          .filter(t => filter === "All" || t.status.toLowerCase() === filter.toLowerCase())
-          .map((transaction, index) => renderTransactionItem(transaction, index))}
+    // Group transactions by Month Year
+    const grouped = filteredTransactions.reduce((acc: { [key: string]: Transaction[] }, txn) => {
+      const date = new Date(txn.created_at);
+      const monthYear = date.toLocaleString("en-IN", {
+        month: "long",
+        year: "numeric",
+      });
+      if (!acc[monthYear]) {
+        acc[monthYear] = [];
+      }
+      acc[monthYear].push(txn);
+      return acc;
+    }, {});
+
+    const monthGroups = Object.entries(grouped);
+
+    return (
+      <View style={styles.transactionsContainer}>
+        {/* Filter Tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterContainer}
+          contentContainerStyle={styles.filterContent}
+        >
+          {["All", "Success", "Pending", "Failed"].map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterTab, filter === f && styles.filterTabActive]}
+              onPress={() => setFilter(f)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.filterTabText,
+                  filter === f && styles.filterTabTextActive,
+                ]}
+              >
+                {f}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Transactions List */}
+        <View style={styles.transactionsList}>
+          {monthGroups.length > 0 ? (
+            monthGroups.map(([month, txns], groupIndex) => (
+              <View
+                key={month}
+                style={[
+                  styles.sectionHeaderContainer,
+                  groupIndex > 0 && { marginTop: 12 },
+                ]}
+              >
+                <Text style={styles.transactionsMonth}>{month}</Text>
+                {txns.map((transaction, index) =>
+                  renderTransactionItem(transaction, index)
+                )}
+              </View>
+            ))
+          ) : (
+            <View style={{ paddingTop: 40, alignItems: "center" }}>
+              <Text style={{ color: "#666", fontSize: 16 }}>
+                No {filter !== "All" ? filter : ""} transactions found
+              </Text>
+            </View>
+          )}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -698,11 +747,11 @@ const styles = StyleSheet.create({
   },
 
   filterTab: {
-    paddingVertical: 8,
+    height: 38,
     width: 90,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
+    borderRadius: 19,
     backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "#E0E0E0",
@@ -711,6 +760,12 @@ const styles = StyleSheet.create({
   filterTabActive: {
     backgroundColor: "#2196F3",
     borderColor: "#2196F3",
+    // Ensure shadow/elevation doesn't cause layout jumps
+    shadowColor: "#2196F3",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
 
   filterTabText: {
@@ -731,8 +786,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     color: "#1A1A1A",
-    marginBottom: 15,
+    marginBottom: 2,
     letterSpacing: 0.3,
+  },
+
+  sectionHeaderContainer: {
+    marginBottom: 5,
+  },
+
+  transactionsMonth: {
+    fontSize: 18,
+    color: "#1A1A1A",
+    fontWeight: "bold",
+    letterSpacing: 0.3,
+    marginBottom: 15,
   },
 
   transactionCard: {
